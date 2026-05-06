@@ -110,40 +110,40 @@
             <span class="text-[0.68rem] text-slate-400 uppercase tracking-widest">Account</span>
         </div>
 
-        <div id="receptionBookAppointmentError" class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[0.75rem] text-red-700"></div>
-        <div id="receptionBookAppointmentSuccess" class="hidden mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[0.75rem] text-emerald-700"></div>
+        <div id="receptionWalkInAccountError" class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[0.75rem] text-red-700"></div>
+        <div id="receptionWalkInAccountSuccess" class="hidden mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[0.75rem] text-emerald-700"></div>
 
-        <form id="receptionBookAppointmentForm" class="grid gap-3 grid-cols-1 md:grid-cols-3 items-start">
+        <form id="receptionWalkInAccountForm" class="grid gap-3 grid-cols-1 md:grid-cols-3 items-start">
             <div class="min-w-0">
-                <label for="reception_appointment_patient_id" class="block text-[0.7rem] text-slate-600 mb-1">Patient</label>
+                <label for="reception_walkin_patient_id" class="block text-[0.7rem] text-slate-600 mb-1">Patient</label>
                 <div class="relative">
-                    <input id="reception_patient_search" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Type to search patient">
-                    <input id="reception_appointment_patient_id" type="hidden" required>
-                    <div id="receptionPatientResults" class="hidden absolute left-0 right-0 top-full mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-sm max-h-64 overflow-y-auto overscroll-contain z-50"></div>
+                    <input id="reception_walkin_patient_search" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Type to search patient">
+                    <input id="reception_walkin_patient_id" type="hidden" required>
+                    <div id="receptionWalkInPatientResults" class="hidden absolute left-0 right-0 top-full mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-sm max-h-64 overflow-y-auto overscroll-contain z-50"></div>
                 </div>
-                <div id="receptionPatientPreview" class="hidden mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.78rem] text-slate-700 break-words"></div>
+                <div id="receptionWalkInPatientPreview" class="hidden mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.78rem] text-slate-700 break-words"></div>
             </div>
             <div class="min-w-0">
-                <label for="reception_appointment_service_ids" class="block text-[0.7rem] text-slate-600 mb-1">Services</label>
+                <label for="reception_walkin_service_ids" class="block text-[0.7rem] text-slate-600 mb-1">Services</label>
                 <div class="relative">
-                    <input id="reception_service_search" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Type to search service">
-                    <input id="reception_appointment_service_ids" type="hidden">
-                    <div id="receptionServiceResults" class="hidden absolute left-0 right-0 top-full mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-sm max-h-64 overflow-y-auto overscroll-contain z-50"></div>
+                    <input id="reception_walkin_service_search" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Type to search service">
+                    <input id="reception_walkin_service_ids" type="hidden">
+                    <div id="receptionWalkInServiceResults" class="hidden absolute left-0 right-0 top-full mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-sm max-h-64 overflow-y-auto overscroll-contain z-50"></div>
                 </div>
-                <div id="receptionSelectedServices" class="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.78rem] text-slate-700 max-h-24 overflow-y-auto overscroll-contain"></div>
+                <div id="receptionWalkInSelectedServices" class="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.78rem] text-slate-700 max-h-24 overflow-y-auto overscroll-contain"></div>
             </div>
             <div class="min-w-0">
-                <label for="reception_appointment_doctor_id" class="block text-[0.7rem] text-slate-600 mb-1">Doctor</label>
+                <label for="reception_walkin_doctor_id" class="block text-[0.7rem] text-slate-600 mb-1">Doctor</label>
                 <div class="relative">
-                    <input id="reception_doctor_search" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Type to search doctor" disabled>
-                    <input id="reception_appointment_doctor_id" type="hidden" required>
-                    <div id="receptionDoctorResults" class="hidden absolute left-0 right-0 top-full mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-sm max-h-64 overflow-y-auto overscroll-contain z-50"></div>
+                    <input id="reception_walkin_doctor_search" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Type to search doctor" disabled>
+                    <input id="reception_walkin_doctor_id" type="hidden" required>
+                    <div id="receptionWalkInDoctorResults" class="hidden absolute left-0 right-0 top-full mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-sm max-h-64 overflow-y-auto overscroll-contain z-50"></div>
                 </div>
-                <div id="receptionDoctorPreview" class="hidden mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.78rem] text-slate-700 break-words"></div>
+                <div id="receptionWalkInDoctorPreview" class="hidden mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.78rem] text-slate-700 break-words"></div>
             </div>
             <div>
-                <label for="reception_appointment_priority" class="block text-[0.7rem] text-slate-600 mb-1">Priority level (optional)</label>
-                <select id="reception_appointment_priority" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                <label for="reception_walkin_priority" class="block text-[0.7rem] text-slate-600 mb-1">Priority level (optional)</label>
+                <select id="reception_walkin_priority" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
                     <option value="">Select priority</option>
                     <option value="1">1 : Emergency</option>
                     <option value="2">2 : PWD</option>
@@ -153,16 +153,16 @@
                 </select>
             </div>
             <div class="md:col-span-3">
-                <label for="reception_appointment_reason" class="block text-[0.7rem] text-slate-600 mb-1">Reason (optional)</label>
-                <input id="reception_appointment_reason" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Reason for visit">
+                <label for="reception_walkin_reason" class="block text-[0.7rem] text-slate-600 mb-1">Reason (optional)</label>
+                <input id="reception_walkin_reason" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Reason for visit">
             </div>
 
-            <input id="reception_appointment_type" type="hidden" value="walk_in">
+            <input id="reception_walkin_type" type="hidden" value="walk_in">
 
             <div class="md:col-span-3 flex justify-end">
-                <button id="receptionBookAppointmentSubmit" type="submit" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700 transition-colors disabled:opacity-60 disabled:hover:bg-cyan-600">
-                    <span id="receptionBookAppointmentSpinner" class="hidden w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
-                    <span id="receptionBookAppointmentSubmitLabel">Create walk-in</span>
+                <button id="receptionWalkInAccountSubmit" type="submit" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700 transition-colors disabled:opacity-60 disabled:hover:bg-cyan-600">
+                    <span id="receptionWalkInAccountSpinner" class="hidden w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                    <span id="receptionWalkInAccountSubmitLabel">Create walk-in</span>
                 </button>
             </div>
         </form>
@@ -248,8 +248,9 @@
 </template>
 
 <script>
+    window.receptionWalkInsIconX = '';
     document.addEventListener('DOMContentLoaded', function () {
-        var iconX = (function () {
+        window.receptionWalkInsIconX = (function () {
             var tpl = document.getElementById('receptionWalkInsIconX')
             return tpl ? String(tpl.innerHTML || '').trim() : ''
         })()
@@ -617,7 +618,7 @@ function setWalkInTab(tab) {
                             '<div class="text-[0.72rem] text-slate-500">' + escapeHtml(meta.join(' • ') || '—') + '</div>' +
                         '</div>' +
                         '<button type="button" class="reception-guest-remove-service inline-flex items-center justify-center w-7 h-7 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50" data-service-id="' + escapeHtml(id) + '">' +
-                            iconX +
+                            window.receptionWalkInsIconX +
                         '</button>' +
                     '</div>'
             }).join('')
@@ -633,6 +634,8 @@ function setWalkInTab(tab) {
                     syncGuestServiceHiddenInput()
                     renderGuestSelectedServices()
                     syncGuestDoctorEnabled()
+                    setGuestDoctorSelection(null)
+                    if (guestDoctorSearch) guestDoctorSearch.value = ''
                     renderGuestServiceResults(guestServices.slice(0, 10))
                 })
             })
@@ -647,6 +650,8 @@ function setWalkInTab(tab) {
             syncGuestServiceHiddenInput()
             renderGuestSelectedServices()
             syncGuestDoctorEnabled()
+            setGuestDoctorSelection(null)
+            if (guestDoctorSearch) guestDoctorSearch.value = ''
             if (guestServiceSearch) guestServiceSearch.value = ''
             if (guestServiceResults) guestServiceResults.classList.add('hidden')
         }
@@ -884,19 +889,6 @@ function setWalkInTab(tab) {
         if (guestMiddleNameInput) guestMiddleNameInput.addEventListener('input', scheduleGuestHistoryLoad)
         if (guestLastNameInput) guestLastNameInput.addEventListener('input', scheduleGuestHistoryLoad)
 
-        function hideResultsOnBlur(inputEl, resultsEl) {
-            if (!inputEl || !resultsEl) return
-            inputEl.addEventListener('blur', function () {
-                setTimeout(function () {
-                    var active = document.activeElement
-                    if (resultsEl.classList.contains('hidden')) return
-                    if (!(resultsEl.contains(active) || inputEl.contains(active))) {
-                        resultsEl.classList.add('hidden')
-                    }
-                }, 0)
-            })
-        }
-
         if (guestServiceSearch) {
             guestServiceSearch.addEventListener('focus', function () {
                 loadGuestServices()
@@ -919,22 +911,19 @@ function setWalkInTab(tab) {
             })
         }
 
-        hideResultsOnBlur(guestServiceSearch, guestServiceResults)
-        hideResultsOnBlur(guestDoctorSearch, guestDoctorResults)
-
         document.addEventListener('click', function (e) {
-            var t = e && e.target ? e.target : null
+            var target = e && e.target ? e.target : null
             if (guestServiceResults && !guestServiceResults.classList.contains('hidden')) {
-                if (!(guestServiceResults.contains(t) || (guestServiceSearch && guestServiceSearch.contains(t)))) {
+                if (!(guestServiceResults.contains(target) || (guestServiceSearch && guestServiceSearch.contains(target)))) {
                     guestServiceResults.classList.add('hidden')
                 }
             }
             if (guestDoctorResults && !guestDoctorResults.classList.contains('hidden')) {
-                if (!(guestDoctorResults.contains(t) || (guestDoctorSearch && guestDoctorSearch.contains(t)))) {
+                if (!(guestDoctorResults.contains(target) || (guestDoctorSearch && guestDoctorSearch.contains(target)))) {
                     guestDoctorResults.classList.add('hidden')
                 }
             }
-        }, true)
+        })
 
         if (guestForm) {
             guestForm.addEventListener('submit', function (e) {
@@ -1214,41 +1203,46 @@ function setWalkInTab(tab) {
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        var form = document.getElementById('receptionBookAppointmentForm')
-        var errorBox = document.getElementById('receptionBookAppointmentError')
-        var successBox = document.getElementById('receptionBookAppointmentSuccess')
-        var submitBtn = document.getElementById('receptionBookAppointmentSubmit')
-        var submitSpinner = document.getElementById('receptionBookAppointmentSpinner')
-        var submitLabel = document.getElementById('receptionBookAppointmentSubmitLabel')
-        var patientSearch = document.getElementById('reception_patient_search')
-        var patientSelect = document.getElementById('reception_appointment_patient_id')
-        var patientResults = document.getElementById('receptionPatientResults')
-        var patientPreview = document.getElementById('receptionPatientPreview')
-        var serviceSearch = document.getElementById('reception_service_search')
-        var serviceIdsInput = document.getElementById('reception_appointment_service_ids')
-        var serviceResults = document.getElementById('receptionServiceResults')
-        var selectedServicesEl = document.getElementById('receptionSelectedServices')
-        var doctorSearch = document.getElementById('reception_doctor_search')
-        var doctorSelect = document.getElementById('reception_appointment_doctor_id')
-        var doctorResults = document.getElementById('receptionDoctorResults')
-        var doctorPreview = document.getElementById('receptionDoctorPreview')
-        var dateSelect = document.getElementById('reception_appointment_date_select')
-        var dateInput = document.getElementById('reception_appointment_date')
-        var dateLoadMore = document.getElementById('reception_appointment_date_load_more')
-        var dateRangeHint = document.getElementById('reception_appointment_date_range_hint')
-        var dateWrap = document.getElementById('receptionAppointmentDateWrap')
-        var dateTrigger = document.getElementById('receptionAppointmentDateTrigger')
-        var dateOverlay = document.getElementById('receptionAppointmentDateOverlay')
-        var dateGrid = document.getElementById('receptionAppointmentDateGrid')
-        var datePrevBtn = document.getElementById('receptionDatePrev')
-        var dateNextBtn = document.getElementById('receptionDateNext')
-        var dateMonthLabel = document.getElementById('receptionDateMonthLabel')
-        var timeInput = document.getElementById('reception_appointment_time')
-        var timeWrap = document.getElementById('receptionAppointmentTimeWrap')
-        var timeTrigger = document.getElementById('receptionTimeSlotTrigger')
-        var timeOverlay = document.getElementById('receptionTimeSlotOverlay')
-        var availableDaysEl = document.getElementById('reception_available_days')
-        var timeSlotsEl = document.getElementById('reception_time_slots')
+        var accountPanel = document.getElementById('receptionWalkInPanelAccount')
+        function accountQuery(selector) {
+            return accountPanel ? accountPanel.querySelector(selector) : null
+        }
+
+        var form = accountQuery('#receptionWalkInAccountForm')
+        var errorBox = accountQuery('#receptionWalkInAccountError')
+        var successBox = accountQuery('#receptionWalkInAccountSuccess')
+        var submitBtn = accountQuery('#receptionWalkInAccountSubmit')
+        var submitSpinner = accountQuery('#receptionWalkInAccountSpinner')
+        var submitLabel = accountQuery('#receptionWalkInAccountSubmitLabel')
+        var patientSearch = accountQuery('#reception_walkin_patient_search')
+        var patientSelect = accountQuery('#reception_walkin_patient_id')
+        var patientResults = accountQuery('#receptionWalkInPatientResults')
+        var patientPreview = accountQuery('#receptionWalkInPatientPreview')
+        var serviceSearch = accountQuery('#reception_walkin_service_search')
+        var serviceIdsInput = accountQuery('#reception_walkin_service_ids')
+        var serviceResults = accountQuery('#receptionWalkInServiceResults')
+        var selectedServicesEl = accountQuery('#receptionWalkInSelectedServices')
+        var doctorSearch = accountQuery('#reception_walkin_doctor_search')
+        var doctorSelect = accountQuery('#reception_walkin_doctor_id')
+        var doctorResults = accountQuery('#receptionWalkInDoctorResults')
+        var doctorPreview = accountQuery('#receptionWalkInDoctorPreview')
+        var dateSelect = accountQuery('#reception_walkin_date_select')
+        var dateInput = accountQuery('#reception_walkin_date')
+        var dateLoadMore = accountQuery('#reception_walkin_date_load_more')
+        var dateRangeHint = accountQuery('#reception_walkin_date_range_hint')
+        var dateWrap = accountQuery('#receptionWalkInDateWrap')
+        var dateTrigger = accountQuery('#receptionWalkInDateTrigger')
+        var dateOverlay = accountQuery('#receptionWalkInDateOverlay')
+        var dateGrid = accountQuery('#receptionWalkInDateGrid')
+        var datePrevBtn = accountQuery('#receptionWalkInDatePrev')
+        var dateNextBtn = accountQuery('#receptionWalkInDateNext')
+        var dateMonthLabel = accountQuery('#receptionWalkInDateMonthLabel')
+        var timeInput = accountQuery('#reception_walkin_time')
+        var timeWrap = accountQuery('#receptionWalkInTimeWrap')
+        var timeTrigger = accountQuery('#receptionWalkInTimeTrigger')
+        var timeOverlay = accountQuery('#receptionWalkInTimeOverlay')
+        var availableDaysEl = accountQuery('#reception_walkin_available_days')
+        var timeSlotsEl = accountQuery('#reception_walkin_time_slots')
         var previousDoctorId = 0
         var previousServiceIds = []
         var previousServiceIdSet = {}
@@ -1276,6 +1270,11 @@ function setWalkInTab(tab) {
         var dateCursorFirstIso = null
         var dateCursorLastIso = null
         var dateCursorIndex = 0
+        var typeInput = accountQuery('#reception_walkin_type')
+
+        function getAppointmentType() {
+            return typeInput && typeInput.value ? String(typeInput.value) : 'walk_in'
+        }
 
         function setSubmitting(isSubmitting) {
             if (submitBtn) submitBtn.disabled = !!isSubmitting
@@ -1525,7 +1524,7 @@ function setWalkInTab(tab) {
                             '<div class="text-[0.72rem] text-slate-500">' + escapeHtml(meta.join(' • ') || '—') + '</div>' +
                         '</div>' +
                         '<button type="button" class="reception-remove-service inline-flex items-center justify-center w-7 h-7 rounded-lg border border-slate-200 text-slate-600 hover:bg-white" data-service-id="' + escapeHtml(id) + '">' +
-                            iconX +
+                            window.receptionWalkInsIconX +
                         '</button>' +
                     '</div>'
             }).join('')
@@ -1568,8 +1567,7 @@ function setWalkInTab(tab) {
             if (!serviceResults) return
             var list = Array.isArray(items) ? items : []
 
-            var typeEl = document.getElementById('reception_appointment_type')
-            var type = typeEl && typeEl.value ? String(typeEl.value) : 'walk_in'
+            var type = getAppointmentType()
             if (type === 'walk_in') {
                 list = list.filter(function (s) { return !isWalkInExcludedService(s) })
             }
@@ -1691,8 +1689,7 @@ function setWalkInTab(tab) {
                     var parts = []
                     var name = [doctor.firstname, doctor.middlename, doctor.lastname].filter(function (v) { return String(v || '').trim() !== '' }).join(' ').trim()
                     if (!name) name = 'Doctor #' + doctor.user_id
-                    var typeEl = document.getElementById('reception_appointment_type')
-                    var type = typeEl && typeEl.value ? String(typeEl.value) : 'walk_in'
+                    var type = getAppointmentType()
                     var dateStr = type === 'walk_in'
                         ? new Date().toISOString().slice(0, 10)
                         : ((dateSelect && dateSelect.value) ? String(dateSelect.value) : new Date().toISOString().slice(0, 10))
@@ -1722,8 +1719,7 @@ function setWalkInTab(tab) {
                 doctorResults.classList.add('hidden')
             }
 
-            var typeInput = document.getElementById('reception_appointment_type')
-            var type = typeInput && typeInput.value ? typeInput.value : 'walk_in'
+            var type = getAppointmentType()
             if (type !== 'walk_in') {
                 clearAvailability()
                 if (doctor && doctor.user_id) {
@@ -1772,8 +1768,7 @@ function setWalkInTab(tab) {
                 doctorResults.classList.remove('hidden')
                 return
             }
-            var typeEl = document.getElementById('reception_appointment_type')
-            var type = typeEl && typeEl.value ? String(typeEl.value) : 'walk_in'
+            var type = getAppointmentType()
             var dateStr = ''
             if (type === 'walk_in') {
                 dateStr = new Date().toISOString().slice(0, 10)
@@ -1862,8 +1857,7 @@ function setWalkInTab(tab) {
             if (doctorSearch) doctorSearch.disabled = false
             if (filtered.length === 1) {
                 var candidate = filtered[0]
-                var typeEl = document.getElementById('reception_appointment_type')
-                var type = typeEl && typeEl.value ? String(typeEl.value) : 'walk_in'
+                var type = getAppointmentType()
                 var dateStr = type === 'walk_in'
                     ? new Date().toISOString().slice(0, 10)
                     : ((dateSelect && dateSelect.value) ? String(dateSelect.value) : new Date().toISOString().slice(0, 10))
@@ -2147,8 +2141,7 @@ function setWalkInTab(tab) {
             if (!timeSlotsEl) return
             timeSlotsEl.innerHTML = ''
 
-            var typeInput = document.getElementById('reception_appointment_type')
-            var apptType = typeInput && typeInput.value ? typeInput.value : 'walk_in'
+            var apptType = getAppointmentType()
             if (apptType === 'walk_in') {
                 if (timeTrigger) {
                     timeTrigger.disabled = true
@@ -2456,9 +2449,8 @@ function setWalkInTab(tab) {
             }
         }
 
-        var typeInput = document.getElementById('reception_appointment_type')
-        var typeScheduledBtn = document.getElementById('receptionApptTypeScheduledBtn')
-        var typeWalkInBtn = document.getElementById('receptionApptTypeWalkInBtn')
+        var typeScheduledBtn = accountQuery('#receptionWalkInTypeScheduledBtn')
+        var typeWalkInBtn = accountQuery('#receptionWalkInTypeWalkInBtn')
 
         function setTypeButtonState(btn, isActive) {
             if (!btn) return
@@ -2528,19 +2520,6 @@ function setWalkInTab(tab) {
         if (typeScheduledBtn) typeScheduledBtn.addEventListener('click', function () { setAppointmentType('scheduled') })
         if (typeWalkInBtn) typeWalkInBtn.addEventListener('click', function () { setAppointmentType('walk_in') })
 
-        function hideResultsOnBlur(inputEl, resultsEl) {
-            if (!inputEl || !resultsEl) return
-            inputEl.addEventListener('blur', function () {
-                setTimeout(function () {
-                    var active = document.activeElement
-                    if (resultsEl.classList.contains('hidden')) return
-                    if (!(resultsEl.contains(active) || inputEl.contains(active))) {
-                        resultsEl.classList.add('hidden')
-                    }
-                }, 0)
-            })
-        }
-
         if (patientSearch) {
             patientSearch.addEventListener('input', function () {
                 var q = String(patientSearch.value || '').trim()
@@ -2587,9 +2566,24 @@ function setWalkInTab(tab) {
             })
         }
 
-        hideResultsOnBlur(patientSearch, patientResults)
-        hideResultsOnBlur(serviceSearch, serviceResults)
-        hideResultsOnBlur(doctorSearch, doctorResults)
+        document.addEventListener('click', function (e) {
+            var target = e && e.target ? e.target : null
+            if (patientResults && !patientResults.classList.contains('hidden')) {
+                if (!(patientResults.contains(target) || (patientSearch && patientSearch.contains(target)))) {
+                    patientResults.classList.add('hidden')
+                }
+            }
+            if (serviceResults && !serviceResults.classList.contains('hidden')) {
+                if (!(serviceResults.contains(target) || (serviceSearch && serviceSearch.contains(target)))) {
+                    serviceResults.classList.add('hidden')
+                }
+            }
+            if (doctorResults && !doctorResults.classList.contains('hidden')) {
+                if (!(doctorResults.contains(target) || (doctorSearch && doctorSearch.contains(target)))) {
+                    doctorResults.classList.add('hidden')
+                }
+            }
+        })
 
         if (dateSelect) {
             dateSelect.addEventListener('change', onDateChanged)
@@ -2631,35 +2625,6 @@ function setWalkInTab(tab) {
             })
         }
 
-        document.addEventListener('click', function (e) {
-            var target = e && e.target ? e.target : null
-            if (patientResults && !patientResults.classList.contains('hidden')) {
-                if (!(patientResults.contains(target) || (patientSearch && patientSearch.contains(target)))) {
-                    patientResults.classList.add('hidden')
-                }
-            }
-            if (serviceResults && !serviceResults.classList.contains('hidden')) {
-                if (!(serviceResults.contains(target) || (serviceSearch && serviceSearch.contains(target)))) {
-                    serviceResults.classList.add('hidden')
-                }
-            }
-            if (doctorResults && !doctorResults.classList.contains('hidden')) {
-                if (!(doctorResults.contains(target) || (doctorSearch && doctorSearch.contains(target)))) {
-                    doctorResults.classList.add('hidden')
-                }
-            }
-            if (dateOverlay && !dateOverlay.classList.contains('hidden')) {
-                if (!dateWrap || (!dateWrap.contains(target) && !dateOverlay.contains(target))) {
-                    closeDateOverlay()
-                }
-            }
-            if (timeOverlay && !timeOverlay.classList.contains('hidden')) {
-                if (!timeWrap || (!timeWrap.contains(target) && !timeOverlay.contains(target))) {
-                    closeTimeOverlay()
-                }
-            }
-        }, true)
-
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
                 closeDateOverlay()
@@ -2682,21 +2647,21 @@ function setWalkInTab(tab) {
                 showSuccess('')
                 setSubmitting(true)
 
-                var patientInput = document.getElementById('reception_appointment_patient_id')
-                var doctorInput = document.getElementById('reception_appointment_doctor_id')
-                var dateSelect = document.getElementById('reception_appointment_date_select')
-                var dateInput = document.getElementById('reception_appointment_date')
-                var timeInput = document.getElementById('reception_appointment_time')
-                var typeInput = document.getElementById('reception_appointment_type')
-                var priorityInput = document.getElementById('reception_appointment_priority')
-                var reasonInput = document.getElementById('reception_appointment_reason')
+                var patientInput = accountQuery('#reception_walkin_patient_id')
+                var doctorInput = accountQuery('#reception_walkin_doctor_id')
+                var dateSelect = accountQuery('#reception_walkin_date_select')
+                var dateInput = accountQuery('#reception_walkin_date')
+                var timeInput = accountQuery('#reception_walkin_time')
+                var currentTypeInput = accountQuery('#reception_walkin_type')
+                var priorityInput = accountQuery('#reception_walkin_priority')
+                var reasonInput = accountQuery('#reception_walkin_reason')
 
                 var patientId = patientInput ? parseInt(patientInput.value, 10) : 0
                 var doctorId = doctorInput ? parseInt(doctorInput.value, 10) : 0
                 var serviceIds = selectedServiceIds()
                 var date = dateSelect && dateSelect.value ? dateSelect.value : (dateInput ? dateInput.value : '')
                 var time = timeInput ? timeInput.value : ''
-                var type = typeInput && typeInput.value ? String(typeInput.value) : 'walk_in'
+                var type = currentTypeInput && currentTypeInput.value ? String(currentTypeInput.value) : 'walk_in'
                 var priority = priorityInput && priorityInput.value ? parseInt(priorityInput.value, 10) : null
                 var reason = reasonInput ? reasonInput.value : ''
                 var autoQueue = true
@@ -2774,7 +2739,7 @@ function setWalkInTab(tab) {
                             if (timeInput) timeInput.value = ''
                             if (priorityInput) priorityInput.value = ''
                             if (reasonInput) reasonInput.value = ''
-                            if (typeInput) typeInput.value = 'walk_in'
+                            if (currentTypeInput) currentTypeInput.value = 'walk_in'
                             syncTypeToggleUI()
                             applyAppointmentTypeUI()
                         }
