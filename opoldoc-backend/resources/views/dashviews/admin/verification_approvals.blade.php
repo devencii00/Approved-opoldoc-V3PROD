@@ -4,7 +4,7 @@
         <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Patients</span>
     </div>
     <p class="text-xs text-slate-500 mb-4">
-        Review verification requests, view uploaded documents, override status, and audit changes.
+        Review verification requests, inspect uploaded documents, and decide approval status.
     </p>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
@@ -79,12 +79,77 @@
         </table>
     </div>
 
-    <div class="mt-3 hidden rounded-lg border border-slate-200 bg-slate-50 px-3 py-3" id="admin_verif_logs_panel">
-        <div class="flex items-center justify-between mb-2">
-            <div class="text-[0.8rem] font-semibold text-slate-900" id="admin_verif_logs_title">Audit logs</div>
-            <button type="button" id="admin_verif_logs_close" class="text-[0.72rem] font-semibold text-slate-600 hover:text-slate-900">Close</button>
+</div>
+
+<div id="adminVerifDocPanelOverlay" class="hidden fixed inset-0 z-[80] bg-slate-900/40">
+    <div id="adminVerifDocPanel" class="absolute top-0 right-0 h-full w-full max-w-[46rem] bg-white border-l border-slate-200 shadow-[-16px_0_40px_rgba(15,23,42,0.2)] transform translate-x-full transition-transform duration-300 ease-out flex flex-col">
+        <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+            <div class="min-w-0">
+                <div class="text-sm font-semibold text-slate-900" id="adminVerifDocPanelTitle">Verification Document</div>
+                <div class="text-[0.72rem] text-slate-500 mt-0.5" id="adminVerifDocPanelSubtitle"></div>
+            </div>
+            <button id="adminVerifDocPanelClose" type="button" class="inline-flex items-center justify-center w-9 h-9 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50">
+                <x-lucide-x class="w-[18px] h-[18px]" />
+            </button>
         </div>
-        <div id="admin_verif_logs_body" class="text-[0.78rem] text-slate-700"></div>
+        <div class="p-4 border-b border-slate-100">
+            <div class="text-[0.72rem] font-semibold text-slate-600 mb-2 uppercase tracking-wide">Latest Uploaded Document</div>
+            <div id="adminVerifDocMainWrap" class="rounded-xl border border-slate-200 bg-slate-50 overflow-hidden h-[16rem] flex items-center justify-center text-[0.78rem] text-slate-500">
+                Select a verification record.
+            </div>
+        </div>
+        <div class="p-4 min-h-0 flex-1 overflow-hidden">
+            <div class="text-[0.72rem] font-semibold text-slate-600 mb-2 uppercase tracking-wide">Verification History</div>
+            <div class="rounded-xl border border-slate-200 overflow-hidden h-full">
+                <div class="overflow-auto h-full">
+                    <table class="w-full text-xs">
+                        <thead class="bg-slate-50 text-slate-500 sticky top-0">
+                            <tr>
+                                <th class="text-left px-3 py-2 font-semibold whitespace-nowrap">ID</th>
+                                <th class="text-left px-3 py-2 font-semibold whitespace-nowrap">Type</th>
+                                <th class="text-left px-3 py-2 font-semibold whitespace-nowrap">Status</th>
+                                <th class="text-left px-3 py-2 font-semibold whitespace-nowrap">Remarks</th>
+                                <th class="text-left px-3 py-2 font-semibold whitespace-nowrap">Document</th>
+                                <th class="text-left px-3 py-2 font-semibold whitespace-nowrap">Uploaded</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminVerifHistoryBody" class="divide-y divide-slate-100 bg-white">
+                            <tr><td colspan="6" class="px-3 py-4 text-center text-slate-400">No history loaded.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="adminVerifActionOverlay" class="hidden fixed inset-0 z-[90] bg-slate-900/40 items-center justify-center p-4">
+    <div class="w-full max-w-lg rounded-2xl bg-white border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.24)] p-4">
+        <div class="flex items-start gap-3">
+            <div class="w-9 h-9 rounded-xl bg-cyan-50 border border-cyan-100 flex items-center justify-center text-cyan-700">
+                <x-lucide-shield-check class="w-[18px] h-[18px]" />
+            </div>
+            <div class="flex-1 min-w-0">
+                <div id="adminVerifActionTitle" class="text-sm font-semibold text-slate-900">Confirm Action</div>
+                <div id="adminVerifActionMessage" class="text-[0.78rem] text-slate-600 mt-0.5"></div>
+            </div>
+        </div>
+        <div id="adminVerifActionDetails" class="mt-3 text-[0.78rem] text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2"></div>
+        <div id="adminVerifActionDocWrap" class="mt-3 rounded-lg border border-slate-200 bg-slate-50 overflow-hidden h-32 flex items-center justify-center text-[0.74rem] text-slate-500">
+            No document preview.
+        </div>
+        <div id="adminVerifRejectReasonWrap" class="hidden mt-3">
+            <label for="adminVerifRejectReason" class="block text-[0.7rem] text-slate-600 mb-1">Reject reason</label>
+            <select id="adminVerifRejectReason" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                <option value="Blurry document">Blurry document</option>
+                <option value="Invalid Document">Invalid Document</option>
+                <option value="Expired Document">Expired Document</option>
+            </select>
+        </div>
+        <div class="mt-4 flex items-center justify-end gap-2">
+            <button id="adminVerifActionCancel" type="button" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+            <button id="adminVerifActionConfirm" type="button" class="px-3 py-2 rounded-xl bg-slate-900 text-white text-[0.78rem] font-semibold hover:bg-slate-800">Confirm</button>
+        </div>
     </div>
 </div>
 
@@ -101,13 +166,29 @@
         var sortSelect = document.getElementById('admin_verif_sort')
         var tableBody = document.getElementById('admin_verif_table_body')
 
-        var logsPanel = document.getElementById('admin_verif_logs_panel')
-        var logsTitle = document.getElementById('admin_verif_logs_title')
-        var logsBody = document.getElementById('admin_verif_logs_body')
-        var logsClose = document.getElementById('admin_verif_logs_close')
+        var docPanelOverlay = document.getElementById('adminVerifDocPanelOverlay')
+        var docPanel = document.getElementById('adminVerifDocPanel')
+        var docPanelClose = document.getElementById('adminVerifDocPanelClose')
+        var docPanelTitle = document.getElementById('adminVerifDocPanelTitle')
+        var docPanelSubtitle = document.getElementById('adminVerifDocPanelSubtitle')
+        var docMainWrap = document.getElementById('adminVerifDocMainWrap')
+        var historyBody = document.getElementById('adminVerifHistoryBody')
+
+        var actionOverlay = document.getElementById('adminVerifActionOverlay')
+        var actionTitle = document.getElementById('adminVerifActionTitle')
+        var actionMessage = document.getElementById('adminVerifActionMessage')
+        var actionDetails = document.getElementById('adminVerifActionDetails')
+        var actionDocWrap = document.getElementById('adminVerifActionDocWrap')
+        var actionCancel = document.getElementById('adminVerifActionCancel')
+        var actionConfirm = document.getElementById('adminVerifActionConfirm')
+        var rejectReasonWrap = document.getElementById('adminVerifRejectReasonWrap')
+        var rejectReasonSelect = document.getElementById('adminVerifRejectReason')
 
         var currentPage = 1
         var lastPayload = null
+        var actionResolver = null
+        var actionDelayTimer = null
+        var actionConfirmDefaultHtml = actionConfirm ? actionConfirm.innerHTML : ''
 
         function showError(message) {
             if (!errorBox) return
@@ -144,7 +225,7 @@
         function getPatientLabel(v) {
             var p = v && v.patient ? v.patient : null
             if (!p) return 'Unknown'
-            var name = ((p.firstname || '') + ' ' + (p.lastname || '')).trim()
+            var name = ((p.firstname || '') + ' ' + (p.middlename || '') + ' ' + (p.lastname || '')).trim().replace(/\s+/g, ' ')
             if (name) return name
             if (p.email) return p.email
             return 'Patient #' + p.user_id
@@ -265,11 +346,9 @@
                     '<td class="py-2 pr-4 text-[0.78rem] text-slate-500">' + verifier + '</td>' +
                     '<td class="py-2 pr-4 text-[0.78rem]">' +
                         '<div class="flex flex-wrap items-center gap-2">' +
-                            (hasDoc ? '<button type="button" class="text-[0.72rem] font-semibold text-slate-700 hover:text-slate-900 admin-verif-doc" data-id="' + id + '">View document</button>' : '<span class="text-[0.72rem] font-semibold text-slate-400">No document</span>') +
-                            '<button type="button" class="text-[0.72rem] font-semibold text-emerald-700 hover:text-emerald-800 admin-verif-set" data-id="' + id + '" data-status="approved">Approve</button>' +
-                            '<button type="button" class="text-[0.72rem] font-semibold text-rose-700 hover:text-rose-800 admin-verif-set" data-id="' + id + '" data-status="rejected">Reject</button>' +
-                            '<button type="button" class="text-[0.72rem] font-semibold text-amber-700 hover:text-amber-800 admin-verif-set" data-id="' + id + '" data-status="pending">Set pending</button>' +
-                            '<button type="button" class="text-[0.72rem] font-semibold text-cyan-700 hover:text-cyan-800 admin-verif-logs" data-id="' + id + '">Audit logs</button>' +
+                            (hasDoc ? '<button type="button" class="px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-[0.72rem] font-semibold text-slate-700 hover:bg-slate-50 admin-verif-doc" data-id="' + id + '">View document</button>' : '<span class="text-[0.72rem] font-semibold text-slate-400">No document</span>') +
+                            '<button type="button" class="px-2.5 py-1 rounded-lg border border-emerald-200 bg-emerald-50 text-[0.72rem] font-semibold text-emerald-700 hover:bg-emerald-100 admin-verif-set" data-id="' + id + '" data-status="approved">Approve</button>' +
+                            '<button type="button" class="px-2.5 py-1 rounded-lg border border-rose-200 bg-rose-50 text-[0.72rem] font-semibold text-rose-700 hover:bg-rose-100 admin-verif-set" data-id="' + id + '" data-status="rejected">Reject</button>' +
                         '</div>' +
                     '</td>' +
                 '</tr>'
@@ -279,27 +358,200 @@
             bindRowActions()
         }
 
+        function statusText(value) {
+            var key = String(value || '').toLowerCase()
+            if (!key) return 'Unknown'
+            return key.charAt(0).toUpperCase() + key.slice(1)
+        }
+
+        function documentUrl(verificationId) {
+            return "{{ url('/api/patient-verifications') }}/" + encodeURIComponent(String(verificationId)) + "/document"
+        }
+
+        function openDocPanel() {
+            if (!docPanelOverlay || !docPanel) return
+            docPanelOverlay.classList.remove('hidden')
+            window.requestAnimationFrame(function () {
+                docPanel.classList.remove('translate-x-full')
+            })
+        }
+
+        function closeDocPanel() {
+            if (!docPanelOverlay || !docPanel) return
+            docPanel.classList.add('translate-x-full')
+            setTimeout(function () {
+                docPanelOverlay.classList.add('hidden')
+            }, 220)
+        }
+
+        function setMainDocumentPreview(v) {
+            if (!docMainWrap) return
+            if (!v || !v.document_path) {
+                docMainWrap.innerHTML = '<div class="text-[0.78rem] text-slate-500">No document uploaded for this verification.</div>'
+                return
+            }
+            docMainWrap.innerHTML = '<iframe src="' + escapeHtml(documentUrl(v.verification_id)) + '" class="w-full h-full bg-white" title="Verification document preview"></iframe>'
+        }
+
+        function renderHistory(rows) {
+            if (!historyBody) return
+            var items = Array.isArray(rows) ? rows : []
+            if (!items.length) {
+                historyBody.innerHTML = '<tr><td colspan="6" class="px-3 py-4 text-center text-slate-400">No verification history found.</td></tr>'
+                return
+            }
+
+            historyBody.innerHTML = items.map(function (entry) {
+                var uploaded = entry && entry.created_at ? String(entry.created_at).slice(0, 10) : '—'
+                var remarks = entry && entry.remarks ? String(entry.remarks) : '—'
+                var thumb = entry && entry.document_path
+                    ? '<div class="w-16 h-12 rounded border border-slate-200 overflow-hidden bg-white"><iframe src="' + escapeHtml(documentUrl(entry.verification_id)) + '" class="w-full h-full" title="History document"></iframe></div>'
+                    : '<span class="text-slate-400">No doc</span>'
+                return '<tr>' +
+                    '<td class="px-3 py-2 text-slate-700 whitespace-nowrap">#' + escapeHtml(entry.verification_id) + '</td>' +
+                    '<td class="px-3 py-2 text-slate-700 whitespace-nowrap">' + escapeHtml(entry.type || '—') + '</td>' +
+                    '<td class="px-3 py-2 text-slate-700 whitespace-nowrap">' + escapeHtml(statusText(entry.status)) + '</td>' +
+                    '<td class="px-3 py-2 text-slate-700 min-w-[14rem]">' + escapeHtml(remarks) + '</td>' +
+                    '<td class="px-3 py-2">' + thumb + '</td>' +
+                    '<td class="px-3 py-2 text-slate-700 whitespace-nowrap">' + escapeHtml(uploaded) + '</td>' +
+                '</tr>'
+            }).join('')
+        }
+
+        function openDocumentPanelFor(verification) {
+            if (!verification) return
+            if (docPanelTitle) docPanelTitle.textContent = 'Verification #' + verification.verification_id
+            if (docPanelSubtitle) docPanelSubtitle.textContent = getPatientLabel(verification) + ' • ' + statusText(verification.status) + ' • ' + (verification.type || '—')
+            setMainDocumentPreview(verification)
+            openDocPanel()
+
+            if (historyBody) {
+                historyBody.innerHTML = '<tr><td colspan="6" class="px-3 py-4 text-center text-slate-400">Loading verification history...</td></tr>'
+            }
+            var patientId = verification && verification.patient_id ? verification.patient_id : 0
+            if (!patientId) {
+                renderHistory([])
+                return
+            }
+
+            apiFetch("{{ url('/api/patient-verifications') }}?per_page=100&patient_id=" + encodeURIComponent(String(patientId)), { method: 'GET' })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, data: data }
+                    }).catch(function () {
+                        return { ok: response.ok, data: null }
+                    })
+                })
+                .then(function (result) {
+                    if (!result.ok || !result.data) {
+                        renderHistory([])
+                        return
+                    }
+                    var rows = Array.isArray(result.data.data) ? result.data.data : []
+                    rows.sort(function (a, b) {
+                        var da = String(a && a.created_at ? a.created_at : '')
+                        var db = String(b && b.created_at ? b.created_at : '')
+                        if (da < db) return 1
+                        if (da > db) return -1
+                        return 0
+                    })
+                    renderHistory(rows)
+                })
+                .catch(function () {
+                    renderHistory([])
+                })
+        }
+
+        function closeActionModal(result) {
+            if (actionOverlay) {
+                actionOverlay.classList.add('hidden')
+                actionOverlay.classList.remove('flex')
+            }
+            if (actionDelayTimer) {
+                clearTimeout(actionDelayTimer)
+                actionDelayTimer = null
+            }
+            if (actionConfirm) {
+                actionConfirm.disabled = false
+                actionConfirm.innerHTML = actionConfirmDefaultHtml || 'Confirm'
+            }
+            var resolver = actionResolver
+            actionResolver = null
+            if (typeof resolver === 'function') resolver(result || null)
+        }
+
+        function openActionModal(status, verification) {
+            return new Promise(function (resolve) {
+                if (!actionOverlay || !actionTitle || !actionMessage || !actionDetails || !actionConfirm || !actionCancel) {
+                    resolve(null)
+                    return
+                }
+                var isReject = status === 'rejected'
+                actionDetails.innerHTML = '<ul class="space-y-1">' +
+                    '<li><strong class="font-semibold text-slate-800">Verification ID:</strong> #' + escapeHtml(verification.verification_id) + '</li>' +
+                    '<li><strong class="font-semibold text-slate-800">Patient:</strong> ' + escapeHtml(getPatientLabel(verification)) + '</li>' +
+                    '<li><strong class="font-semibold text-slate-800">Type:</strong> ' + escapeHtml(verification.type || '—') + '</li>' +
+                    '<li><strong class="font-semibold text-slate-800">Current Status:</strong> ' + escapeHtml(statusText(verification.status)) + '</li>' +
+                '</ul>'
+
+                if (verification && verification.document_path) {
+                    actionDocWrap.innerHTML = '<iframe src="' + escapeHtml(documentUrl(verification.verification_id)) + '" class="w-full h-full bg-white" title="Verification action preview"></iframe>'
+                } else {
+                    actionDocWrap.innerHTML = '<div class="text-[0.74rem] text-slate-500">No document preview.</div>'
+                }
+
+                if (isReject) {
+                    actionTitle.textContent = 'Reject Verification'
+                    actionMessage.textContent = "Do you want to reject this patient's verification request?"
+                    if (rejectReasonWrap) rejectReasonWrap.classList.remove('hidden')
+                } else {
+                    actionTitle.textContent = 'Approve Verification'
+                    actionMessage.textContent = 'Do you want to approve this patient verification request?'
+                    if (rejectReasonWrap) rejectReasonWrap.classList.add('hidden')
+                }
+
+                actionResolver = resolve
+                actionOverlay.classList.remove('hidden')
+                actionOverlay.classList.add('flex')
+
+                actionConfirm.disabled = true
+                actionConfirm.innerHTML = '<span class="inline-flex items-center gap-2"><span class="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span><span>Confirm</span></span>'
+                actionDelayTimer = setTimeout(function () {
+                    actionConfirm.disabled = false
+                    actionConfirm.innerHTML = actionConfirmDefaultHtml || 'Confirm'
+                    actionDelayTimer = null
+                }, 3000)
+            })
+        }
+
+        function updateVerificationStatus(id, status, remarks) {
+            return apiFetch("{{ url('/api/patient-verifications') }}/" + id, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: status, remarks: remarks || '' })
+            }).then(function (response) {
+                return response.json().then(function (data) {
+                    return { ok: response.ok, data: data }
+                }).catch(function () {
+                    return { ok: response.ok, data: null }
+                })
+            })
+        }
+
         function bindRowActions() {
             var docButtons = document.querySelectorAll('.admin-verif-doc')
             docButtons.forEach(function (button) {
                 button.addEventListener('click', function () {
                     var id = this.getAttribute('data-id')
                     if (!id) return
-                    apiFetch("{{ url('/api/patient-verifications') }}/" + id + "/document", { method: 'GET' })
-                        .then(function (response) {
-                            if (!response.ok) {
-                                return Promise.reject(new Error('failed'))
-                            }
-                            return response.blob()
-                        })
-                        .then(function (blob) {
-                            var url = URL.createObjectURL(blob)
-                            window.open(url, '_blank', 'noopener')
-                            setTimeout(function () { URL.revokeObjectURL(url) }, 60000)
-                        })
-                        .catch(function () {
-                            showError('Unable to open the document.')
-                        })
+                    var payload = lastPayload || {}
+                    var list = Array.isArray(payload.data) ? payload.data : []
+                    var selected = list.find(function (item) { return String(item.verification_id) === String(id) }) || null
+                    if (!selected) {
+                        showError('Unable to find the selected verification.')
+                        return
+                    }
+                    openDocumentPanelFor(selected)
                 })
             })
 
@@ -309,98 +561,63 @@
                     var id = this.getAttribute('data-id')
                     var status = this.getAttribute('data-status')
                     if (!id || !status) return
-                    var remarks = window.prompt('Remarks (optional)', '') || ''
+                    var payload = lastPayload || {}
+                    var list = Array.isArray(payload.data) ? payload.data : []
+                    var selected = list.find(function (item) { return String(item.verification_id) === String(id) }) || null
+                    if (!selected) {
+                        showError('Unable to find the selected verification.')
+                        return
+                    }
 
-                    apiFetch("{{ url('/api/patient-verifications') }}/" + id, {
-                        method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ status: status, remarks: remarks })
-                    })
-                        .then(function (response) {
-                            return response.json().then(function (data) {
-                                return { ok: response.ok, data: data }
-                            })
-                        })
+                    openActionModal(status, selected)
                         .then(function (result) {
-                            if (!result.ok) {
-                                showError('Failed to update verification status.')
-                                return
-                            }
-                            loadStats()
-                            loadVerifications(currentPage)
+                            if (!result) return
+                            var remarks = ''
+                            if (status === 'rejected' && rejectReasonSelect) remarks = String(rejectReasonSelect.value || '').trim()
+                            return updateVerificationStatus(id, status, remarks)
+                                .then(function (updateResult) {
+                                    if (!updateResult.ok) {
+                                        showError('Failed to update verification status.')
+                                        return
+                                    }
+                                    showError('')
+                                    loadStats()
+                                    loadVerifications(currentPage)
+                                    if (docPanelOverlay && !docPanelOverlay.classList.contains('hidden')) {
+                                        openDocumentPanelFor(updateResult.data || selected)
+                                    }
+                                })
+                                .catch(function () {
+                                    showError('Network error while updating verification status.')
+                                })
                         })
-                        .catch(function () {
-                            showError('Network error while updating verification status.')
-                        })
-                })
-            })
-
-            var logsButtons = document.querySelectorAll('.admin-verif-logs')
-            logsButtons.forEach(function (button) {
-                button.addEventListener('click', function () {
-                    var id = this.getAttribute('data-id')
-                    if (!id) return
-                    showAuditLogs(id)
                 })
             })
         }
 
-        function showAuditLogs(verificationId) {
-            if (!logsPanel || !logsBody || !logsTitle) return
-            logsTitle.textContent = 'Audit logs — Verification #' + verificationId
-            logsBody.textContent = 'Loading audit logs…'
-            logsPanel.classList.remove('hidden')
-
-            apiFetch("{{ url('/api/patient-verifications') }}/" + verificationId + "/audit-logs", { method: 'GET' })
-                .then(function (response) {
-                    return response.json().then(function (data) {
-                        return { ok: response.ok, data: data }
-                    })
-                })
-                .then(function (result) {
-                    if (!result.ok) {
-                        logsBody.textContent = 'Failed to load audit logs.'
-                        return
-                    }
-                    var logs = Array.isArray(result.data) ? result.data : []
-                    if (!logs.length) {
-                        logsBody.textContent = 'No audit logs for this verification yet.'
-                        return
-                    }
-                    var html = '<div class="space-y-2">'
-                    logs.forEach(function (l) {
-                        var user = l.user ? (((l.user.firstname || '') + ' ' + (l.user.lastname || '')).trim() || l.user.email || ('User #' + l.user.user_id)) : '—'
-                        var when = l.created_at ? String(l.created_at).replace('T', ' ').slice(0, 19) : ''
-                        var details = ''
-                        try {
-                            var parsed = l.details ? JSON.parse(l.details) : null
-                            if (parsed) details = escapeHtml(JSON.stringify(parsed))
-                        } catch (e) {
-                            details = escapeHtml(l.details || '')
-                        }
-
-                        html += '<div class="rounded-lg border border-slate-200 bg-white px-3 py-2">' +
-                            '<div class="flex items-center justify-between gap-3">' +
-                                '<div class="text-[0.78rem] font-semibold text-slate-900">' + escapeHtml(l.action || 'log') + '</div>' +
-                                '<div class="text-[0.72rem] text-slate-500">' + escapeHtml(when) + '</div>' +
-                            '</div>' +
-                            '<div class="mt-1 text-[0.74rem] text-slate-600"><span class="font-semibold text-slate-700">User:</span> ' + escapeHtml(user) + '</div>' +
-                            (details ? '<div class="mt-1 text-[0.74rem] text-slate-600 break-words"><span class="font-semibold text-slate-700">Details:</span> ' + details + '</div>' : '') +
-                        '</div>'
-                    })
-                    html += '</div>'
-                    logsBody.innerHTML = html
-                })
-                .catch(function () {
-                    logsBody.textContent = 'Network error while loading audit logs.'
-                })
-        }
-
-        if (logsClose && logsPanel) {
-            logsClose.addEventListener('click', function () {
-                logsPanel.classList.add('hidden')
+        if (docPanelClose) docPanelClose.addEventListener('click', closeDocPanel)
+        if (docPanelOverlay) {
+            docPanelOverlay.addEventListener('click', function (e) {
+                if (e.target === docPanelOverlay) closeDocPanel()
             })
         }
+        if (actionCancel) actionCancel.addEventListener('click', function () { closeActionModal(null) })
+        if (actionConfirm) {
+            actionConfirm.addEventListener('click', function () {
+                closeActionModal({ confirmed: true })
+            })
+        }
+        if (actionOverlay) {
+            actionOverlay.addEventListener('click', function (e) {
+                if (e.target === actionOverlay) closeActionModal(null)
+            })
+        }
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                closeDocPanel()
+                closeActionModal(null)
+            }
+        })
 
         if (searchInput) {
             searchInput.addEventListener('input', function () {
