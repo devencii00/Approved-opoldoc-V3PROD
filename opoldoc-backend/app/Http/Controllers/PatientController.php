@@ -46,17 +46,29 @@ class PatientController extends Controller
         }
 
         if ($search !== '') {
-            $prefix = $search.'%';
-            $query->where(function ($q) use ($search, $prefix) {
-                $q->where('email', 'like', $prefix)
-                    ->orWhere('firstname', 'like', $prefix)
-                    ->orWhere('lastname', 'like', $prefix)
-                    ->orWhere('middlename', 'like', $prefix)
-                    ->orWhere('contact_number', 'like', $prefix)
-                    ->orWhere('address', 'like', $prefix);
+            $contains = '%'.$search.'%';
+            $tokens = preg_split('/\s+/u', $search, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+            $query->where(function ($q) use ($search, $contains, $tokens) {
+                $q->where('email', 'like', $contains)
+                    ->orWhere('firstname', 'like', $contains)
+                    ->orWhere('lastname', 'like', $contains)
+                    ->orWhere('middlename', 'like', $contains)
+                    ->orWhere('contact_number', 'like', $contains)
+                    ->orWhere('address', 'like', $contains)
+                    ->orWhereRaw("TRIM(CONCAT_WS(' ', firstname, middlename, lastname)) like ?", [$contains]);
 
                 if (is_numeric($search)) {
                     $q->orWhere('user_id', (int) $search);
+                }
+
+                foreach ($tokens as $token) {
+                    $piece = '%'.$token.'%';
+                    $q->orWhere(function ($w) use ($piece) {
+                        $w->where('firstname', 'like', $piece)
+                            ->orWhere('middlename', 'like', $piece)
+                            ->orWhere('lastname', 'like', $piece);
+                    });
                 }
             });
         }

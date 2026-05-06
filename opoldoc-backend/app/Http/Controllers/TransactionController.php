@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Appointment;
 use App\Models\LogEntry;
 use App\Models\Transaction;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -11,7 +13,29 @@ class TransactionController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Transaction::with('appointment');
+        $perPage = (int) $request->query('per_page', 15);
+        if ($perPage < 1) {
+            $perPage = 15;
+        }
+        if ($perPage > 100) {
+            $perPage = 100;
+        }
+
+        $request->validate([
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'patient_id' => ['nullable', 'integer'],
+            'service_id' => ['nullable', 'integer', 'exists:services,service_id'],
+            'search' => ['nullable', 'string'],
+            'order' => ['nullable', 'in:latest,oldest'],
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date'],
+        ]);
+
+        $query = Transaction::with([
+            'appointment.patient',
+            'appointment.doctor',
+            'appointment.services',
+        ]);
 
         $currentUser = $request->user();
         if ($currentUser && $currentUser->role === 'patient') {
@@ -25,7 +49,74 @@ class TransactionController extends Controller
             });
         }
 
-        return $query->paginate();
+        if ($request->filled('service_id')) {
+            $serviceId = (int) $request->query('service_id');
+            $query->whereHas('appointment.services', function ($q) use ($serviceId) {
+                $q->where('services.service_id', $serviceId);
+            });
+        }
+
+        $search = trim((string) $request->query('search', ''));
+        if ($search !== '') {
+            $contains = '%'.$search.'%';
+            $tokens = preg_split('/\s+/u', $search, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+            $query->where(function ($q) use ($search, $contains, $tokens) {
+                $q->where('reference_number', 'like', $contains);
+                if (is_numeric($search)) {
+                    $q->orWhere('transaction_id', (int) $search);
+                }
+                $q->orWhereHas('appointment.patient', function ($p) use ($contains, $tokens) {
+                    $p->where('email', 'like', $contains)
+                        ->orWhere('firstname', 'like', $contains)
+                        ->orWhere('lastname', 'like', $contains)
+                        ->orWhere('middlename', 'like', $contains)
+                        ->orWhere('contact_number', 'like', $contains)
+                        ->orWhereRaw("TRIM(CONCAT_WS(' ', firstname, middlename, lastname)) like ?", [$contains]);
+                    foreach ($tokens as $token) {
+                        $piece = '%'.$token.'%';
+                        $p->orWhere(function ($w) use ($piece) {
+                            $w->where('firstname', 'like', $piece)
+                                ->orWhere('middlename', 'like', $piece)
+                                ->orWhere('lastname', 'like', $piece);
+                        });
+                    }
+                });
+            });
+        }
+
+        if ($request->filled('start_date') || $request->filled('end_date')) {
+            $startRaw = $request->query('start_date');
+            $endRaw = $request->query('end_date');
+            $start = $startRaw ? Carbon::parse($startRaw)->startOfDay() : null;
+            $end = $endRaw ? Carbon::parse($endRaw)->endOfDay() : null;
+            if (! $start && $end) {
+                $start = $end->copy()->startOfDay();
+            }
+            if ($start && ! $end) {
+                $end = $start->copy()->endOfDay();
+            }
+            if ($start && $end) {
+                $query->where(function ($q) use ($start, $end) {
+                    $q->whereBetween('transaction_datetime', [$start, $end])
+                        ->orWhere(function ($w) use ($start, $end) {
+                            $w->whereNull('transaction_datetime')->whereBetween('created_at', [$start, $end]);
+                        });
+                });
+            }
+        }
+
+        $order = (string) $request->query('order', 'latest');
+        if ($order === 'oldest') {
+            $query->orderByRaw('transaction_datetime IS NULL ASC')
+                ->orderBy('transaction_datetime')
+                ->orderBy('transaction_id');
+        } else {
+            $query->orderByRaw('transaction_datetime IS NULL ASC')
+                ->orderByDesc('transaction_datetime')
+                ->orderByDesc('transaction_id');
+        }
+
+        return $query->paginate($perPage);
     }
 
     public function store(Request $request)
@@ -39,7 +130,7 @@ class TransactionController extends Controller
             'appointment_id' => ['required', 'exists:appointments,appointment_id'],
             'amount' => ['nullable', 'numeric'],
             'discount_amount' => ['nullable', 'numeric'],
-            'discount_type' => ['nullable', 'in:none,senior,pwd'],
+            'discount_type' => ['nullable', 'in:none,senior,pwd,pregnant'],
             'payment_mode' => ['nullable', 'in:cash,gcash'],
             'payment_status' => ['nullable', 'in:pending,paid,failed'],
             'reference_number' => ['nullable', 'string'],
@@ -50,16 +141,47 @@ class TransactionController extends Controller
             'treatment_notes' => ['nullable', 'string'],
         ]);
 
-        if (! isset($data['discount_amount'])) {
-            $data['discount_amount'] = 0;
-        }
+        $appointment = Appointment::query()->with('services')->findOrFail((int) $data['appointment_id']);
 
         if (! isset($data['discount_type'])) {
             $data['discount_type'] = 'none';
         }
 
-        if (! isset($data['payment_status'])) {
-            $data['payment_status'] = 'pending';
+        if (! isset($data['amount']) || $data['amount'] === null || $data['amount'] === '') {
+            $data['amount'] = (float) $appointment->services->sum(function ($service) {
+                return (float) ($service->price ?? 0);
+            });
+        }
+
+        $discountRates = [
+            'none' => 0.0,
+            'pwd' => 0.15,
+            'pregnant' => 0.10,
+            'senior' => 0.05,
+        ];
+        $selectedDiscountType = (string) ($data['discount_type'] ?? 'none');
+        if (! array_key_exists($selectedDiscountType, $discountRates)) {
+            $selectedDiscountType = 'none';
+        }
+        $data['discount_type'] = $selectedDiscountType;
+        $baseAmount = (float) ($data['amount'] ?? 0);
+        if ($baseAmount < 0) {
+            $baseAmount = 0;
+            $data['amount'] = 0;
+        }
+        $data['discount_amount'] = round($baseAmount * (float) $discountRates[$selectedDiscountType], 2);
+
+        if (! isset($data['payment_mode']) || ! $data['payment_mode']) {
+            $data['payment_mode'] = 'cash';
+        }
+        $data['payment_status'] = 'paid';
+
+        if (! isset($data['transaction_datetime']) || ! $data['transaction_datetime']) {
+            $data['transaction_datetime'] = now();
+        }
+
+        if (! isset($data['reference_number']) || trim((string) $data['reference_number']) === '') {
+            $data['reference_number'] = $this->generateReferenceNumber();
         }
 
         $receiptPath = null;
@@ -79,6 +201,7 @@ class TransactionController extends Controller
                 $updateData['receipt_path'] = $receiptPath;
             }
             $transaction->update($updateData);
+            $this->markLinkedAppointmentCompleted((int) $transaction->appointment_id);
 
             LogEntry::write(
                 optional($request->user())->user_id ? (int) $request->user()->user_id : null,
@@ -99,6 +222,7 @@ class TransactionController extends Controller
         }
 
         $transaction = Transaction::create($data);
+        $this->markLinkedAppointmentCompleted((int) $transaction->appointment_id);
 
         LogEntry::write(
             optional($request->user())->user_id ? (int) $request->user()->user_id : null,
@@ -143,7 +267,7 @@ class TransactionController extends Controller
         $data = $request->validate([
             'amount' => ['sometimes', 'numeric'],
             'discount_amount' => ['sometimes', 'numeric'],
-            'discount_type' => ['sometimes', 'in:none,senior,pwd'],
+            'discount_type' => ['sometimes', 'in:none,senior,pwd,pregnant'],
             'payment_mode' => ['sometimes', 'in:cash,gcash'],
             'payment_status' => ['sometimes', 'in:pending,paid,failed'],
             'reference_number' => ['sometimes', 'nullable', 'string'],
@@ -164,6 +288,7 @@ class TransactionController extends Controller
         unset($data['receipt']);
 
         $transaction->update($data);
+        $this->markLinkedAppointmentCompleted((int) $transaction->appointment_id);
 
         LogEntry::write(
             optional($request->user())->user_id ? (int) $request->user()->user_id : null,
@@ -206,5 +331,31 @@ class TransactionController extends Controller
         return response()->json([
             'message' => 'Transaction deleted',
         ]);
+    }
+
+    private function generateReferenceNumber(): string
+    {
+        do {
+            $reference = 'TXN-'.now()->format('Ymd-His').'-'.str_pad((string) random_int(0, 9999), 4, '0', STR_PAD_LEFT);
+        } while (Transaction::query()->where('reference_number', $reference)->exists());
+
+        return $reference;
+    }
+
+    private function markLinkedAppointmentCompleted(int $appointmentId): void
+    {
+        if ($appointmentId < 1) {
+            return;
+        }
+
+        $appointment = Appointment::query()->find($appointmentId);
+        if (! $appointment) {
+            return;
+        }
+
+        if ((string) $appointment->status !== 'completed') {
+            $appointment->status = 'completed';
+            $appointment->save();
+        }
     }
 }

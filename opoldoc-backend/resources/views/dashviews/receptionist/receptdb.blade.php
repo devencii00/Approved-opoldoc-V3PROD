@@ -72,7 +72,7 @@
                                 <button type="button" id="receptionNextQueueNextBtn" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 text-[0.75rem] font-semibold hover:bg-slate-50 transition-colors disabled:opacity-60 disabled:hover:bg-white">
                                     <span id="receptionNextQueueNextSpinner" class="hidden w-3 h-3 border-2 border-slate-700/20 border-t-slate-700 rounded-full animate-spin"></span>
                                     <x-lucide-megaphone class="w-[18px] h-[18px]" />
-                                    Call next
+                                    <span id="receptionNextQueueNextLabel">Call next</span>
                                 </button>
                             </div>
                         </div>
@@ -102,6 +102,7 @@
                 var nextQueueMeta = document.getElementById('receptionNextQueueMeta')
                 var nextQueueBtn = document.getElementById('receptionNextQueueNextBtn')
                 var nextQueueSpinner = document.getElementById('receptionNextQueueNextSpinner')
+                var nextQueueLabel = document.getElementById('receptionNextQueueNextLabel')
                 if (typeof apiFetch !== 'function') return
 
                 function escapeHtml(input) {
@@ -234,7 +235,7 @@
                                     return names[0] + ' +' + String(names.length - 1)
                                 }
 
-                                var nowServingLabels = serving.slice(0, 3).map(function (q) {
+                                var nowServingLabels = serving.slice(0, 4).map(function (q) {
                                     var patientName = q && q.appointment && q.appointment.patient ? nameForUser(q.appointment.patient) : 'Patient'
                                     var serviceName = serviceSummaryFromQueue(q)
                                     return queueLabel(q) + ' ' + patientName + (serviceName ? (' — ' + serviceName) : '')
@@ -243,8 +244,7 @@
                                 var waiting = queueRows.filter(function (q) { return q && String(q.status || '') === 'waiting' })
                                 waiting.sort(queueSort)
                                 var next = waiting.slice(0, 5)
-                                var nextCandidate = next.length ? next[0] : null
-                                var nextCandidateId = nextCandidate && nextCandidate.queue_id ? String(nextCandidate.queue_id) : ''
+                                var nextBatchCount = Math.min(4, waiting.length)
 
                                 var html = ''
                                 html += '<li class="text-[0.78rem] text-slate-700"><span class="font-semibold">Now serving:</span> ' + (nowServingLabels.length ? escapeHtml(nowServingLabels.join(', ')) : '—') + '</li>'
@@ -254,15 +254,20 @@
                                 } else {
                                     html += next.map(function (q) {
                                         var nm = q && q.appointment && q.appointment.patient ? nameForUser(q.appointment.patient) : 'Patient'
+                                        var qn = queueLabel(q)
+                                        var serviceName = serviceSummaryFromQueue(q)
                                         var dt4 = parseApiDate(q && q.queue_datetime ? q.queue_datetime : null)
                                         var mins2 = dt4 ? Math.max(0, Math.floor((now.getTime() - dt4.getTime()) / 60000)) : 0
-                                        return '<li class="text-[0.78rem] text-slate-700">Next: ' + escapeHtml(nm) + ' <span class="text-slate-500">(waiting ' + mins2 + ' min)</span></li>'
+                                        return '<li class="text-[0.78rem] text-slate-700">Next #' + escapeHtml(qn) + ': ' + escapeHtml(nm) + (serviceName ? (' <span class="text-slate-500">— ' + escapeHtml(serviceName) + '</span>') : '') + ' <span class="text-slate-500">(waiting ' + mins2 + ' min)</span></li>'
                                     }).join('')
                                 }
 
                                 nextQueueList.innerHTML = html
-                                if (nextQueueBtn) nextQueueBtn.disabled = !nextCandidateId
-                                if (nextQueueBtn) nextQueueBtn.setAttribute('data-next-queue-id', nextCandidateId || '')
+                                if (nextQueueBtn) nextQueueBtn.disabled = nextBatchCount < 1
+                                if (nextQueueBtn) nextQueueBtn.setAttribute('data-next-batch-count', String(nextBatchCount))
+                                if (nextQueueLabel) {
+                                    nextQueueLabel.textContent = nextBatchCount > 1 ? ('Call next x' + nextBatchCount) : 'Call next'
+                                }
                             }
 
                             var stamp = 'Updated ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -282,34 +287,54 @@
                         if (isSubmitting) {
                             nextQueueBtn.disabled = true
                         } else {
-                            var id = nextQueueBtn.getAttribute('data-next-queue-id') || ''
-                            nextQueueBtn.disabled = !id
+                            var count = parseInt(nextQueueBtn.getAttribute('data-next-batch-count') || '0', 10)
+                            nextQueueBtn.disabled = isNaN(count) || count < 1
                         }
                     }
                 }
 
+                function readApiResult(response) {
+                    return response.json().then(function (d) {
+                        return { ok: response.ok, data: d }
+                    }).catch(function () {
+                        return { ok: response.ok, data: null }
+                    })
+                }
+
+                function callNextBatch(remaining, called) {
+                    if (remaining < 1) return Promise.resolve(called)
+                    return apiFetch("{{ url('/api/queues/call-next') }}", { method: 'POST' })
+                        .then(readApiResult)
+                        .then(function (result) {
+                            if (!result.ok) {
+                                var code = result && result.data && result.data.code ? String(result.data.code) : ''
+                                var graceful = code === 'SERVING_SLOTS_FULL' || code === 'NO_AVAILABLE_SLOTS' || code === 'NO_ELIGIBLE_WAITING' || code === 'NO_ACTIVE_DOCTORS'
+                                if (graceful) return called
+                                var message = (result && result.data && result.data.message) ? String(result.data.message) : 'Unable to call next right now.'
+                                throw new Error(message)
+                            }
+                            return callNextBatch(remaining - 1, called + 1)
+                        })
+                }
+
                 if (nextQueueBtn) {
                     nextQueueBtn.addEventListener('click', function () {
-                        var id = nextQueueBtn.getAttribute('data-next-queue-id')
-                        if (!id) return
+                        var count = parseInt(nextQueueBtn.getAttribute('data-next-batch-count') || '0', 10)
+                        if (!count || isNaN(count) || count < 1) return
 
                         setNextQueueSubmitting(true)
 
-                        apiFetch("{{ url('/api/queues') }}/" + encodeURIComponent(id), {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ status: 'serving' })
-                        })
-                            .then(function (response) { return response.json().then(function (d) { return { ok: response.ok, data: d } }).catch(function () { return { ok: response.ok, data: null } }) })
-                            .then(function (result) {
-                                if (!result.ok) {
-                                    window.alert('Unable to call next right now.')
-                                    return
+                        callNextBatch(Math.min(4, count), 0)
+                            .then(function (called) {
+                                if (called > 0) {
+                                    window.alert('Called ' + called + ' queue entr' + (called > 1 ? 'ies' : 'y') + '.')
+                                } else {
+                                    window.alert('No available slots to call next right now.')
                                 }
                                 load()
                             })
-                            .catch(function () {
-                                window.alert('Network error while calling next.')
+                            .catch(function (err) {
+                                window.alert((err && err.message) ? err.message : 'Network error while calling next.')
                             })
                             .finally(function () {
                                 setNextQueueSubmitting(false)

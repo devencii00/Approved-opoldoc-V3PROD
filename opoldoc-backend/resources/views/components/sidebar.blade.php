@@ -281,23 +281,6 @@
             </a>
             </div>
 
-            <div class="{{ $groupHeaderBase }}">
-                <div>Verification</div>
-                <button type="button" class="{{ $groupToggleBtn }} sidebar-group-toggle" data-group="reception-verification">
-                    <x-lucide-chevron-down class="sidebar-group-icon-expanded w-[18px] h-[18px]" />
-                    <x-lucide-chevron-right class="sidebar-group-icon-collapsed hidden w-[18px] h-[18px]" />
-                </button>
-            </div>
-            <div data-group-body="reception-verification">
-
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'verification-oversight']) }}" class="{{ $navBase }} {{ $isReceptionVerificationOversight ? $navActive : $navInactive }} mb-3">
-                <x-lucide-user-check class="w-[18px] h-[18px] {{ $isReceptionVerificationOversight ? 'text-cyan-600' : '' }}" />
-                Verification requests
-                @if ($isReceptionVerificationOversight)
-                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
-                @endif
-            </a>
-            </div>
 
             <div class="{{ $groupHeaderBase }}">
                 <div>Billing</div>
@@ -316,6 +299,25 @@
                 @endif
             </a>
             </div>
+
+            <div class="{{ $groupHeaderBase }}">
+                <div>Verification</div>
+                <button type="button" class="{{ $groupToggleBtn }} sidebar-group-toggle" data-group="reception-verification">
+                    <x-lucide-chevron-down class="sidebar-group-icon-expanded w-[18px] h-[18px]" />
+                    <x-lucide-chevron-right class="sidebar-group-icon-collapsed hidden w-[18px] h-[18px]" />
+                </button>
+            </div>
+            <div data-group-body="reception-verification">
+
+            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'verification-oversight']) }}" class="{{ $navBase }} {{ $isReceptionVerificationOversight ? $navActive : $navInactive }} mb-3">
+                <x-lucide-user-check class="w-[18px] h-[18px] {{ $isReceptionVerificationOversight ? 'text-cyan-600' : '' }}" />
+                Verification requests
+                @if ($isReceptionVerificationOversight)
+                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                @endif
+            </a>
+            </div>
+
 
             <div class="{{ $groupHeaderBase }}">
                 <div>Communication</div>
