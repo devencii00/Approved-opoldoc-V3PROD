@@ -188,6 +188,7 @@
         var lastPayload = null
         var actionResolver = null
         var actionDelayTimer = null
+        var actionCountdownTimer = null
         var actionConfirmDefaultHtml = actionConfirm ? actionConfirm.innerHTML : ''
 
         function showError(message) {
@@ -471,6 +472,10 @@
                 clearTimeout(actionDelayTimer)
                 actionDelayTimer = null
             }
+            if (actionCountdownTimer) {
+                clearInterval(actionCountdownTimer)
+                actionCountdownTimer = null
+            }
             if (actionConfirm) {
                 actionConfirm.disabled = false
                 actionConfirm.innerHTML = actionConfirmDefaultHtml || 'Confirm'
@@ -515,8 +520,22 @@
                 actionOverlay.classList.add('flex')
 
                 actionConfirm.disabled = true
-                actionConfirm.innerHTML = '<span class="inline-flex items-center gap-2"><span class="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span><span>Confirm</span></span>'
+                var countdown = 3
+                actionConfirm.innerHTML = '<span class="inline-flex items-center gap-2"><span class="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span><span>Confirm (' + countdown + 's)</span></span>'
+                actionCountdownTimer = setInterval(function () {
+                    countdown = countdown - 1
+                    if (countdown < 1) {
+                        clearInterval(actionCountdownTimer)
+                        actionCountdownTimer = null
+                        return
+                    }
+                    actionConfirm.innerHTML = '<span class="inline-flex items-center gap-2"><span class="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span><span>Confirm (' + countdown + 's)</span></span>'
+                }, 1000)
                 actionDelayTimer = setTimeout(function () {
+                    if (actionCountdownTimer) {
+                        clearInterval(actionCountdownTimer)
+                        actionCountdownTimer = null
+                    }
                     actionConfirm.disabled = false
                     actionConfirm.innerHTML = actionConfirmDefaultHtml || 'Confirm'
                     actionDelayTimer = null
