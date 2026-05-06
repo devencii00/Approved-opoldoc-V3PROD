@@ -728,13 +728,17 @@ function setWalkInTab(tab) {
         function searchGuestServices(query) {
             var q = normalizeText(query)
             if (!q) {
-                renderGuestServiceResults((guestPopularServices && guestPopularServices.length) ? guestPopularServices.slice() : (guestServices || []).slice(0, 12))
+                if (guestSelectedServices && guestSelectedServices.length) {
+                    renderGuestServiceResults(guestServices || [])
+                } else {
+                    renderGuestServiceResults((guestPopularServices && guestPopularServices.length) ? guestPopularServices.slice() : (guestServices || []).slice(0, 12))
+                }
                 return
             }
             var filtered = (guestServices || []).filter(function (s) {
                 return wordPrefixMatch(s && s.service_name ? s.service_name : '', q)
             })
-            renderGuestServiceResults(filtered.slice(0, 20))
+            renderGuestServiceResults(filtered)
         }
 
         function doctorDisplayName(doctor) {
@@ -1605,7 +1609,7 @@ function setWalkInTab(tab) {
                 return
             }
             var html = ''
-            list.forEach(function (s) {
+            list.slice(0, 12).forEach(function (s) {
                 var name = String(s.service_name || '').trim() || 'Service'
                 var isLast = !!(previousServiceIdSet && previousServiceIdSet[String(s.service_id)])
                 var tag = isLast
@@ -1642,6 +1646,11 @@ function setWalkInTab(tab) {
             var list = Array.isArray(services) ? services : []
 
             if (!q) {
+                if (selectedServices && selectedServices.length) {
+                    renderServiceResults(list)
+                    return
+                }
+
                 var popularList = Array.isArray(popularServices) ? popularServices : []
                 if (popularServicesLoaded && popularList.length) {
                     renderServiceResults(popularList.slice(0, 10))
@@ -1666,7 +1675,7 @@ function setWalkInTab(tab) {
                 var name = normalizeText(s && s.service_name ? s.service_name : '')
                 return wordPrefixMatch(name, q)
             })
-            renderServiceResults(filtered.slice(0, 10))
+            renderServiceResults(filtered)
         }
 
         function doctorDisplayName(doctor) {
