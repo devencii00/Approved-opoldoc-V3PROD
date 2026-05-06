@@ -82,8 +82,8 @@
             <button id="receptionTimeSlotTrigger" type="button" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 text-left focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none disabled:opacity-60" disabled>
                 Select a date first
             </button>
-            <div id="receptionTimeSlotOverlay" class="hidden absolute left-0 right-0 top-full mt-1 z-50 rounded-xl border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.12)]">
-                <div id="reception_time_slots" class="max-h-44 overflow-y-auto overscroll-contain flex flex-col gap-2 p-2"></div>
+            <div id="receptionTimeSlotOverlay" class="hidden absolute left-0 right-0 bottom-full mb-1 z-50 rounded-xl border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.12)]">
+                <div id="reception_time_slots" class="h-44 overflow-y-auto overscroll-contain flex flex-col gap-2 p-2"></div>
             </div>
         </div>
         <input id="reception_appointment_type" type="hidden" value="scheduled">
@@ -105,11 +105,14 @@
     </div>
 
     <div id="receptionAppointmentPanelManage" class="hidden p-5">
-        <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center justify-between mb-3 gap-3">
             <div>
                 <h3 class="text-sm font-semibold text-slate-900">Manage appointment</h3>
                 <p class="text-xs text-slate-500">Search, update status, or mark check-in for an existing appointment.</p>
             </div>
+           <button id="receptionManageTodayOnlyBtn" type="button" class="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white text-[0.75rem] font-semibold text-slate-700">
+    Show today only
+</button>
         </div>
 
         <div id="receptionManageAppointmentError" class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[0.75rem] text-red-700"></div>
@@ -176,7 +179,7 @@
     </div>
 </div>
 
-<div id="receptionConfirmOverlay" class="hidden fixed inset-0 z-50 bg-slate-900/40 items-center justify-center p-4">
+<div id="receptionBookConfirmOverlay" class="hidden fixed inset-0 z-[70] bg-slate-900/40 items-center justify-center p-4">
     <div class="w-full max-w-sm rounded-2xl bg-white border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.24)] p-4">
         <div class="flex items-start gap-3">
             <div class="w-9 h-9 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-700">
@@ -184,16 +187,89 @@
             </div>
             <div class="flex-1">
                 <div class="text-sm font-semibold text-slate-900">Confirm</div>
-                <div id="receptionConfirmMessage" class="text-[0.78rem] text-slate-600 mt-0.5">Are you sure?</div>
+                <div id="receptionBookConfirmMessage" class="text-[0.78rem] text-slate-600 mt-0.5">Are you sure?</div>
             </div>
         </div>
         <div class="mt-4 flex items-center justify-end gap-2">
-            <button type="button" id="receptionConfirmCancel" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
-            <button type="button" id="receptionConfirmOk" class="px-3 py-2 rounded-xl bg-slate-900 text-white text-[0.78rem] font-semibold hover:bg-slate-800">Confirm</button>
+            <button type="button" id="receptionBookConfirmCancel" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+            <button type="button" id="receptionBookConfirmOk" class="px-3 py-2 rounded-xl bg-slate-900 text-white text-[0.78rem] font-semibold hover:bg-slate-800">Confirm</button>
         </div>
     </div>
 </div>
+<div id="receptionBookReviewOverlay" class="hidden fixed inset-0 z-[75] bg-slate-900/50 backdrop-blur-sm items-center justify-center p-4 transition-all duration-200">
+    <div class="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-100 overflow-hidden">
+        <!-- Header section with icon and title - refined spacing -->
+        <div class="px-5 pt-5 pb-3 border-b border-slate-100 bg-gradient-to-r from-white to-slate-50/50">
+            <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-xl bg-cyan-50 border border-cyan-200 flex items-center justify-center text-cyan-600 shadow-sm flex-shrink-0">
+                    <x-lucide-calendar-check class="w-5 h-5" />
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-base font-semibold text-slate-800 tracking-tight">Review Appointment Details</div>
+                    <p class="text-xs text-slate-500 mt-0.5">Please verify all information before confirming</p>
+                </div>
+            </div>
+        </div>
 
+        <!-- Content area - improved typography and visual hierarchy -->
+        <div class="px-5 py-4 bg-white">
+            <div id="receptionBookReviewContent" class="text-sm text-slate-700 leading-relaxed space-y-3">
+                <!-- Dynamic content will be injected here with better structure -->
+                <div class="bg-slate-50/80 rounded-xl border border-slate-100 p-4 space-y-3">
+                    <div class="flex items-start gap-2.5">
+                        <x-lucide-user class="w-4 h-4 mt-0.5 text-slate-400 flex-shrink-0" />
+                        <div class="flex flex-wrap items-baseline gap-1">
+                            <span class="font-medium text-slate-800">Patient:</span>
+                            <span class="text-slate-600">—</span>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-2.5">
+                        <x-lucide-calendar-days class="w-4 h-4 mt-0.5 text-slate-400 flex-shrink-0" />
+                        <div class="flex flex-wrap items-baseline gap-1">
+                            <span class="font-medium text-slate-800">Date:</span>
+                            <span class="text-slate-600">—</span>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-2.5">
+                        <x-lucide-clock class="w-4 h-4 mt-0.5 text-slate-400 flex-shrink-0" />
+                        <div class="flex flex-wrap items-baseline gap-1">
+                            <span class="font-medium text-slate-800">Time:</span>
+                            <span class="text-slate-600">—</span>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-2.5">
+                        <x-lucide-stethoscope class="w-4 h-4 mt-0.5 text-slate-400 flex-shrink-0" />
+                        <div class="flex flex-wrap items-baseline gap-1">
+                            <span class="font-medium text-slate-800">Doctor / Department:</span>
+                            <span class="text-slate-600">—</span>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-2.5">
+                        <x-lucide-file-text class="w-4 h-4 mt-0.5 text-slate-400 flex-shrink-0" />
+                        <div class="flex flex-wrap items-baseline gap-1">
+                            <span class="font-medium text-slate-800">Reason / Notes:</span>
+                            <span class="text-slate-600">—</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-start gap-2 text-xs text-amber-700 bg-amber-50/60 rounded-lg px-3 py-2">
+                    <x-lucide-alert-circle class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                    <span>Please ensure all details are correct before confirming the appointment.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer buttons - improved hierarchy -->
+        <div class="px-5 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-end gap-2.5">
+            <button type="button" id="receptionBookReviewCancel" class="px-4 py-2 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-offset-1">
+                Cancel
+            </button>
+            <button type="button" id="receptionBookReviewOk" class="px-5 py-2 rounded-lg bg-cyan-600 text-white text-sm font-semibold hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 shadow-sm transition-all duration-150">
+                Confirm Appointment
+            </button>
+        </div>
+    </div>
+</div>
 <template id="receptionBookAppointmentIconX">
     <x-lucide-x class="w-[18px] h-[18px]" />
 </template>
@@ -601,6 +677,18 @@ function setAppointmentTab(tab) {
             })
         }
 
+        function formatLocalDateIso(dateObj) {
+            var d = dateObj instanceof Date ? dateObj : new Date()
+            var y = d.getFullYear()
+            var m = String(d.getMonth() + 1).padStart(2, '0')
+            var day = String(d.getDate()).padStart(2, '0')
+            return String(y) + '-' + m + '-' + day
+        }
+
+        function localDateIso() {
+            return formatLocalDateIso(new Date())
+        }
+
         function clearAvailability() {
             doctorSchedules = []
             doctorAvailableDaySet = {}
@@ -820,7 +908,7 @@ function setAppointmentTab(tab) {
             var list = doctor && doctor.doctor_schedules && Array.isArray(doctor.doctor_schedules) ? doctor.doctor_schedules : []
             var isToday = false
             if (dateStr) {
-                var today = new Date().toISOString().slice(0, 10)
+                var today = localDateIso()
                 isToday = String(dateStr) === today
             }
             return list.filter(function (s) {
@@ -858,7 +946,7 @@ function setAppointmentTab(tab) {
                     if (previousDoctorId && parseInt(doctor.user_id, 10) === previousDoctorId) {
                         parts.push('Last provider')
                     }
-                    var dateStr = dateInput && dateInput.value ? String(dateInput.value).slice(0, 10) : new Date().toISOString().slice(0, 10)
+                    var dateStr = dateInput && dateInput.value ? String(dateInput.value).slice(0, 10) : localDateIso()
                     var dayKey = dayKeyFromDate(dateStr)
                     var checkTime = selectedSlotStart ? String(selectedSlotStart).slice(0, 5) : ''
                     var hasSchedule = !!dayKey && hasScheduleAtTime(doctor, dayKey, dateStr, checkTime)
@@ -929,7 +1017,7 @@ function setAppointmentTab(tab) {
                 return
             }
 
-            var dateStr = (dateSelect && dateSelect.value) ? String(dateSelect.value).slice(0, 10) : (dateInput && dateInput.value ? String(dateInput.value).slice(0, 10) : new Date().toISOString().slice(0, 10))
+            var dateStr = (dateSelect && dateSelect.value) ? String(dateSelect.value).slice(0, 10) : (dateInput && dateInput.value ? String(dateInput.value).slice(0, 10) : localDateIso())
             var dayKey = dayKeyFromDate(dateStr)
             var checkTime = selectedSlotStart ? String(selectedSlotStart).slice(0, 5) : ''
 
@@ -1239,7 +1327,7 @@ function setAppointmentTab(tab) {
                 return
             }
 
-            var todayIso = new Date().toISOString().slice(0, 10)
+            var todayIso = localDateIso()
             var isToday = String(dateInput.value) === todayIso
             var daySchedules = doctorSchedules.filter(function (s) {
                 if (!s) return false
@@ -1852,6 +1940,15 @@ function setAppointmentTab(tab) {
                     body.reason_for_visit = reason
                 }
 
+                var reviewDetails = {
+                    'Patient': selectedPatient ? patientDisplayName(selectedPatient) : ('#' + String(patientId)),
+                    'Doctor': selectedDoctor ? doctorLabel(selectedDoctor) : ('#' + String(doctorId)),
+                    'Services': (selectedServices || []).map(function (s) { return s && s.service_name ? s.service_name : '' }).filter(Boolean).join(', ') || 'N/A',
+                    'Date': date || 'N/A',
+                    'Time': time ? formatTime12h(time) : 'N/A',
+                    'Reason': reason || 'N/A'
+                }
+
                 function submitAppointment() {
                     apiFetch("{{ url('/api/appointments') }}", {
                         method: 'POST',
@@ -1860,13 +1957,7 @@ function setAppointmentTab(tab) {
                         },
                         body: JSON.stringify(body)
                     })
-                        .then(function (response) {
-                            return response.json().then(function (data) {
-                                return { ok: response.ok, status: response.status, data: data }
-                            }).catch(function () {
-                                return { ok: response.ok, status: response.status, data: null }
-                            })
-                        })
+                        .then(function (response) { return readResponse(response) })
                         .then(function (result) {
                             if (!result.ok) {
                                 var message = 'Failed to book appointment.'
@@ -1874,6 +1965,12 @@ function setAppointmentTab(tab) {
                                     message = result.data.message
                                 }
                                 showBookAppointmentError(message)
+                                return
+                            }
+
+                            var createdId = result.data && result.data.appointment_id ? parseInt(result.data.appointment_id, 10) : 0
+                            if (!createdId || isNaN(createdId)) {
+                                showBookAppointmentError('Appointment was not saved. Please refresh and try again.')
                                 return
                             }
 
@@ -1892,6 +1989,7 @@ function setAppointmentTab(tab) {
                             if (reasonInput) reasonInput.value = ''
                             applyAppointmentTypeUI()
                             syncTypeToggleUI()
+                            loadManageAppointments()
                         })
                         .catch(function () {
                             showBookAppointmentError('Network error while booking appointment.')
@@ -1901,25 +1999,32 @@ function setAppointmentTab(tab) {
                         })
                 }
 
-                apiFetch("{{ url('/api/appointments/active-exists') }}?patient_id=" + encodeURIComponent(String(patientId)), { method: 'GET' })
-                    .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d } }).catch(function () { return { ok: r.ok, data: null } }) })
-                    .then(function (res) {
-                        var exists = !!(res && res.ok && res.data && res.data.exists)
-                        if (!exists) {
-                            submitAppointment()
+                openReview(reviewDetails)
+                    .then(function (reviewOk) {
+                        if (!reviewOk) {
+                            setBookSubmitting(false)
                             return
                         }
-                        confirmAction('This patient has already an active appointment, Are you sure you want to set another one?', { okText: 'Yes', delayMs: 3000 })
-                            .then(function (confirmed) {
-                                if (!confirmed) {
-                                    setBookSubmitting(false)
+                        return apiFetch("{{ url('/api/appointments/active-exists') }}?patient_id=" + encodeURIComponent(String(patientId)), { method: 'GET' })
+                            .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d } }).catch(function () { return { ok: r.ok, data: null } }) })
+                            .then(function (res) {
+                                var exists = !!(res && res.ok && res.data && res.data.exists)
+                                if (!exists) {
+                                    submitAppointment()
                                     return
                                 }
+                                confirmAction('This patient has an active appointment already, would you still like to book this appointment?', { okText: 'Yes', delayMs: 3000 })
+                                    .then(function (confirmed) {
+                                        if (!confirmed) {
+                                            setBookSubmitting(false)
+                                            return
+                                        }
+                                        submitAppointment()
+                                    })
+                            })
+                            .catch(function () {
                                 submitAppointment()
                             })
-                    })
-                    .catch(function () {
-                        submitAppointment()
                     })
             })
         }
@@ -1936,16 +2041,23 @@ function setAppointmentTab(tab) {
         var manageTableBody = document.getElementById('receptionManageAppointmentTableBody')
         var manageMeta = document.getElementById('receptionManageAppointmentMeta')
         var manageRefreshBtn = document.getElementById('receptionManageAppointmentRefresh')
+        var manageTodayOnlyBtn = document.getElementById('receptionManageTodayOnlyBtn')
+        var manageShowTodayOnly = false
         var manageSearchTimer = null
         var manageServices = []
         var manageServicesLoaded = false
         var manageServicesLoading = false
 
-        var confirmOverlay = document.getElementById('receptionConfirmOverlay')
-        var confirmMessage = document.getElementById('receptionConfirmMessage')
-        var confirmOk = document.getElementById('receptionConfirmOk')
-        var confirmCancel = document.getElementById('receptionConfirmCancel')
+        var confirmOverlay = document.getElementById('receptionBookConfirmOverlay')
+        var confirmMessage = document.getElementById('receptionBookConfirmMessage')
+        var confirmOk = document.getElementById('receptionBookConfirmOk')
+        var confirmCancel = document.getElementById('receptionBookConfirmCancel')
+        var reviewOverlay = document.getElementById('receptionBookReviewOverlay')
+        var reviewContent = document.getElementById('receptionBookReviewContent')
+        var reviewOk = document.getElementById('receptionBookReviewOk')
+        var reviewCancel = document.getElementById('receptionBookReviewCancel')
         var confirmResolver = null
+        var reviewResolver = null
         var confirmDelayTimer = null
         var confirmOkDefaultHtml = confirmOk ? confirmOk.innerHTML : ''
 
@@ -1956,7 +2068,20 @@ function setAppointmentTab(tab) {
             if (manageSortSelect) manageSortSelect.disabled = disabled
             if (manageStatusSelect) manageStatusSelect.disabled = disabled
             if (manageRefreshBtn) manageRefreshBtn.disabled = disabled
+            if (manageTodayOnlyBtn) manageTodayOnlyBtn.disabled = disabled
         }
+function updateManageTodayButton() {
+    if (!manageTodayOnlyBtn) return
+    if (manageShowTodayOnly) {
+        manageTodayOnlyBtn.textContent = 'Showing today only'
+        manageTodayOnlyBtn.classList.remove('bg-white', 'text-slate-700', 'border-slate-200', 'hover:bg-slate-50')
+        manageTodayOnlyBtn.classList.add('bg-cyan-600', 'text-white', 'border-cyan-600', 'hover:bg-cyan-700', 'hover:border-cyan-700')
+    } else {
+        manageTodayOnlyBtn.textContent = 'Show today only'
+        manageTodayOnlyBtn.classList.add('bg-white', 'text-slate-700', 'border-slate-200', 'hover:bg-slate-50')
+        manageTodayOnlyBtn.classList.remove('bg-cyan-600', 'text-white', 'border-cyan-600', 'hover:bg-cyan-700', 'hover:border-cyan-700')
+    }
+}
 
         function confirmAction(message, options) {
             return new Promise(function (resolve) {
@@ -2016,6 +2141,49 @@ function setAppointmentTab(tab) {
         if (confirmOverlay) {
             confirmOverlay.addEventListener('click', function (e) {
                 if (e.target === confirmOverlay) closeConfirm(false)
+            })
+        }
+
+        function closeReview(result) {
+            if (reviewOverlay) {
+                reviewOverlay.classList.add('hidden')
+                reviewOverlay.classList.remove('flex')
+            }
+            var resolver = reviewResolver
+            reviewResolver = null
+            if (typeof resolver === 'function') resolver(!!result)
+        }
+
+        function openReview(details) {
+            return new Promise(function (resolve) {
+                if (!reviewOverlay || !reviewContent || !reviewOk || !reviewCancel) {
+                    resolve(window.confirm('Please review appointment details before submitting.'))
+                    return
+                }
+                function esc(input) {
+                    return String(input == null ? '' : input)
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#039;')
+                }
+                var source = details && typeof details === 'object' ? details : {}
+                var rows = Object.keys(source).map(function (key) {
+                    return '<li><strong class="font-semibold text-slate-800">' + esc(key) + ':</strong> ' + esc(source[key]) + '</li>'
+                })
+                reviewContent.innerHTML = '<ul class="space-y-1">' + rows.join('') + '</ul>'
+                reviewResolver = resolve
+                reviewOverlay.classList.remove('hidden')
+                reviewOverlay.classList.add('flex')
+            })
+        }
+
+        if (reviewOk) reviewOk.addEventListener('click', function () { closeReview(true) })
+        if (reviewCancel) reviewCancel.addEventListener('click', function () { closeReview(false) })
+        if (reviewOverlay) {
+            reviewOverlay.addEventListener('click', function (e) {
+                if (e.target === reviewOverlay) closeReview(false)
             })
         }
 
@@ -2248,10 +2416,20 @@ function setAppointmentTab(tab) {
             url += '&order=' + encodeURIComponent(order === 'oldest' ? 'oldest' : 'latest')
 
             var now = new Date()
-            var start = new Date(now.getFullYear(), now.getMonth(), 1)
-            var end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-            url += '&start_date=' + encodeURIComponent(start.toISOString().slice(0, 10))
-            url += '&end_date=' + encodeURIComponent(end.toISOString().slice(0, 10))
+            var startIso = ''
+            var endIso = ''
+            if (manageShowTodayOnly) {
+                var todayIso = formatLocalDateIso(now)
+                startIso = todayIso
+                endIso = todayIso
+            } else {
+                var start = new Date(now.getFullYear(), now.getMonth(), 1)
+                var end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+                startIso = formatLocalDateIso(start)
+                endIso = formatLocalDateIso(end)
+            }
+            url += '&start_date=' + encodeURIComponent(startIso)
+            url += '&end_date=' + encodeURIComponent(endIso)
 
             var search = manageSearchInput ? normalizeText(manageSearchInput.value) : ''
             if (search) url += '&search=' + encodeURIComponent(search)
@@ -2303,8 +2481,12 @@ function setAppointmentTab(tab) {
                     renderManageAppointments(rows)
 
                     if (manageMeta) {
-                        var monthLabel = start.toISOString().slice(0, 7)
-                        manageMeta.textContent = 'Showing ' + String(rows.length) + ' appointments for ' + monthLabel + '.'
+                        if (manageShowTodayOnly) {
+                            manageMeta.textContent = 'Showing ' + String(rows.length) + ' appointments for ' + startIso + '.'
+                        } else {
+                            var monthLabel = startIso.slice(0, 7)
+                            manageMeta.textContent = 'Showing ' + String(rows.length) + ' appointments for ' + monthLabel + '.'
+                        }
                     }
                 })
                 .catch(function () {
@@ -2368,6 +2550,14 @@ function setAppointmentTab(tab) {
 
         if (manageRefreshBtn) {
             manageRefreshBtn.addEventListener('click', function () {
+                loadManageAppointments()
+            })
+        }
+        if (manageTodayOnlyBtn) {
+            updateManageTodayButton()
+            manageTodayOnlyBtn.addEventListener('click', function () {
+                manageShowTodayOnly = !manageShowTodayOnly
+                updateManageTodayButton()
                 loadManageAppointments()
             })
         }

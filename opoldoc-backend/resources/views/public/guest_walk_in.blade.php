@@ -116,6 +116,42 @@
         </div>
     </div>
 
+    <div id="publicGuestWalkInDetailsModal" class="hidden fixed inset-0 z-50 bg-slate-900/40 items-center justify-center p-4">
+        <div class="w-full max-w-sm rounded-2xl bg-white border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.24)] p-4">
+            <div class="flex items-start gap-3">
+                <div class="w-9 h-9 rounded-xl bg-cyan-50 border border-cyan-100 flex items-center justify-center text-cyan-700">
+                    <x-lucide-info class="w-[18px] h-[18px]" />
+                </div>
+                <div class="flex-1">
+                    <div class="text-sm font-semibold text-slate-900">Confirm Guest Walk-In Details</div>
+                    <div id="publicGuestWalkInDetailsContent" class="text-[0.78rem] text-slate-600 mt-0.5"></div>
+                </div>
+            </div>
+            <div class="mt-4 flex items-center justify-end gap-2">
+                <button type="button" id="publicGuestWalkInDetailsCancel" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+                <button type="button" id="publicGuestWalkInDetailsConfirm" class="px-3 py-2 rounded-xl bg-slate-900 text-white text-[0.78rem] font-semibold hover:bg-slate-800">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="publicGuestWalkInQueueConfirmModal" class="hidden fixed inset-0 z-[55] bg-slate-900/40 items-center justify-center p-4">
+        <div class="w-full max-w-sm rounded-2xl bg-white border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.24)] p-4">
+            <div class="flex items-start gap-3">
+                <div class="w-9 h-9 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-700">
+                    <x-lucide-alert-triangle class="w-[18px] h-[18px]" />
+                </div>
+                <div class="flex-1">
+                    <div class="text-sm font-semibold text-slate-900">Queue Confirmation</div>
+                    <div id="publicGuestWalkInQueueConfirmMessage" class="text-[0.78rem] text-slate-600 mt-0.5"></div>
+                </div>
+            </div>
+            <div class="mt-4 flex items-center justify-end gap-2">
+                <button type="button" id="publicGuestWalkInQueueConfirmCancel" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+                <button type="button" id="publicGuestWalkInQueueConfirmOk" class="px-3 py-2 rounded-xl bg-slate-900 text-white text-[0.78rem] font-semibold hover:bg-slate-800">Continue</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             var token = @json($token);
@@ -153,6 +189,57 @@
 
             var selectedServices = []
             var selectedDoctor = null
+
+            var publicGuestWalkInDetailsModal = document.getElementById('publicGuestWalkInDetailsModal')
+            var publicGuestWalkInDetailsContent = document.getElementById('publicGuestWalkInDetailsContent')
+            var publicGuestWalkInDetailsCancelBtn = document.getElementById('publicGuestWalkInDetailsCancel')
+            var publicGuestWalkInDetailsConfirmBtn = document.getElementById('publicGuestWalkInDetailsConfirm')
+            var publicGuestWalkInQueueConfirmModal = document.getElementById('publicGuestWalkInQueueConfirmModal')
+            var publicGuestWalkInQueueConfirmMessage = document.getElementById('publicGuestWalkInQueueConfirmMessage')
+            var publicGuestWalkInQueueConfirmCancelBtn = document.getElementById('publicGuestWalkInQueueConfirmCancel')
+            var publicGuestWalkInQueueConfirmOkBtn = document.getElementById('publicGuestWalkInQueueConfirmOk')
+            var publicGuestQueueResolver = null
+
+            function showPublicGuestWalkInDetailsModal(details) {
+                if (!publicGuestWalkInDetailsModal || !publicGuestWalkInDetailsContent) return
+                var html = '<ul class="text-xs text-slate-600 space-y-1">'
+                for (var key in details) {
+                    html += '<li><strong class="font-semibold text-slate-800">' + escapeHtml(key) + ':</strong> ' + escapeHtml(details[key]) + '</li>'
+                }
+                html += '</ul>'
+                publicGuestWalkInDetailsContent.innerHTML = html
+                publicGuestWalkInDetailsModal.classList.remove('hidden')
+                publicGuestWalkInDetailsModal.classList.add('flex')
+            }
+
+            function hidePublicGuestWalkInDetailsModal() {
+                if (!publicGuestWalkInDetailsModal) return
+                publicGuestWalkInDetailsModal.classList.add('hidden')
+                publicGuestWalkInDetailsModal.classList.remove('flex')
+            }
+
+            function closePublicGuestQueueConfirm(result) {
+                if (publicGuestWalkInQueueConfirmModal) {
+                    publicGuestWalkInQueueConfirmModal.classList.add('hidden')
+                    publicGuestWalkInQueueConfirmModal.classList.remove('flex')
+                }
+                var resolver = publicGuestQueueResolver
+                publicGuestQueueResolver = null
+                if (typeof resolver === 'function') resolver(!!result)
+            }
+
+            function askPublicGuestQueueConfirm(message) {
+                return new Promise(function (resolve) {
+                    if (!publicGuestWalkInQueueConfirmModal || !publicGuestWalkInQueueConfirmMessage) {
+                        resolve(window.confirm(message || 'Continue?'))
+                        return
+                    }
+                    publicGuestQueueResolver = resolve
+                    publicGuestWalkInQueueConfirmMessage.textContent = message || ''
+                    publicGuestWalkInQueueConfirmModal.classList.remove('hidden')
+                    publicGuestWalkInQueueConfirmModal.classList.add('flex')
+                })
+            }
 
             function setSubmitting(isSubmitting) {
                 if (submitBtn) submitBtn.disabled = !!isSubmitting
@@ -224,6 +311,14 @@
                     .replace(/'/g, '&#039;')
             }
 
+            function localDateIso() {
+                var now = new Date()
+                var y = now.getFullYear()
+                var m = String(now.getMonth() + 1).padStart(2, '0')
+                var d = String(now.getDate()).padStart(2, '0')
+                return y + '-' + m + '-' + d
+            }
+
             function dayKeyFromDate(dateStr) {
                 if (!dateStr) return ''
                 var d = new Date(dateStr + 'T00:00:00')
@@ -243,7 +338,7 @@
                 var list = doctor && doctor.doctor_schedules && Array.isArray(doctor.doctor_schedules) ? doctor.doctor_schedules : []
                 var isToday = false
                 if (dateStr) {
-                    var today = new Date().toISOString().slice(0, 10)
+                    var today = localDateIso()
                     isToday = String(dateStr) === today
                 }
                 return list.filter(function (s) {
@@ -422,7 +517,7 @@
                     return
                 }
 
-                var dateStr = new Date().toISOString().slice(0, 10)
+                var dateStr = localDateIso()
                 var dayKey = dayKeyFromDate(dateStr)
                 var checkTime = new Date().toTimeString().slice(0, 5)
 
@@ -608,7 +703,51 @@
                         body.priority_level = priorityLevel
                     }
 
-                    apiFetch("{{ url('/api/public/guest-walk-in') }}/" + encodeURIComponent(token), {
+                    var details = {
+                        'First Name': firstName,
+                        'Middle Name': middleName,
+                        'Last Name': lastName,
+                        'Contact Number': contact || 'N/A',
+                        'Doctor': doctorDisplayName(selectedDoctor),
+                        'Services': selectedServices.map(function(s) { return s.service_name }).join(', '),
+                        'Reason': reason || 'N/A',
+                        'Priority Level': priorityInput && priorityInput.value ? priorityInput.value : 'N/A'
+                    }
+
+                    showPublicGuestWalkInDetailsModal(details)
+
+                    publicGuestWalkInDetailsConfirmBtn.onclick = function() {
+                        hidePublicGuestWalkInDetailsModal()
+                        
+                        var query = "?firstname=" + encodeURIComponent(firstName) + "&middlename=" + encodeURIComponent(middleName) + "&lastname=" + encodeURIComponent(lastName)
+                        apiFetch("{{ url('/api/public/guest-walk-in') }}/" + encodeURIComponent(token) + "/check" + query, { method: 'GET' })
+                            .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d } }).catch(function () { return { ok: r.ok, data: null } }) })
+                            .then(function (res) {
+                                if (res && res.ok && res.data && res.data.similar_in_queue) {
+                                    askPublicGuestQueueConfirm('A patient with similar details is already in current queue, would you still like to register this queue entry?')
+                                        .then(function (confirmed) {
+                                            if (!confirmed) {
+                                                setSubmitting(false)
+                                                return
+                                            }
+                                            submitGuestWalkIn()
+                                        })
+                                } else {
+                                    submitGuestWalkIn()
+                                }
+                            })
+                            .catch(function () {
+                                submitGuestWalkIn()
+                            })
+                    }
+
+                    publicGuestWalkInDetailsCancelBtn.onclick = function() {
+                        hidePublicGuestWalkInDetailsModal()
+                        setSubmitting(false)
+                    }
+
+                    function submitGuestWalkIn() {
+                        apiFetch("{{ url('/api/public/guest-walk-in') }}/" + encodeURIComponent(token), {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(body)
@@ -654,6 +793,22 @@
                             setSubmitting(false)
                             showError('Network error while creating guest walk-in.')
                         })
+                })
+            }
+
+            if (publicGuestWalkInQueueConfirmCancelBtn) {
+                publicGuestWalkInQueueConfirmCancelBtn.addEventListener('click', function () {
+                    closePublicGuestQueueConfirm(false)
+                })
+            }
+            if (publicGuestWalkInQueueConfirmOkBtn) {
+                publicGuestWalkInQueueConfirmOkBtn.addEventListener('click', function () {
+                    closePublicGuestQueueConfirm(true)
+                })
+            }
+            if (publicGuestWalkInQueueConfirmModal) {
+                publicGuestWalkInQueueConfirmModal.addEventListener('click', function (e) {
+                    if (e.target === publicGuestWalkInQueueConfirmModal) closePublicGuestQueueConfirm(false)
                 })
             }
         })

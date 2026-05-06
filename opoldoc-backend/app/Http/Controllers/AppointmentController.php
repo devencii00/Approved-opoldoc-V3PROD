@@ -152,13 +152,10 @@ class AppointmentController extends Controller
         ]);
 
         $patientId = (int) $request->query('patient_id');
-        $todayStart = now()->startOfDay();
 
         $query = Appointment::query()
             ->where('patient_id', $patientId)
-            ->whereIn('status', ['pending', 'confirmed'])
-            ->whereNotNull('appointment_datetime')
-            ->where('appointment_datetime', '>=', $todayStart);
+            ->whereIn('status', ['pending', 'confirmed']);
 
         return response()->json([
             'exists' => $query->exists(),
@@ -185,6 +182,7 @@ class AppointmentController extends Controller
             'service_id' => ['nullable', 'exists:services,service_id'],
             'service_ids' => ['nullable', 'array'],
             'service_ids.*' => ['integer', 'exists:services,service_id'],
+            'force_duplicate_queue' => ['nullable', 'boolean'],
         ]);
 
         $doctor = User::query()->find((int) $data['doctor_id']);
@@ -217,6 +215,7 @@ class AppointmentController extends Controller
 
         if ($isReceptionist && $data['appointment_type'] === 'walk_in') {
             $patientId = (int) ($data['patient_id'] ?? 0);
+            $forceDuplicateQueue = (bool) ($data['force_duplicate_queue'] ?? false);
             if ($patientId > 0) {
                 $date = now()->toDateString();
                 $alreadyQueued = Queue::query()
@@ -227,7 +226,7 @@ class AppointmentController extends Controller
                     })
                     ->exists();
 
-                if ($alreadyQueued) {
+                if ($alreadyQueued && ! $forceDuplicateQueue) {
                     return response()->json([
                         'message' => 'This patient is already in the queue.',
                         'code' => 'PATIENT_ALREADY_IN_QUEUE',
@@ -258,7 +257,7 @@ class AppointmentController extends Controller
             ], 422);
         }
 
-        unset($data['service_id'], $data['service_ids']);
+        unset($data['service_id'], $data['service_ids'], $data['force_duplicate_queue']);
 
         $services = collect();
         if (count($serviceIds)) {

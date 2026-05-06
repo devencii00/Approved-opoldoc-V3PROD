@@ -10,10 +10,7 @@ class QueueDisplayController extends Controller
 {
     public function page(Request $request)
     {
-        $date = $request->query('date');
-        if (! $date) {
-            $date = now()->toDateString();
-        }
+        $date = now()->toDateString();
 
         $doctorId = $request->query('doctor_id');
 
@@ -25,10 +22,7 @@ class QueueDisplayController extends Controller
 
     public function data(Request $request)
     {
-        $date = $request->query('date');
-        if (! $date) {
-            $date = now()->toDateString();
-        }
+        $date = now()->toDateString();
 
         $doctorId = $request->query('doctor_id');
 

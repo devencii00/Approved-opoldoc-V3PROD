@@ -243,6 +243,24 @@
     </div>
 </div>
 
+<div id="receptionWalkInReviewOverlay" class="hidden fixed inset-0 z-[55] bg-slate-900/40 items-center justify-center p-4">
+    <div class="w-full max-w-lg rounded-2xl bg-white border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.24)] p-4">
+        <div class="flex items-start gap-3">
+            <div class="w-9 h-9 rounded-xl bg-cyan-50 border border-cyan-100 flex items-center justify-center text-cyan-700">
+                <x-lucide-info class="w-[18px] h-[18px]" />
+            </div>
+            <div class="flex-1 min-w-0">
+                <div id="receptionWalkInReviewTitle" class="text-sm font-semibold text-slate-900">Review Details</div>
+                <div id="receptionWalkInReviewContent" class="mt-1 text-[0.78rem] text-slate-600"></div>
+            </div>
+        </div>
+        <div class="mt-4 flex items-center justify-end gap-2">
+            <button type="button" id="receptionWalkInReviewCancel" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+            <button type="button" id="receptionWalkInReviewOk" class="px-3 py-2 rounded-xl bg-slate-900 text-white text-[0.78rem] font-semibold hover:bg-slate-800">Confirm</button>
+        </div>
+    </div>
+</div>
+
 <template id="receptionWalkInsIconX">
     <x-lucide-x class="w-[18px] h-[18px]" />
 </template>
@@ -315,7 +333,13 @@ function setWalkInTab(tab) {
         var messageEl = document.getElementById('receptionWalkInConfirmMessage')
         var okBtn = document.getElementById('receptionWalkInConfirmOk')
         var cancelBtn = document.getElementById('receptionWalkInConfirmCancel')
+        var reviewOverlay = document.getElementById('receptionWalkInReviewOverlay')
+        var reviewTitleEl = document.getElementById('receptionWalkInReviewTitle')
+        var reviewContentEl = document.getElementById('receptionWalkInReviewContent')
+        var reviewOkBtn = document.getElementById('receptionWalkInReviewOk')
+        var reviewCancelBtn = document.getElementById('receptionWalkInReviewCancel')
         var resolver = null
+        var reviewResolver = null
         var timer = null
         var okDefaultHtml = okBtn ? okBtn.innerHTML : ''
 
@@ -367,11 +391,52 @@ function setWalkInTab(tab) {
             })
         }
 
+        function closeReview(result) {
+            if (reviewOverlay) {
+                reviewOverlay.classList.add('hidden')
+                reviewOverlay.classList.remove('flex')
+            }
+            var r = reviewResolver
+            reviewResolver = null
+            if (typeof r === 'function') r(!!result)
+        }
+
+        function openReview(title, details) {
+            return new Promise(function (resolve) {
+                if (!reviewOverlay || !reviewContentEl || !reviewOkBtn || !reviewCancelBtn) {
+                    resolve(window.confirm('Please review details before continuing.'))
+                    return
+                }
+                function esc(input) {
+                    return String(input == null ? '' : input)
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#039;')
+                }
+                reviewResolver = resolve
+                if (reviewTitleEl) reviewTitleEl.textContent = title || 'Review Details'
+                var rows = []
+                var source = details && typeof details === 'object' ? details : {}
+                Object.keys(source).forEach(function (key) {
+                    rows.push('<li><strong class="font-semibold text-slate-800">' + esc(key) + ':</strong> ' + esc(source[key]) + '</li>')
+                })
+                reviewContentEl.innerHTML = '<ul class="space-y-1">' + rows.join('') + '</ul>'
+                reviewOverlay.classList.remove('hidden')
+                reviewOverlay.classList.add('flex')
+            })
+        }
+
         if (okBtn) okBtn.addEventListener('click', function () { close(true) })
         if (cancelBtn) cancelBtn.addEventListener('click', function () { close(false) })
         if (overlay) overlay.addEventListener('click', function (e) { if (e.target === overlay) close(false) })
+        if (reviewOkBtn) reviewOkBtn.addEventListener('click', function () { closeReview(true) })
+        if (reviewCancelBtn) reviewCancelBtn.addEventListener('click', function () { closeReview(false) })
+        if (reviewOverlay) reviewOverlay.addEventListener('click', function (e) { if (e.target === reviewOverlay) closeReview(false) })
 
         window.receptionWalkInConfirm = open
+        window.receptionWalkInReview = openReview
     })
 </script>
 
@@ -496,6 +561,14 @@ function setWalkInTab(tab) {
             return keys[d.getDay()] || ''
         }
 
+        function localDateIso() {
+            var now = new Date()
+            var y = now.getFullYear()
+            var m = String(now.getMonth() + 1).padStart(2, '0')
+            var d = String(now.getDate()).padStart(2, '0')
+            return y + '-' + m + '-' + d
+        }
+
         function minutesFromHHMM(timeStr) {
             var t = String(timeStr || '').slice(0, 5)
             if (!/^\d{2}:\d{2}$/.test(t)) return NaN
@@ -507,7 +580,7 @@ function setWalkInTab(tab) {
             var list = doctor && doctor.doctor_schedules && Array.isArray(doctor.doctor_schedules) ? doctor.doctor_schedules : []
             var isToday = false
             if (dateStr) {
-                var today = new Date().toISOString().slice(0, 10)
+                var today = localDateIso()
                 isToday = String(dateStr) === today
             }
             return list.filter(function (s) {
@@ -781,7 +854,7 @@ function setWalkInTab(tab) {
                 return
             }
 
-            var dateStr = new Date().toISOString().slice(0, 10)
+            var dateStr = localDateIso()
             var dayKey = dayKeyFromDate(dateStr)
             var checkTime = new Date().toTimeString().slice(0, 5)
 
@@ -986,6 +1059,17 @@ function setWalkInTab(tab) {
                 if (reason) body.reason_for_visit = reason
                 if (priorityLevel !== null && !isNaN(priorityLevel)) body.priority_level = priorityLevel
 
+                var reviewDetails = {
+                    'First Name': firstName,
+                    'Middle Name': middleName,
+                    'Last Name': lastName,
+                    'Contact Number': contact || 'N/A',
+                    'Doctor': guestSelectedDoctor ? doctorDisplayName(guestSelectedDoctor) : ('#' + String(doctorId)),
+                    'Services': (guestSelectedServices || []).map(function (s) { return s && s.service_name ? s.service_name : '' }).filter(Boolean).join(', '),
+                    'Reason': reason || 'N/A',
+                    'Priority Level': (priorityLevel !== null && !isNaN(priorityLevel)) ? String(priorityLevel) : 'N/A'
+                }
+
                 function submitGuestWalkIn() {
                     apiFetch("{{ url('/api/walk-ins/guest') }}", {
                         method: 'POST',
@@ -1034,24 +1118,32 @@ function setWalkInTab(tab) {
                             showGuestError('Network error while creating guest walk-in.')
                         })
                 }
+                var askReview = window.receptionWalkInReview
+                var reviewPromise = (typeof askReview === 'function')
+                    ? askReview('Review Guest Walk-in Details', reviewDetails)
+                    : Promise.resolve(window.confirm('Please review details before submitting this guest walk-in.'))
 
-                loadGuestHistoryForNames()
-                    .then(function (dup) {
-                        if (dup && dup.similar_in_queue) {
-                            var ask = window.receptionWalkInConfirm
-                            if (typeof ask === 'function') {
-                                return ask('There is a patient with a similar personal info already in the queue, are you sure you want to submit this guest?', 3000)
-                                    .then(function (confirmed) {
-                                        if (!confirmed) return
-                                        submitGuestWalkIn()
-                                    })
-                            }
-                            if (!window.confirm('There is a patient with a similar personal info already in the queue, are you sure you want to submit this guest?')) return
-                        }
-                        submitGuestWalkIn()
-                    })
-                    .catch(function () {
-                        submitGuestWalkIn()
+                reviewPromise
+                    .then(function (reviewOk) {
+                        if (!reviewOk) return
+                        return loadGuestHistoryForNames()
+                            .then(function (dup) {
+                                if (dup && dup.similar_in_queue) {
+                                    var ask = window.receptionWalkInConfirm
+                                    if (typeof ask === 'function') {
+                                        return ask('A patient with similar details is already in current queue, would you still like to register this queue entry?', 3000)
+                                            .then(function (confirmed) {
+                                                if (!confirmed) return
+                                                submitGuestWalkIn()
+                                            })
+                                    }
+                                    if (!window.confirm('A patient with similar details is already in current queue, would you still like to register this queue entry?')) return
+                                }
+                                submitGuestWalkIn()
+                            })
+                            .catch(function () {
+                                submitGuestWalkIn()
+                            })
                     })
             })
         }
@@ -1238,6 +1330,7 @@ function setWalkInTab(tab) {
         var dateTrigger = accountQuery('#receptionWalkInDateTrigger')
         var dateOverlay = accountQuery('#receptionWalkInDateOverlay')
         var dateGrid = accountQuery('#receptionWalkInDateGrid')
+        var dateList = dateGrid
         var datePrevBtn = accountQuery('#receptionWalkInDatePrev')
         var dateNextBtn = accountQuery('#receptionWalkInDateNext')
         var dateMonthLabel = accountQuery('#receptionWalkInDateMonthLabel')
@@ -1300,6 +1393,14 @@ function setWalkInTab(tab) {
 
         function normalizeText(value) {
             return String(value || '').trim().toLowerCase()
+        }
+
+        function localDateIso() {
+            var now = new Date()
+            var y = now.getFullYear()
+            var m = String(now.getMonth() + 1).padStart(2, '0')
+            var d = String(now.getDate()).padStart(2, '0')
+            return y + '-' + m + '-' + d
         }
 
         function wordPrefixMatch(value, query) {
@@ -1700,8 +1801,8 @@ function setWalkInTab(tab) {
                     if (!name) name = 'Doctor #' + doctor.user_id
                     var type = getAppointmentType()
                     var dateStr = type === 'walk_in'
-                        ? new Date().toISOString().slice(0, 10)
-                        : ((dateSelect && dateSelect.value) ? String(dateSelect.value) : new Date().toISOString().slice(0, 10))
+                        ? localDateIso()
+                        : ((dateSelect && dateSelect.value) ? String(dateSelect.value) : localDateIso())
                     var dayKey = dayKeyFromDate(dateStr)
                     var checkTime = type === 'walk_in'
                         ? new Date().toTimeString().slice(0, 5)
@@ -1745,7 +1846,7 @@ function setWalkInTab(tab) {
             var list = doctor && doctor.doctor_schedules && Array.isArray(doctor.doctor_schedules) ? doctor.doctor_schedules : []
             var isToday = false
             if (dateStr) {
-                var today = new Date().toISOString().slice(0, 10)
+                var today = localDateIso()
                 isToday = String(dateStr) === today
             }
             return list.filter(function (s) {
@@ -1780,9 +1881,9 @@ function setWalkInTab(tab) {
             var type = getAppointmentType()
             var dateStr = ''
             if (type === 'walk_in') {
-                dateStr = new Date().toISOString().slice(0, 10)
+                dateStr = localDateIso()
             } else {
-                dateStr = (dateSelect && dateSelect.value) ? String(dateSelect.value) : new Date().toISOString().slice(0, 10)
+                dateStr = (dateSelect && dateSelect.value) ? String(dateSelect.value) : localDateIso()
             }
             var dayKey = dayKeyFromDate(dateStr)
             var checkTime = ''
@@ -1868,8 +1969,8 @@ function setWalkInTab(tab) {
                 var candidate = filtered[0]
                 var type = getAppointmentType()
                 var dateStr = type === 'walk_in'
-                    ? new Date().toISOString().slice(0, 10)
-                    : ((dateSelect && dateSelect.value) ? String(dateSelect.value) : new Date().toISOString().slice(0, 10))
+                    ? localDateIso()
+                    : ((dateSelect && dateSelect.value) ? String(dateSelect.value) : localDateIso())
                 var dayKey = dayKeyFromDate(dateStr)
                 var checkTime = type === 'walk_in' ? new Date().toTimeString().slice(0, 5) : (selectedSlotStart ? String(selectedSlotStart).slice(0, 5) : '')
                 var isSelectable = candidate && candidate.is_available !== false && !!dayKey && hasScheduleAtTime(candidate, dayKey, dateStr, checkTime)
@@ -2209,7 +2310,7 @@ function setWalkInTab(tab) {
                 return
             }
 
-            var todayIso = new Date().toISOString().slice(0, 10)
+            var todayIso = localDateIso()
             var isToday = String(dateInput.value) === todayIso
             var daySchedules = doctorSchedules.filter(function (s) {
                 if (!s) return false
@@ -2709,70 +2810,167 @@ function setWalkInTab(tab) {
                 if (reason) body.reason_for_visit = reason
                 if (priority !== null && !isNaN(priority)) body.priority_level = priority
 
-                apiFetch("{{ url('/api/appointments') }}", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(body)
-                })
-                    .then(function (response) {
-                        return response.json().then(function (data) {
-                            return { ok: response.ok, status: response.status, data: data }
-                        }).catch(function () {
-                            return { ok: response.ok, status: response.status, data: null }
-                        })
+                var patientName = selectedPatient ? patientDisplayName(selectedPatient) : ('#' + String(patientId))
+                var doctorName = selectedDoctor ? doctorDisplayName(selectedDoctor) : ('#' + String(doctorId))
+                var serviceText = (selectedServices || []).map(function (s) { return s && s.service_name ? s.service_name : '' }).filter(Boolean).join(', ')
+                var reviewDetails = {
+                    'Appointment Type': type === 'walk_in' ? 'Walk-in' : 'Scheduled',
+                    'Patient': patientName,
+                    'Doctor': doctorName,
+                    'Services': serviceText || 'N/A',
+                    'Date': type === 'walk_in' ? localDateIso() : date,
+                    'Time': type === 'walk_in' ? 'Now' : time,
+                    'Reason': reason || 'N/A',
+                    'Priority Level': (priority !== null && !isNaN(priority)) ? String(priority) : 'N/A'
+                }
+
+                function readJson(response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, status: response.status, data: data }
+                    }).catch(function () {
+                        return { ok: response.ok, status: response.status, data: null }
                     })
-                    .then(function (result) {
-                        if (!result.ok) {
-                            var message = 'Failed to create appointment.'
-                            if (result.data && result.data.message) message = result.data.message
-                            showError(message)
-                            return
-                        }
+                }
 
-                        var created = result.data || {}
-                        function afterQueue() {
-                            showSuccess(type === 'walk_in'
-                                ? 'Walk-in successfuly created and currently on the queue.'
-                                : 'Appointment has been created successfully. Queue entry created.')
-                            if (patientSearch) patientSearch.value = ''
-                            if (serviceSearch) serviceSearch.value = ''
-                            if (doctorSearch) doctorSearch.value = ''
-                            setPatientSelection(null)
-                            selectedServices = []
-                            syncServiceHiddenInput()
-                            renderSelectedServices()
-                            setDoctorSelection(null)
-                            if (dateInput) dateInput.value = ''
-                            if (timeInput) timeInput.value = ''
-                            if (priorityInput) priorityInput.value = ''
-                            if (reasonInput) reasonInput.value = ''
-                            if (currentTypeInput) currentTypeInput.value = 'walk_in'
-                            syncTypeToggleUI()
-                            applyAppointmentTypeUI()
-                        }
+                function resetFormState() {
+                    if (patientSearch) patientSearch.value = ''
+                    if (serviceSearch) serviceSearch.value = ''
+                    if (doctorSearch) doctorSearch.value = ''
+                    setPatientSelection(null)
+                    selectedServices = []
+                    syncServiceHiddenInput()
+                    renderSelectedServices()
+                    setDoctorSelection(null)
+                    if (dateInput) dateInput.value = ''
+                    if (timeInput) timeInput.value = ''
+                    if (priorityInput) priorityInput.value = ''
+                    if (reasonInput) reasonInput.value = ''
+                    if (currentTypeInput) currentTypeInput.value = 'walk_in'
+                    syncTypeToggleUI()
+                    applyAppointmentTypeUI()
+                }
 
-                        if (autoQueue && created && created.appointment_id) {
-                            apiFetch("{{ url('/api/queues') }}", {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({ appointment_id: created.appointment_id })
-                            })
-                                .then(function () { afterQueue() })
-                                .catch(function () { afterQueue() })
-                        } else {
+                function createAndQueue(options) {
+                    var opts = options && typeof options === 'object' ? options : {}
+                    var createUrl = type === 'walk_in' ? "{{ url('/api/walk-ins') }}" : "{{ url('/api/appointments') }}"
+                    var requestBody = Object.assign({}, body)
+                    if (type === 'walk_in' && opts.forceDuplicateQueue) {
+                        requestBody.force_duplicate_queue = true
+                    }
+
+                    return apiFetch(createUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(requestBody)
+                    })
+                        .then(readJson)
+                        .then(function (result) {
+                            if (!result.ok) {
+                                var message = 'Failed to create appointment.'
+                                if (result.data && result.data.message) message = result.data.message
+                                showError(message)
+                                return
+                            }
+
+                            var created = result.data || {}
+                            function afterQueue() {
+                                showSuccess(type === 'walk_in'
+                                    ? 'Walk-in successfuly created and currently on the queue.'
+                                    : 'Appointment has been created successfully. Queue entry created.')
+                                resetFormState()
+                            }
+
+                            if (autoQueue && created && created.appointment_id) {
+                                var queueBody = { appointment_id: created.appointment_id }
+                                if (type === 'walk_in' && opts.forceDuplicatePatient) {
+                                    queueBody.force_duplicate_patient = true
+                                }
+                                return apiFetch("{{ url('/api/queues') }}", {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(queueBody)
+                                })
+                                    .then(function () { afterQueue() })
+                                    .catch(function () { afterQueue() })
+                            }
                             afterQueue()
-                        }
-                    })
-                    .catch(function () {
-                        showError('Network error while creating appointment.')
-                    })
-                    .finally(function () {
+                        })
+                        .catch(function () {
+                            showError('Network error while creating appointment.')
+                        })
+                        .finally(function () {
+                            setSubmitting(false)
+                        })
+                }
+
+                function continueAfterReview() {
+                    if (type === 'walk_in') {
+                        return apiFetch("{{ url('/api/queues/active-exists') }}?patient_id=" + encodeURIComponent(String(patientId)), { method: 'GET' })
+                            .then(readJson)
+                            .then(function (res) {
+                                var exists = !!(res && res.ok && res.data && res.data.exists)
+                                if (!exists) return createAndQueue()
+                                var ask = window.receptionWalkInConfirm
+                                if (typeof ask === 'function') {
+                                    return ask('This patient is already in the queue, would you still like to register this queue entry?', 3000)
+                                        .then(function (confirmed) {
+                                            if (!confirmed) {
+                                                setSubmitting(false)
+                                                return
+                                            }
+                                            return createAndQueue({ forceDuplicateQueue: true, forceDuplicatePatient: true })
+                                        })
+                                }
+                                if (!window.confirm('This patient is already in the queue, would you still like to register this queue entry?')) {
+                                    setSubmitting(false)
+                                    return
+                                }
+                                return createAndQueue({ forceDuplicateQueue: true, forceDuplicatePatient: true })
+                            })
+                            .catch(function () {
+                                return createAndQueue()
+                            })
+                    }
+
+                    return apiFetch("{{ url('/api/appointments/active-exists') }}?patient_id=" + encodeURIComponent(String(patientId)), { method: 'GET' })
+                        .then(readJson)
+                        .then(function (res) {
+                            var exists = !!(res && res.ok && res.data && res.data.exists)
+                            if (!exists) return createAndQueue()
+                            var ask = window.receptionWalkInConfirm
+                            if (typeof ask === 'function') {
+                                return ask('This patient has an active appointment already, would you still like to book this appointment?', 3000)
+                                    .then(function (confirmed) {
+                                        if (!confirmed) {
+                                            setSubmitting(false)
+                                            return
+                                        }
+                                        return createAndQueue()
+                                    })
+                            }
+                            if (!window.confirm('This patient has an active appointment already, would you still like to book this appointment?')) {
+                                setSubmitting(false)
+                                return
+                            }
+                            return createAndQueue()
+                        })
+                        .catch(function () {
+                            return createAndQueue()
+                        })
+                }
+
+                var askReview = window.receptionWalkInReview
+                var reviewPromise = (typeof askReview === 'function')
+                    ? askReview('Review Walk-in Details', reviewDetails)
+                    : Promise.resolve(window.confirm('Please review details before submitting this walk-in.'))
+
+                reviewPromise.then(function (reviewOk) {
+                    if (!reviewOk) {
                         setSubmitting(false)
-                    })
+                        return
+                    }
+                    return continueAfterReview()
+                })
             })
         }
     })

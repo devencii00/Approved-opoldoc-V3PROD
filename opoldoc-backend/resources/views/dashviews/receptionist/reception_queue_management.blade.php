@@ -29,10 +29,10 @@
                 <x-lucide-refresh-cw class="w-[18px] h-[18px]" />
                 Refresh
             </button>
-            <button id="receptionPublicQueueLinkButton" type="button" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-slate-800 text-[0.8rem] font-semibold hover:bg-slate-50 transition-colors border border-slate-200">
+            <a href="{{ url('/queue-display') }}" target="_blank" id="receptionPublicQueueLinkButton" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-slate-800 text-[0.8rem] font-semibold hover:bg-slate-50 transition-colors border border-slate-200">
                 <x-lucide-link class="w-[18px] h-[18px]" />
                 Public link
-            </button>
+            </a>
             
         </div>
     </div>
@@ -505,6 +505,14 @@
             return String(value == null ? '' : value).toLowerCase().replace(/\s+/g, ' ').trim()
         }
 
+        function localDateIso() {
+            var now = new Date()
+            var y = now.getFullYear()
+            var m = String(now.getMonth() + 1).padStart(2, '0')
+            var d = String(now.getDate()).padStart(2, '0')
+            return y + '-' + m + '-' + d
+        }
+
         function wordPrefixMatch(value, query) {
             var v = normalizeText(value || '')
             var q = normalizeText(query || '')
@@ -584,8 +592,8 @@
 
         function loadAppointmentOptions(search) {
             if (typeof apiFetch !== 'function') return
-            var today = new Date().toISOString().slice(0, 10)
-            var url = "{{ url('/api/appointments') }}" + '?per_page=10&start_date=' + encodeURIComponent(today) + '&end_date=' + encodeURIComponent(today) + '&order=latest&appointment_type=walk_in'
+            var today = localDateIso()
+            var url = "{{ url('/api/appointments') }}" + '?per_page=100&start_date=' + encodeURIComponent(today) + '&end_date=' + encodeURIComponent(today) + '&order=latest&appointment_type=walk_in'
             if (search) {
                 url += '&search=' + encodeURIComponent(search)
             }
@@ -600,7 +608,23 @@
                 .then(function (result) {
                     if (!result.ok || !result.data) return
                     var raw = result.data && Array.isArray(result.data.data) ? result.data.data : (Array.isArray(result.data) ? result.data : [])
-                    renderAppointmentOptions(raw || [])
+                    
+                    // Filter only those that are walk_in AND not already in the queue
+                    var walkIns = raw.filter(function (a) {
+                        if (!a) return false
+                        var t = String(a.appointment_type || '').toLowerCase().trim()
+                        if (t !== 'walk_in') return false
+                        
+                        // If there's a queue object, and its status is waiting or serving, it's already in the queue
+                        if (a.queue) {
+                            var qStatus = String(a.queue.status || '').toLowerCase().trim()
+                            if (qStatus === 'waiting' || qStatus === 'serving') return false
+                        }
+                        
+                        return true
+                    })
+                    
+                    renderAppointmentOptions(walkIns)
                 })
                 .catch(function () {})
         }
@@ -619,6 +643,10 @@
                 }, 250)
             })
             appointmentSearch.addEventListener('focus', function () {
+                var q = String(appointmentSearch.value || '').trim()
+                loadAppointmentOptions(q)
+            })
+            appointmentSearch.addEventListener('click', function () {
                 var q = String(appointmentSearch.value || '').trim()
                 loadAppointmentOptions(q)
             })
@@ -1003,8 +1031,7 @@
         var publicLinkButton = document.getElementById('receptionPublicQueueLinkButton')
         if (publicLinkButton) {
             publicLinkButton.addEventListener('click', function () {
-                var today = new Date().toISOString().slice(0, 10)
-                var link = "{{ route('queue.display') }}" + '?date=' + encodeURIComponent(today)
+                var link = "{{ route('queue.display') }}"
 
                 try {
                     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -1124,7 +1151,7 @@
                 return
             }
 
-            var today = new Date().toISOString().slice(0, 10)
+            var today = localDateIso()
             var url = "{{ route('queue.display.data') }}" + '?date=' + encodeURIComponent(today)
 
             apiFetch(url, { method: 'GET' })

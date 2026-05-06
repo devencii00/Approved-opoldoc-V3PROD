@@ -216,6 +216,7 @@ class QueueController extends Controller
 
         $data = $request->validate([
             'appointment_id' => ['required', 'exists:appointments,appointment_id'],
+            'force_duplicate_patient' => ['nullable', 'boolean'],
         ]);
 
         $queueAt = now();
@@ -243,6 +244,7 @@ class QueueController extends Controller
         }
 
         $patientId = (int) ($appointment->patient_id ?? 0);
+        $forceDuplicatePatient = (bool) ($data['force_duplicate_patient'] ?? false);
         if ($patientId > 0) {
             $duplicatePatient = Queue::query()
                 ->whereDate('queue_datetime', $date)
@@ -252,7 +254,7 @@ class QueueController extends Controller
                 })
                 ->exists();
 
-            if ($duplicatePatient) {
+            if ($duplicatePatient && ! $forceDuplicatePatient) {
                 return response()->json([
                     'message' => 'This patient is already in the queue.',
                 ], 422);

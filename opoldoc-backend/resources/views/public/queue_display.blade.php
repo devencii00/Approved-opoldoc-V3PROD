@@ -6,6 +6,7 @@
     <title>Queue Display — Opol Doctors Clinic</title>
     @vite('resources/css/app.css')
        <link rel="stylesheet" href="{{ asset('assets/fonts/css/stylefont.css') }}">
+         <link rel="icon" type="image/x-icon" href="/images/opoldoc-weblog.ico">
     <style>
         .scrollbar-hidden { scrollbar-width: none; }
         .scrollbar-hidden::-webkit-scrollbar { width: 0; height: 0; }
@@ -60,7 +61,15 @@
 
 <script>
     (function () {
-        var date = @json($date);
+        function localDateIso() {
+            var now = new Date();
+            var y = now.getFullYear();
+            var m = String(now.getMonth() + 1).padStart(2, '0');
+            var d = String(now.getDate()).padStart(2, '0');
+            return y + '-' + m + '-' + d;
+        }
+        var date = localDateIso();
+        
         var doctorId = @json($doctorId);
 
         var dateLabel = document.getElementById('queueDisplayDateLabel');
