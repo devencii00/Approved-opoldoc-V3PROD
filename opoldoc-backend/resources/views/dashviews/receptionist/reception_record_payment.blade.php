@@ -311,6 +311,22 @@
             return name
         }
 
+        function normalizeAppointmentType(value) {
+            var raw = String(value || '').toLowerCase().trim()
+            if (!raw) return ''
+            raw = raw.replace(/[\s-]+/g, '_')
+            if (raw === 'walk_in' || raw === 'walkin') return 'walk_in'
+            if (raw === 'scheduled') return 'scheduled'
+            return ''
+        }
+
+        function appointmentTypeLabel(appt) {
+            var normalized = normalizeAppointmentType(appt && appt.appointment_type ? appt.appointment_type : '')
+            if (normalized === 'walk_in') return 'walk-in'
+            if (normalized === 'scheduled') return 'scheduled'
+            return 'unknown'
+        }
+
         function servicesFromAppointment(appt) {
             var list = appt && Array.isArray(appt.services) ? appt.services : []
             return list.map(function (s) {
@@ -389,7 +405,7 @@
 
             var when = appt && appt.appointment_datetime ? String(appt.appointment_datetime).replace('T', ' ').slice(0, 16) : '—'
             if (appointmentPreview) {
-                appointmentPreview.textContent = 'Patient: ' + appointmentPatientName(appt) + ' • Doctor: ' + appointmentDoctorName(appt) + ' • Date/Time: ' + when + ' • Type: ' + String(appt.appointment_type || 'scheduled')
+                appointmentPreview.textContent = 'Patient: ' + appointmentPatientName(appt) + ' • Doctor: ' + appointmentDoctorName(appt) + ' • Date/Time: ' + when + ' • Type: ' + appointmentTypeLabel(appt)
                 appointmentPreview.classList.remove('hidden')
             }
 
@@ -408,7 +424,7 @@
             })()
 
             var list = (Array.isArray(items) ? items : []).filter(function (appt) {
-                var type = String(appt && appt.appointment_type ? appt.appointment_type : '').toLowerCase()
+                var type = normalizeAppointmentType(appt && appt.appointment_type ? appt.appointment_type : '')
                 if (type !== 'scheduled' && type !== 'walk_in') return false
 
                 var status = String(appt && appt.status ? appt.status : '').toLowerCase()
@@ -435,7 +451,7 @@
                 var id = appt && appt.appointment_id != null ? appt.appointment_id : ''
                 var patient = appointmentPatientName(appt)
                 var when = appt && appt.appointment_datetime ? String(appt.appointment_datetime).replace('T', ' ').slice(0, 16) : '—'
-                var type = appt && appt.appointment_type ? String(appt.appointment_type) : 'scheduled'
+                var type = appointmentTypeLabel(appt)
                 return '<button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-50 border-b border-slate-100 last:border-0">' +
                     '<div class="text-[0.78rem] text-slate-800 font-semibold">#' + escapeHtml(id) + ' - ' + escapeHtml(patient) + '</div>' +
                     '<div class="text-[0.72rem] text-slate-500">' + escapeHtml(when + ' • ' + type) + '</div>' +
@@ -580,7 +596,7 @@
                 var ref = tx && tx.reference_number ? String(tx.reference_number) : '—'
                 var patient = txPatientName(tx)
                 var services = txServiceSummary(tx)
-                var type = appt && appt.appointment_type ? String(appt.appointment_type) : 'scheduled'
+                var type = appointmentTypeLabel(appt)
                 var gross = parseFloat(tx && tx.amount != null ? tx.amount : 0)
                 var disc = parseFloat(tx && tx.discount_amount != null ? tx.discount_amount : 0)
                 if (isNaN(gross)) gross = 0

@@ -68,7 +68,10 @@
             var d = String(now.getDate()).padStart(2, '0');
             return y + '-' + m + '-' + d;
         }
-        var date = localDateIso();
+        var date = @json($date);
+        if (!date) {
+            date = localDateIso();
+        }
         
         var doctorId = @json($doctorId);
 

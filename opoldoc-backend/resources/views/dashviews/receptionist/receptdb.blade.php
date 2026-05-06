@@ -76,6 +76,7 @@
                                 </button>
                             </div>
                         </div>
+                        <div id="receptionNextQueueInlineMessage" class="hidden mt-2 rounded-lg border px-2.5 py-2 text-[0.72rem]"></div>
                         <div class="mt-2 flex-1 min-h-0 overflow-y-auto scrollbar-hidden">
                             <ul id="receptionNextQueue" class="space-y-1 text-[0.78rem] text-slate-700"></ul>
                         </div>
@@ -103,6 +104,7 @@
                 var nextQueueBtn = document.getElementById('receptionNextQueueNextBtn')
                 var nextQueueSpinner = document.getElementById('receptionNextQueueNextSpinner')
                 var nextQueueLabel = document.getElementById('receptionNextQueueNextLabel')
+                var nextQueueInlineMessage = document.getElementById('receptionNextQueueInlineMessage')
                 if (typeof apiFetch !== 'function') return
 
                 function escapeHtml(input) {
@@ -149,6 +151,24 @@
                     }
                 }
 
+                function showNextQueueMessage(message, tone) {
+                    if (!nextQueueInlineMessage) return
+                    var kind = String(tone || 'info').toLowerCase()
+                    nextQueueInlineMessage.textContent = message || ''
+                    nextQueueInlineMessage.className = 'mt-2 rounded-lg border px-2.5 py-2 text-[0.72rem]'
+                    if (!message) {
+                        nextQueueInlineMessage.classList.add('hidden')
+                        return
+                    }
+                    if (kind === 'error') {
+                        nextQueueInlineMessage.classList.add('border-red-200', 'bg-red-50', 'text-red-700')
+                    } else if (kind === 'success') {
+                        nextQueueInlineMessage.classList.add('border-emerald-200', 'bg-emerald-50', 'text-emerald-700')
+                    } else {
+                        nextQueueInlineMessage.classList.add('border-slate-200', 'bg-slate-50', 'text-slate-700')
+                    }
+                }
+
                 function load() {
                     if (nextApptsList) nextApptsList.innerHTML = '<li class="text-[0.78rem] text-slate-400">Loading…</li>'
                     if (nextQueueList) nextQueueList.innerHTML = '<li class="text-[0.78rem] text-slate-400">Loading…</li>'
@@ -159,17 +179,17 @@
                     var now = new Date()
                     var today = isoDate(now)
 
-                    var queuesUrl = "{{ url('/api/queues') }}" + '?date=' + encodeURIComponent(today) + '&per_page=100'
+                    var queueSnapshotUrl = "{{ route('queue.display.data') }}" + '?date=' + encodeURIComponent(today)
                     var apptsUrl = "{{ url('/api/appointments') }}" + '?start_date=' + encodeURIComponent(today) + '&end_date=' + encodeURIComponent(today) + '&status=confirmed&per_page=100'
 
                     Promise.all([
-                        apiFetch(queuesUrl, { method: 'GET' }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d } }).catch(function () { return { ok: r.ok, data: null } }) }).catch(function () { return { ok: false, data: null } }),
+                        apiFetch(queueSnapshotUrl, { method: 'GET' }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d } }).catch(function () { return { ok: r.ok, data: null } }) }).catch(function () { return { ok: false, data: null } }),
                         apiFetch(apptsUrl, { method: 'GET' }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d } }).catch(function () { return { ok: r.ok, data: null } }) }).catch(function () { return { ok: false, data: null } })
                     ])
                         .then(function (results) {
-                            var queueRows = []
+                            var queuePayload = null
                             if (results[0] && results[0].ok && results[0].data) {
-                                queueRows = Array.isArray(results[0].data.data) ? results[0].data.data : []
+                                queuePayload = results[0].data
                             }
 
                             var appts = []
@@ -203,20 +223,6 @@
                             }
 
                             if (nextQueueList) {
-                                function queueSort(a, b) {
-                                    var pa = parseInt(String(a && a.priority_level != null ? a.priority_level : 5), 10)
-                                    var pb = parseInt(String(b && b.priority_level != null ? b.priority_level : 5), 10)
-                                    if (pa < pb) return -1
-                                    if (pa > pb) return 1
-                                    var na = parseInt(String(a && a.queue_number != null ? a.queue_number : 999999), 10)
-                                    var nb = parseInt(String(b && b.queue_number != null ? b.queue_number : 999999), 10)
-                                    if (na < nb) return -1
-                                    if (na > nb) return 1
-                                    return 0
-                                }
-
-                                var serving = queueRows.filter(function (q) { return q && String(q.status || '') === 'serving' })
-                                serving.sort(queueSort)
                                 function queueLabel(q) {
                                     if (q && q.queue_code) return String(q.queue_code)
                                     var n = q && q.queue_number != null ? String(q.queue_number) : ''
@@ -224,27 +230,18 @@
                                     return n || '---'
                                 }
 
-                                function serviceSummaryFromQueue(q) {
-                                    var appt = q && q.appointment ? q.appointment : null
-                                    var services = appt && Array.isArray(appt.services) ? appt.services : []
-                                    var names = services.map(function (s) {
-                                        return s && s.service_name ? String(s.service_name).trim() : ''
-                                    }).filter(function (v) { return v !== '' })
-                                    if (!names.length) return ''
-                                    if (names.length === 1) return names[0]
-                                    return names[0] + ' +' + String(names.length - 1)
-                                }
+                                var serving = queuePayload && Array.isArray(queuePayload.now_serving) ? queuePayload.now_serving : []
+                                var next = queuePayload && Array.isArray(queuePayload.next) ? queuePayload.next.slice(0, 5) : []
+                                var waitingCount = queuePayload && queuePayload.counts && queuePayload.counts.waiting != null
+                                    ? parseInt(String(queuePayload.counts.waiting), 10)
+                                    : next.length
+                                if (isNaN(waitingCount) || waitingCount < 0) waitingCount = next.length
 
                                 var nowServingLabels = serving.slice(0, 4).map(function (q) {
-                                    var patientName = q && q.appointment && q.appointment.patient ? nameForUser(q.appointment.patient) : 'Patient'
-                                    var serviceName = serviceSummaryFromQueue(q)
-                                    return queueLabel(q) + ' ' + patientName + (serviceName ? (' — ' + serviceName) : '')
+                                    var patientName = q && q.patient && q.patient.name ? String(q.patient.name) : 'Patient'
+                                    var doctorName = q && q.doctor && q.doctor.name ? String(q.doctor.name) : ''
+                                    return queueLabel(q) + ' ' + patientName + (doctorName ? (' — ' + doctorName) : '')
                                 })
-
-                                var waiting = queueRows.filter(function (q) { return q && String(q.status || '') === 'waiting' })
-                                waiting.sort(queueSort)
-                                var next = waiting.slice(0, 5)
-                                var nextBatchCount = Math.min(4, waiting.length)
 
                                 var html = ''
                                 html += '<li class="text-[0.78rem] text-slate-700"><span class="font-semibold">Now serving:</span> ' + (nowServingLabels.length ? escapeHtml(nowServingLabels.join(', ')) : '—') + '</li>'
@@ -253,21 +250,19 @@
                                     html += '<li class="text-[0.78rem] text-slate-500">No one waiting.</li>'
                                 } else {
                                     html += next.map(function (q) {
-                                        var nm = q && q.appointment && q.appointment.patient ? nameForUser(q.appointment.patient) : 'Patient'
+                                        var nm = q && q.patient && q.patient.name ? String(q.patient.name) : 'Patient'
                                         var qn = queueLabel(q)
-                                        var serviceName = serviceSummaryFromQueue(q)
-                                        var dt4 = parseApiDate(q && q.queue_datetime ? q.queue_datetime : null)
-                                        var mins2 = dt4 ? Math.max(0, Math.floor((now.getTime() - dt4.getTime()) / 60000)) : 0
-                                        return '<li class="text-[0.78rem] text-slate-700">Next #' + escapeHtml(qn) + ': ' + escapeHtml(nm) + (serviceName ? (' <span class="text-slate-500">— ' + escapeHtml(serviceName) + '</span>') : '') + ' <span class="text-slate-500">(waiting ' + mins2 + ' min)</span></li>'
+                                        var doctorName = q && q.doctor && q.doctor.name ? String(q.doctor.name) : 'Doctor'
+                                        var est = q && q.estimated_wait_minutes != null ? parseInt(String(q.estimated_wait_minutes), 10) : null
+                                        var estLabel = (est != null && !isNaN(est) && est > 0) ? (' <span class="text-slate-500">(est. ' + est + ' min)</span>') : ''
+                                        return '<li class="text-[0.78rem] text-slate-700">Next #' + escapeHtml(qn) + ': ' + escapeHtml(nm) + ' <span class="text-slate-500">— ' + escapeHtml(doctorName) + '</span>' + estLabel + '</li>'
                                     }).join('')
                                 }
 
                                 nextQueueList.innerHTML = html
-                                if (nextQueueBtn) nextQueueBtn.disabled = nextBatchCount < 1
-                                if (nextQueueBtn) nextQueueBtn.setAttribute('data-next-batch-count', String(nextBatchCount))
-                                if (nextQueueLabel) {
-                                    nextQueueLabel.textContent = nextBatchCount > 1 ? ('Call next x' + nextBatchCount) : 'Call next'
-                                }
+                                if (nextQueueBtn) nextQueueBtn.disabled = waitingCount < 1
+                                if (nextQueueBtn) nextQueueBtn.setAttribute('data-can-call', waitingCount > 0 ? '1' : '0')
+                                if (nextQueueLabel) nextQueueLabel.textContent = 'Call next'
                             }
 
                             var stamp = 'Updated ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -278,6 +273,7 @@
                             if (nextApptsList) nextApptsList.innerHTML = '<li class="text-[0.78rem] text-slate-500">Unable to load.</li>'
                             if (nextQueueList) nextQueueList.innerHTML = '<li class="text-[0.78rem] text-slate-500">Unable to load.</li>'
                             if (nextQueueBtn) nextQueueBtn.disabled = true
+                            showNextQueueMessage('Unable to refresh queue snapshot right now.', 'error')
                         })
                 }
 
@@ -287,8 +283,8 @@
                         if (isSubmitting) {
                             nextQueueBtn.disabled = true
                         } else {
-                            var count = parseInt(nextQueueBtn.getAttribute('data-next-batch-count') || '0', 10)
-                            nextQueueBtn.disabled = isNaN(count) || count < 1
+                            var canCall = String(nextQueueBtn.getAttribute('data-can-call') || '') === '1'
+                            nextQueueBtn.disabled = !canCall
                         }
                     }
                 }
@@ -301,40 +297,37 @@
                     })
                 }
 
-                function callNextBatch(remaining, called) {
-                    if (remaining < 1) return Promise.resolve(called)
+                function callNextOnce() {
                     return apiFetch("{{ url('/api/queues/call-next') }}", { method: 'POST' })
                         .then(readApiResult)
                         .then(function (result) {
                             if (!result.ok) {
                                 var code = result && result.data && result.data.code ? String(result.data.code) : ''
                                 var graceful = code === 'SERVING_SLOTS_FULL' || code === 'NO_AVAILABLE_SLOTS' || code === 'NO_ELIGIBLE_WAITING' || code === 'NO_ACTIVE_DOCTORS'
-                                if (graceful) return called
+                                if (graceful) return { called: false, tone: 'error', message: 'No available slots to call next right now.' }
                                 var message = (result && result.data && result.data.message) ? String(result.data.message) : 'Unable to call next right now.'
                                 throw new Error(message)
                             }
-                            return callNextBatch(remaining - 1, called + 1)
+                            return { called: true, message: 'Next patient is now serving.' }
                         })
                 }
 
                 if (nextQueueBtn) {
                     nextQueueBtn.addEventListener('click', function () {
-                        var count = parseInt(nextQueueBtn.getAttribute('data-next-batch-count') || '0', 10)
-                        if (!count || isNaN(count) || count < 1) return
+                        var canCall = String(nextQueueBtn.getAttribute('data-can-call') || '') === '1'
+                        if (!canCall) return
 
                         setNextQueueSubmitting(true)
 
-                        callNextBatch(Math.min(4, count), 0)
-                            .then(function (called) {
-                                if (called > 0) {
-                                    window.alert('Called ' + called + ' queue entr' + (called > 1 ? 'ies' : 'y') + '.')
-                                } else {
-                                    window.alert('No available slots to call next right now.')
-                                }
+                        callNextOnce()
+                            .then(function (state) {
+                                var message = state && state.message ? state.message : 'Call next finished.'
+                                var tone = state && state.tone ? String(state.tone) : (state && state.called ? 'success' : 'info')
+                                showNextQueueMessage(message, tone)
                                 load()
                             })
                             .catch(function (err) {
-                                window.alert((err && err.message) ? err.message : 'Network error while calling next.')
+                                showNextQueueMessage((err && err.message) ? err.message : 'Network error while calling next.', 'error')
                             })
                             .finally(function () {
                                 setNextQueueSubmitting(false)

@@ -5,12 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\DoctorSchedule;
 use App\Models\Queue;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class QueueDisplayController extends Controller
 {
     public function page(Request $request)
     {
-        $date = now()->toDateString();
+        $date = $this->resolveDate($request);
 
         $doctorId = $request->query('doctor_id');
 
@@ -22,7 +23,7 @@ class QueueDisplayController extends Controller
 
     public function data(Request $request)
     {
-        $date = now()->toDateString();
+        $date = $this->resolveDate($request);
 
         $doctorId = $request->query('doctor_id');
 
@@ -271,7 +272,7 @@ class QueueDisplayController extends Controller
         if (! $doctorId) {
             $activeDoctorIdsForServing = array_keys($roomByDoctor);
             if (count($activeDoctorIdsForServing)) {
-                $servingItems = $servingItems
+                $filteredServing = $servingItems
                     ->filter(function ($q) use ($activeDoctorIdsForServing) {
                         $docId = (int) ($q->appointment?->doctor_id ?? 0);
                         return in_array($docId, $activeDoctorIdsForServing, true);
@@ -280,8 +281,11 @@ class QueueDisplayController extends Controller
                         $docId = (int) ($q->appointment?->doctor_id ?? 0);
                         $room = $roomByDoctor[$docId] ?? null;
                         return str_pad((string) ((int) ($room ?? 999)), 6, '0', STR_PAD_LEFT).'-'.str_pad((string) $docId, 10, '0', STR_PAD_LEFT);
-                    })
-                    ->values()
+                    })->values();
+
+                // Fallback: if serving exists but no doctor is currently marked active,
+                // still show current serving queues instead of showing an empty state.
+                $servingItems = ($filteredServing->count() ? $filteredServing : $servingItems)
                     ->take(4)
                     ->values();
             } else {
@@ -289,6 +293,83 @@ class QueueDisplayController extends Controller
             }
         } else {
             $servingItems = $servingItems->take(1)->values();
+        }
+
+        $missingRoomDoctorIds = $servingItems
+            ->map(function ($q) use ($roomByDoctor) {
+                $docId = (int) ($q->appointment?->doctor_id ?? 0);
+                if ($docId < 1) {
+                    return null;
+                }
+                if (array_key_exists($docId, $roomByDoctor) && $roomByDoctor[$docId] !== null) {
+                    return null;
+                }
+                return $docId;
+            })
+            ->filter(fn ($v) => $v !== null)
+            ->unique()
+            ->values()
+            ->all();
+
+        if (count($missingRoomDoctorIds)) {
+            $displayDate = Carbon::parse($date);
+            $dayKey = strtolower($displayDate->format('D'));
+            $time = now()->format('H:i:s');
+
+            $fallbackSchedules = DoctorSchedule::query()
+                ->whereIn('doctor_id', $missingRoomDoctorIds)
+                ->whereNotNull('room_number')
+                ->get(['doctor_id', 'day_of_week', 'room_number', 'start_time', 'end_time', 'is_available'])
+                ->groupBy('doctor_id');
+
+            foreach ($missingRoomDoctorIds as $docId) {
+                $docId = (int) $docId;
+                $group = $fallbackSchedules->get($docId);
+                if (! $group || $group->isEmpty()) {
+                    continue;
+                }
+
+                $picked = $group
+                    ->filter(fn ($s) => strtolower((string) ($s->day_of_week ?? '')) === $dayKey && $s->start_time <= $time && $s->end_time >= $time && $s->is_available)
+                    ->sortBy('start_time')
+                    ->first();
+
+                if (! $picked) {
+                    $picked = $group
+                        ->filter(fn ($s) => strtolower((string) ($s->day_of_week ?? '')) === $dayKey && $s->start_time <= $time && $s->end_time >= $time)
+                        ->sortBy('start_time')
+                        ->first();
+                }
+
+                if (! $picked) {
+                    $picked = $group
+                        ->filter(fn ($s) => strtolower((string) ($s->day_of_week ?? '')) === $dayKey && (bool) $s->is_available)
+                        ->sortBy('start_time')
+                        ->first();
+                }
+
+                if (! $picked) {
+                    $picked = $group
+                        ->filter(fn ($s) => strtolower((string) ($s->day_of_week ?? '')) === $dayKey)
+                        ->sortBy('start_time')
+                        ->first();
+                }
+
+                if (! $picked) {
+                    $picked = $group
+                        ->filter(fn ($s) => (bool) $s->is_available)
+                        ->sortBy('start_time')
+                        ->first();
+                }
+
+                if (! $picked) {
+                    $picked = $group->sortBy('start_time')->first();
+                }
+
+                if ($picked && $picked->room_number !== null) {
+                    $roomByDoctor[$docId] = (int) $picked->room_number;
+                }
+            }
         }
 
         $payload = [
@@ -345,5 +426,15 @@ class QueueDisplayController extends Controller
         ];
 
         return response()->json($payload);
+    }
+
+    private function resolveDate(Request $request): string
+    {
+        $raw = trim((string) $request->query('date', ''));
+        if ($raw !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw)) {
+            return $raw;
+        }
+
+        return now()->toDateString();
     }
 }

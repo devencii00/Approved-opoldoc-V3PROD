@@ -34,6 +34,7 @@ class AppointmentController extends Controller
             'search' => ['nullable', 'string'],
             'order' => ['nullable', 'in:latest,oldest'],
             'service_id' => ['nullable', 'integer', 'exists:services,service_id'],
+            'today_only' => ['nullable', 'boolean'],
         ]);
 
         $query = Appointment::with(['patient', 'doctor', 'queue', 'services']);
@@ -51,7 +52,16 @@ class AppointmentController extends Controller
         }
 
         if ($request->filled('appointment_type')) {
-            $query->where('appointment_type', $request->query('appointment_type'));
+            $rawType = strtolower(trim((string) $request->query('appointment_type')));
+            $normalizedType = str_replace(['-', ' '], '_', $rawType);
+
+            if (in_array($normalizedType, ['walk_in', 'walkin'], true)) {
+                $query->whereIn('appointment_type', ['walk_in', 'walk-in', 'walk in', 'walkin']);
+            } elseif ($normalizedType === 'scheduled') {
+                $query->where('appointment_type', 'scheduled');
+            } else {
+                $query->where('appointment_type', $request->query('appointment_type'));
+            }
         }
 
         if ($request->filled('status')) {
@@ -142,6 +152,11 @@ class AppointmentController extends Controller
                 $query->whereNotNull('appointment_datetime')
                     ->whereBetween('appointment_datetime', [$start, $end]);
             }
+        }
+
+        if ($request->boolean('today_only')) {
+            $query->whereNotNull('appointment_datetime')
+                ->whereDate('appointment_datetime', now()->toDateString());
         }
 
         $order = (string) $request->query('order', 'oldest');

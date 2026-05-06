@@ -29,7 +29,7 @@
                 <x-lucide-refresh-cw class="w-[18px] h-[18px]" />
                 Refresh
             </button>
-            <a href="{{ url('/queue-display') }}" target="_blank" id="receptionPublicQueueLinkButton" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-slate-800 text-[0.8rem] font-semibold hover:bg-slate-50 transition-colors border border-slate-200">
+            <a href="{{ route('queue.display', ['date' => now()->toDateString()]) }}" target="_blank" id="receptionPublicQueueLinkButton" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-slate-800 text-[0.8rem] font-semibold hover:bg-slate-50 transition-colors border border-slate-200">
                 <x-lucide-link class="w-[18px] h-[18px]" />
                 Public link
             </a>
@@ -593,7 +593,7 @@
         function loadAppointmentOptions(search) {
             if (typeof apiFetch !== 'function') return
             var today = localDateIso()
-            var url = "{{ url('/api/appointments') }}" + '?per_page=100&start_date=' + encodeURIComponent(today) + '&end_date=' + encodeURIComponent(today) + '&order=latest&appointment_type=walk_in'
+            var url = "{{ url('/api/appointments') }}" + '?per_page=100&start_date=' + encodeURIComponent(today) + '&end_date=' + encodeURIComponent(today) + '&today_only=1&order=latest&appointment_type=walk_in'
             if (search) {
                 url += '&search=' + encodeURIComponent(search)
             }
@@ -1031,7 +1031,8 @@
         var publicLinkButton = document.getElementById('receptionPublicQueueLinkButton')
         if (publicLinkButton) {
             publicLinkButton.addEventListener('click', function () {
-                var link = "{{ route('queue.display') }}"
+                var today = localDateIso()
+                var link = "{{ route('queue.display') }}" + '?date=' + encodeURIComponent(today)
 
                 try {
                     if (navigator.clipboard && navigator.clipboard.writeText) {

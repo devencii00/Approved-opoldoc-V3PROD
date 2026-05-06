@@ -61,8 +61,8 @@
             </div>
 
             <div class="p-5">
-                <div id="adminDoctorError" class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[0.75rem] text-red-700"></div>
-                <div id="adminDoctorSuccess" class="hidden mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[0.75rem] text-emerald-700"></div>
+                <div id="adminDoctorScheduleError" class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[0.75rem] text-red-700"></div>
+                <div id="adminDoctorScheduleSuccess" class="hidden mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[0.75rem] text-emerald-700"></div>
 
                 <form id="adminDoctorScheduleForm" class="mb-5 grid gap-3 grid-cols-1 md:grid-cols-6 items-end">
                     <div>
@@ -309,18 +309,14 @@
         var sortSelect = document.getElementById('admin_doctor_sort')
         var tableBody = document.getElementById('admin_doctor_table_body')
 
-        var schedulePanel = document.getElementById('adminDoctorSchedulePanel')
+        var scheduleModal = document.getElementById('adminDoctorScheduleModal')
         var scheduleTitle = document.getElementById('adminDoctorScheduleTitle')
         var scheduleClose = document.getElementById('adminDoctorScheduleClose')
+        var scheduleErrorBox = document.getElementById('adminDoctorScheduleError')
+        var scheduleSuccessBox = document.getElementById('adminDoctorScheduleSuccess')
         var scheduleForm = document.getElementById('adminDoctorScheduleForm')
         var scheduleFromDay = document.getElementById('admin_schedule_from_day')
         var scheduleToDay = document.getElementById('admin_schedule_to_day')
-        var scheduleStartHour = document.getElementById('admin_schedule_start_hour')
-        var scheduleStartMin = document.getElementById('admin_schedule_start_min')
-        var scheduleStartAmPm = document.getElementById('admin_schedule_start_ampm')
-        var scheduleEndHour = document.getElementById('admin_schedule_end_hour')
-        var scheduleEndMin = document.getElementById('admin_schedule_end_min')
-        var scheduleEndAmPm = document.getElementById('admin_schedule_end_ampm')
         var scheduleMax = document.getElementById('admin_schedule_max')
         var scheduleRoom = document.getElementById('admin_schedule_room')
         var scheduleSlotMinutes = document.getElementById('admin_schedule_slot_minutes')
@@ -469,6 +465,10 @@
             } else {
                 errorBox.classList.add('hidden')
             }
+            if (scheduleErrorBox) {
+                scheduleErrorBox.textContent = message || ''
+                scheduleErrorBox.classList.toggle('hidden', !message)
+            }
         }
 
         function showDoctorSuccess(message) {
@@ -478,6 +478,10 @@
                 successBox.classList.remove('hidden')
             } else {
                 successBox.classList.add('hidden')
+            }
+            if (scheduleSuccessBox) {
+                scheduleSuccessBox.textContent = message || ''
+                scheduleSuccessBox.classList.toggle('hidden', !message)
             }
         }
 
@@ -1048,10 +1052,9 @@
                         scheduleTitle.textContent = 'Manage Schedule — ' + name
                     }
                     
-                    var modal = document.getElementById('adminDoctorScheduleModal')
-                    if (modal) {
-                        modal.classList.remove('hidden')
-                        modal.classList.add('flex')
+                    if (scheduleModal) {
+                        scheduleModal.classList.remove('hidden')
+                        scheduleModal.classList.add('flex')
                     }
                     
                     loadSchedulesForDoctor(id)
@@ -1225,6 +1228,7 @@
         function setBulkDeleting(isDeleting) {
             var buttons = [scheduleSelectAll, scheduleClearAll, scheduleDeleteSelected, scheduleDeleteDay, scheduleDeleteAll]
             buttons.forEach(function (btn) {
+                if (!btn) return
                 btn.disabled = !!isDeleting
                 btn.classList.toggle('opacity-60', !!isDeleting)
                 btn.classList.toggle('cursor-not-allowed', !!isDeleting)
@@ -1573,10 +1577,9 @@
 
               if (scheduleClose) {
             scheduleClose.addEventListener('click', function () {
-                var modal = document.getElementById('adminDoctorScheduleModal')
-                if (modal) {
-                    modal.classList.add('hidden')
-                    modal.classList.remove('flex')
+                if (scheduleModal) {
+                    scheduleModal.classList.add('hidden')
+                    scheduleModal.classList.remove('flex')
                 }
                 currentDoctorIdForSchedule = null
                 currentScheduleId = null
@@ -1589,6 +1592,12 @@
                 if (scheduleSubmitLabel) scheduleSubmitLabel.textContent = 'Generate schedule'
                 showDoctorError('')
                 showDoctorSuccess('')
+            })
+        }
+        if (scheduleModal) {
+            scheduleModal.addEventListener('click', function (e) {
+                if (e.target !== scheduleModal) return
+                if (scheduleClose) scheduleClose.click()
             })
         }
         if (scheduleForm) {
