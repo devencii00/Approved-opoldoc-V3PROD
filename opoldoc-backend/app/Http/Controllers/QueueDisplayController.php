@@ -283,9 +283,17 @@ class QueueDisplayController extends Controller
                         return str_pad((string) ((int) ($room ?? 999)), 6, '0', STR_PAD_LEFT).'-'.str_pad((string) $docId, 10, '0', STR_PAD_LEFT);
                     })->values();
 
-                // Fallback: if serving exists but no doctor is currently marked active,
-                // still show current serving queues instead of showing an empty state.
-                $servingItems = ($filteredServing->count() ? $filteredServing : $servingItems)
+                // Keep currently active doctors first, but do not hide already-serving queues
+                // that fall outside the current active-doctor snapshot.
+                $remainingServing = $servingItems
+                    ->filter(function ($q) use ($activeDoctorIdsForServing) {
+                        $docId = (int) ($q->appointment?->doctor_id ?? 0);
+                        return ! in_array($docId, $activeDoctorIdsForServing, true);
+                    })
+                    ->values();
+
+                $servingItems = $filteredServing
+                    ->concat($remainingServing)
                     ->take(4)
                     ->values();
             } else {

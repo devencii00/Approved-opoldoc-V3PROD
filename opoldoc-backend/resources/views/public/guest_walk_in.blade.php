@@ -37,7 +37,7 @@
                     <div id="publicGuestWalkInSuccess" class="hidden mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[0.75rem] text-emerald-700"></div>
                     <div id="publicGuestWalkInCreds" class="hidden mb-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[0.75rem] text-slate-700"></div>
 
-                    <form id="publicGuestWalkInForm" class="grid gap-3 grid-cols-1 md:grid-cols-4 items-start">
+                    <form id="publicGuestWalkInForm" method="POST" action="javascript:void(0)" class="grid gap-3 grid-cols-1 md:grid-cols-4 items-start">
                         <div>
                             <label for="public_guest_firstname" class="block text-[0.7rem] text-slate-600 mb-1">First name</label>
                             <input id="public_guest_firstname" type="text" required class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="First name">
@@ -116,41 +116,53 @@
         </div>
     </div>
 
-    <div id="publicGuestWalkInDetailsModal" class="hidden fixed inset-0 z-50 bg-slate-900/40 items-center justify-center p-4">
+    <div id="publicWalkInConfirmOverlay" class="hidden fixed inset-0 z-[60] bg-slate-900/40 items-center justify-center p-4">
         <div class="w-full max-w-sm rounded-2xl bg-white border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.24)] p-4">
             <div class="flex items-start gap-3">
                 <div class="w-9 h-9 rounded-xl bg-cyan-50 border border-cyan-100 flex items-center justify-center text-cyan-700">
                     <x-lucide-info class="w-[18px] h-[18px]" />
                 </div>
                 <div class="flex-1">
-                    <div class="text-sm font-semibold text-slate-900">Confirm Guest Walk-In Details</div>
-                    <div id="publicGuestWalkInDetailsContent" class="text-[0.78rem] text-slate-600 mt-0.5"></div>
+                    <div class="text-sm font-semibold text-slate-900">Confirm Registration</div>
+                    <div id="publicWalkInConfirmMessage" class="text-[0.78rem] text-slate-600 mt-1 whitespace-pre-wrap"></div>
                 </div>
             </div>
             <div class="mt-4 flex items-center justify-end gap-2">
-                <button type="button" id="publicGuestWalkInDetailsCancel" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
-                <button type="button" id="publicGuestWalkInDetailsConfirm" class="px-3 py-2 rounded-xl bg-slate-900 text-white text-[0.78rem] font-semibold hover:bg-slate-800">Confirm</button>
+                <button type="button" id="publicWalkInConfirmCancel" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+                <button type="button" id="publicWalkInConfirmOk" class="px-3 py-2 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700">Confirm</button>
             </div>
         </div>
     </div>
 
-    <div id="publicGuestWalkInQueueConfirmModal" class="hidden fixed inset-0 z-[55] bg-slate-900/40 items-center justify-center p-4">
-        <div class="w-full max-w-sm rounded-2xl bg-white border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.24)] p-4">
-            <div class="flex items-start gap-3">
-                <div class="w-9 h-9 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-700">
-                    <x-lucide-alert-triangle class="w-[18px] h-[18px]" />
-                </div>
-                <div class="flex-1">
-                    <div class="text-sm font-semibold text-slate-900">Queue Confirmation</div>
-                    <div id="publicGuestWalkInQueueConfirmMessage" class="text-[0.78rem] text-slate-600 mt-0.5"></div>
-                </div>
-            </div>
-            <div class="mt-4 flex items-center justify-end gap-2">
-                <button type="button" id="publicGuestWalkInQueueConfirmCancel" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
-                <button type="button" id="publicGuestWalkInQueueConfirmOk" class="px-3 py-2 rounded-xl bg-slate-900 text-white text-[0.78rem] font-semibold hover:bg-slate-800">Continue</button>
-            </div>
-        </div>
-    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var overlay = document.getElementById('publicWalkInConfirmOverlay')
+            var messageEl = document.getElementById('publicWalkInConfirmMessage')
+            var okBtn = document.getElementById('publicWalkInConfirmOk')
+            var cancelBtn = document.getElementById('publicWalkInConfirmCancel')
+            var resolver = null
+
+            function close(result) {
+                if (overlay) overlay.classList.add('hidden'), overlay.classList.remove('flex')
+                var r = resolver; resolver = null
+                if (typeof r === 'function') r(!!result)
+            }
+
+            window.publicConfirm = function(message) {
+                return new Promise(function(resolve) {
+                    if (!overlay || !messageEl) return resolve(window.confirm(message))
+                    resolver = resolve
+                    messageEl.textContent = message
+                    overlay.classList.remove('hidden')
+                    overlay.classList.add('flex')
+                })
+            }
+
+            if (okBtn) okBtn.addEventListener('click', function() { close(true) })
+            if (cancelBtn) cancelBtn.addEventListener('click', function() { close(false) })
+            if (overlay) overlay.addEventListener('click', function(e) { if (e.target === overlay) close(false) })
+        })
+    </script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -190,57 +202,6 @@
             var selectedServices = []
             var selectedDoctor = null
 
-            var publicGuestWalkInDetailsModal = document.getElementById('publicGuestWalkInDetailsModal')
-            var publicGuestWalkInDetailsContent = document.getElementById('publicGuestWalkInDetailsContent')
-            var publicGuestWalkInDetailsCancelBtn = document.getElementById('publicGuestWalkInDetailsCancel')
-            var publicGuestWalkInDetailsConfirmBtn = document.getElementById('publicGuestWalkInDetailsConfirm')
-            var publicGuestWalkInQueueConfirmModal = document.getElementById('publicGuestWalkInQueueConfirmModal')
-            var publicGuestWalkInQueueConfirmMessage = document.getElementById('publicGuestWalkInQueueConfirmMessage')
-            var publicGuestWalkInQueueConfirmCancelBtn = document.getElementById('publicGuestWalkInQueueConfirmCancel')
-            var publicGuestWalkInQueueConfirmOkBtn = document.getElementById('publicGuestWalkInQueueConfirmOk')
-            var publicGuestQueueResolver = null
-
-            function showPublicGuestWalkInDetailsModal(details) {
-                if (!publicGuestWalkInDetailsModal || !publicGuestWalkInDetailsContent) return
-                var html = '<ul class="text-xs text-slate-600 space-y-1">'
-                for (var key in details) {
-                    html += '<li><strong class="font-semibold text-slate-800">' + escapeHtml(key) + ':</strong> ' + escapeHtml(details[key]) + '</li>'
-                }
-                html += '</ul>'
-                publicGuestWalkInDetailsContent.innerHTML = html
-                publicGuestWalkInDetailsModal.classList.remove('hidden')
-                publicGuestWalkInDetailsModal.classList.add('flex')
-            }
-
-            function hidePublicGuestWalkInDetailsModal() {
-                if (!publicGuestWalkInDetailsModal) return
-                publicGuestWalkInDetailsModal.classList.add('hidden')
-                publicGuestWalkInDetailsModal.classList.remove('flex')
-            }
-
-            function closePublicGuestQueueConfirm(result) {
-                if (publicGuestWalkInQueueConfirmModal) {
-                    publicGuestWalkInQueueConfirmModal.classList.add('hidden')
-                    publicGuestWalkInQueueConfirmModal.classList.remove('flex')
-                }
-                var resolver = publicGuestQueueResolver
-                publicGuestQueueResolver = null
-                if (typeof resolver === 'function') resolver(!!result)
-            }
-
-            function askPublicGuestQueueConfirm(message) {
-                return new Promise(function (resolve) {
-                    if (!publicGuestWalkInQueueConfirmModal || !publicGuestWalkInQueueConfirmMessage) {
-                        resolve(window.confirm(message || 'Continue?'))
-                        return
-                    }
-                    publicGuestQueueResolver = resolve
-                    publicGuestWalkInQueueConfirmMessage.textContent = message || ''
-                    publicGuestWalkInQueueConfirmModal.classList.remove('hidden')
-                    publicGuestWalkInQueueConfirmModal.classList.add('flex')
-                })
-            }
-
             function setSubmitting(isSubmitting) {
                 if (submitBtn) submitBtn.disabled = !!isSubmitting
                 if (submitSpinner) submitSpinner.classList.toggle('hidden', !isSubmitting)
@@ -253,10 +214,19 @@
                 errorBox.classList.toggle('hidden', !message)
             }
 
+            var successTimer = null
             function showSuccess(message) {
                 if (!successBox) return
                 successBox.textContent = message || ''
-                successBox.classList.toggle('hidden', !message)
+                if (message) {
+                    successBox.classList.remove('hidden')
+                    if (successTimer) clearTimeout(successTimer)
+                    successTimer = setTimeout(function() {
+                        successBox.classList.add('hidden')
+                    }, 5000)
+                } else {
+                    successBox.classList.add('hidden')
+                }
             }
 
             function showCreds(message) {
@@ -311,14 +281,6 @@
                     .replace(/'/g, '&#039;')
             }
 
-            function localDateIso() {
-                var now = new Date()
-                var y = now.getFullYear()
-                var m = String(now.getMonth() + 1).padStart(2, '0')
-                var d = String(now.getDate()).padStart(2, '0')
-                return y + '-' + m + '-' + d
-            }
-
             function dayKeyFromDate(dateStr) {
                 if (!dateStr) return ''
                 var d = new Date(dateStr + 'T00:00:00')
@@ -338,7 +300,7 @@
                 var list = doctor && doctor.doctor_schedules && Array.isArray(doctor.doctor_schedules) ? doctor.doctor_schedules : []
                 var isToday = false
                 if (dateStr) {
-                    var today = localDateIso()
+                    var today = new Date().toISOString().slice(0, 10)
                     isToday = String(dateStr) === today
                 }
                 return list.filter(function (s) {
@@ -517,7 +479,7 @@
                     return
                 }
 
-                var dateStr = localDateIso()
+                var dateStr = new Date().toISOString().slice(0, 10)
                 var dayKey = dayKeyFromDate(dateStr)
                 var checkTime = new Date().toTimeString().slice(0, 5)
 
@@ -616,12 +578,16 @@
                 if (!inputEl || !resultsEl) return
                 inputEl.addEventListener('blur', function () {
                     setTimeout(function () {
-                        var active = document.activeElement
                         if (resultsEl.classList.contains('hidden')) return
+                        var active = document.activeElement
                         if (!(resultsEl.contains(active) || inputEl.contains(active))) {
                             resultsEl.classList.add('hidden')
                         }
-                    }, 0)
+                    }, 200) // Increased delay
+                })
+                // Prevent blur from hiding when clicking results
+                resultsEl.addEventListener('mousedown', function (e) {
+                    e.preventDefault()
                 })
             }
 
@@ -654,10 +620,6 @@
             if (form) {
                 form.addEventListener('submit', function (e) {
                     e.preventDefault()
-                    showError('')
-                    showSuccess('')
-                    showCreds('')
-                    setSubmitting(true)
 
                     var firstName = firstNameInput ? String(firstNameInput.value || '').trim() : ''
                     var middleName = middleNameInput ? String(middleNameInput.value || '').trim() : ''
@@ -670,145 +632,105 @@
                     var priorityLevel = priorityInput && priorityInput.value ? parseInt(priorityInput.value, 10) : null
 
                     if (!firstName || !middleName || !lastName) {
-                        setSubmitting(false)
                         showError('First name, middle name, and last name are required.')
                         return
                     }
                     if (!serviceIds.length) {
-                        setSubmitting(false)
                         showError('Services are required.')
                         return
                     }
                     if (!doctorId) {
-                        setSubmitting(false)
                         showError('Doctor is required.')
                         return
                     }
-                    if (typeof apiFetch !== 'function') {
-                        setSubmitting(false)
-                        showError('API client is not available.')
-                        return
-                    }
 
-                    var body = {
-                        firstname: firstName,
-                        middlename: middleName,
-                        lastname: lastName,
-                        contact_number: contact || undefined,
-                        reason_for_visit: reason || undefined,
-                        doctor_id: doctorId,
-                        service_ids: serviceIds
-                    }
-                    if (priorityLevel !== null && !isNaN(priorityLevel)) {
-                        body.priority_level = priorityLevel
-                    }
+                    var doctorName = selectedDoctor ? doctorDisplayName(selectedDoctor) : 'Unknown'
+                    var serviceNames = selectedServices.map(function(s) { return s.service_name }).join(', ')
+                    
+                    var confirmMsg = 'Please review your details:\n\n' +
+                        'Name: ' + firstName + ' ' + middleName + ' ' + lastName + '\n' +
+                        'Doctor: Dr. ' + doctorName + '\n' +
+                        'Services: ' + serviceNames + '\n';
+                    
+                    if (contact) confirmMsg += 'Contact: ' + contact + '\n';
+                    if (reason) confirmMsg += 'Reason: ' + reason + '\n';
+                    
+                    confirmMsg += '\nAre you sure you want to register?';
 
-                    var details = {
-                        'First Name': firstName,
-                        'Middle Name': middleName,
-                        'Last Name': lastName,
-                        'Contact Number': contact || 'N/A',
-                        'Doctor': doctorDisplayName(selectedDoctor),
-                        'Services': selectedServices.map(function(s) { return s.service_name }).join(', '),
-                        'Reason': reason || 'N/A',
-                        'Priority Level': priorityInput && priorityInput.value ? priorityInput.value : 'N/A'
-                    }
+                    window.publicConfirm(confirmMsg).then(function(confirmed) {
+                        if (!confirmed) return;
 
-                    showPublicGuestWalkInDetailsModal(details)
+                        showError('')
+                        showSuccess('')
+                        showCreds('')
+                        setSubmitting(true)
 
-                    publicGuestWalkInDetailsConfirmBtn.onclick = function() {
-                        hidePublicGuestWalkInDetailsModal()
-                        
-                        var query = "?firstname=" + encodeURIComponent(firstName) + "&middlename=" + encodeURIComponent(middleName) + "&lastname=" + encodeURIComponent(lastName)
-                        apiFetch("{{ url('/api/public/guest-walk-in') }}/" + encodeURIComponent(token) + "/check" + query, { method: 'GET' })
-                            .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d } }).catch(function () { return { ok: r.ok, data: null } }) })
-                            .then(function (res) {
-                                if (res && res.ok && res.data && res.data.similar_in_queue) {
-                                    askPublicGuestQueueConfirm('A patient with similar details is already in current queue, would you still like to register this queue entry?')
-                                        .then(function (confirmed) {
-                                            if (!confirmed) {
-                                                setSubmitting(false)
-                                                return
-                                            }
-                                            submitGuestWalkIn()
-                                        })
-                                } else {
-                                    submitGuestWalkIn()
+                        if (typeof apiFetch !== 'function') {
+                            setSubmitting(false)
+                            showError('API client is not available.')
+                            return
+                        }
+
+                        var body = {
+                            firstname: firstName,
+                            middlename: middleName,
+                            lastname: lastName,
+                            contact_number: contact || undefined,
+                            reason_for_visit: reason || undefined,
+                            doctor_id: doctorId,
+                            service_ids: serviceIds
+                        }
+                        if (priorityLevel !== null && !isNaN(priorityLevel)) {
+                            body.priority_level = priorityLevel
+                        }
+
+                        apiFetch("{{ url('/api/public/guest-walk-in') }}/" + encodeURIComponent(token), {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(body)
+                        })
+                            .then(function (response) {
+                                return response.json().then(function (data) {
+                                    return { ok: response.ok, status: response.status, data: data }
+                                }).catch(function () {
+                                    return { ok: response.ok, status: response.status, data: null }
+                                })
+                            })
+                            .then(function (result) {
+                                setSubmitting(false)
+                                if (!result.ok) {
+                                    var message = 'Failed to create guest walk-in.'
+                                    if (result.data && result.data.message) message = result.data.message
+                                    showError(message)
+                                    return
                                 }
+
+                                showSuccess('Walk-in successfuly created and currently on the queue.')
+                                showCreds('')
+
+                                if (firstNameInput) firstNameInput.value = ''
+                                if (middleNameInput) middleNameInput.value = ''
+                                if (lastNameInput) lastNameInput.value = ''
+                                if (contactInput) contactInput.value = ''
+                                if (reasonInput) reasonInput.value = ''
+                                if (serviceSearch) serviceSearch.value = ''
+                                if (doctorSearch) doctorSearch.value = ''
+                                if (pwdCb) pwdCb.checked = false
+                                if (pregCb) pregCb.checked = false
+                                if (seniorCb) seniorCb.checked = false
+                                syncPriorityHiddenInput()
+
+                                selectedServices = []
+                                syncServiceHiddenInput()
+                                renderSelectedServices()
+                                syncDoctorEnabled()
+                                setDoctorSelection(null)
                             })
                             .catch(function () {
-                                submitGuestWalkIn()
+                                setSubmitting(false)
+                                showError('Network error while creating guest walk-in.')
                             })
-                    }
-
-                    publicGuestWalkInDetailsCancelBtn.onclick = function() {
-                        hidePublicGuestWalkInDetailsModal()
-                        setSubmitting(false)
-                    }
-
-                    function submitGuestWalkIn() {
-                        apiFetch("{{ url('/api/public/guest-walk-in') }}/" + encodeURIComponent(token), {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(body)
                     })
-                        .then(function (response) {
-                            return response.json().then(function (data) {
-                                return { ok: response.ok, status: response.status, data: data }
-                            }).catch(function () {
-                                return { ok: response.ok, status: response.status, data: null }
-                            })
-                        })
-                        .then(function (result) {
-                            setSubmitting(false)
-                            if (!result.ok) {
-                                var message = 'Failed to create guest walk-in.'
-                                if (result.data && result.data.message) message = result.data.message
-                                showError(message)
-                                return
-                            }
-
-                            showSuccess('Walk-in successfuly created and currently on the queue.')
-                            showCreds('')
-
-                            if (firstNameInput) firstNameInput.value = ''
-                            if (middleNameInput) middleNameInput.value = ''
-                            if (lastNameInput) lastNameInput.value = ''
-                            if (contactInput) contactInput.value = ''
-                            if (reasonInput) reasonInput.value = ''
-                            if (serviceSearch) serviceSearch.value = ''
-                            if (doctorSearch) doctorSearch.value = ''
-                            if (pwdCb) pwdCb.checked = false
-                            if (pregCb) pregCb.checked = false
-                            if (seniorCb) seniorCb.checked = false
-                            syncPriorityHiddenInput()
-
-                            selectedServices = []
-                            syncServiceHiddenInput()
-                            renderSelectedServices()
-                            syncDoctorEnabled()
-                            setDoctorSelection(null)
-                        })
-                        .catch(function () {
-                            setSubmitting(false)
-                            showError('Network error while creating guest walk-in.')
-                        })
-                })
-            }
-
-            if (publicGuestWalkInQueueConfirmCancelBtn) {
-                publicGuestWalkInQueueConfirmCancelBtn.addEventListener('click', function () {
-                    closePublicGuestQueueConfirm(false)
-                })
-            }
-            if (publicGuestWalkInQueueConfirmOkBtn) {
-                publicGuestWalkInQueueConfirmOkBtn.addEventListener('click', function () {
-                    closePublicGuestQueueConfirm(true)
-                })
-            }
-            if (publicGuestWalkInQueueConfirmModal) {
-                publicGuestWalkInQueueConfirmModal.addEventListener('click', function (e) {
-                    if (e.target === publicGuestWalkInQueueConfirmModal) closePublicGuestQueueConfirm(false)
                 })
             }
         })

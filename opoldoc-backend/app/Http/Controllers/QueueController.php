@@ -320,9 +320,6 @@ class QueueController extends Controller
             ->with('appointment')
             ->whereDate('queue_datetime', $date)
             ->where('status', 'serving')
-            ->whereHas('appointment', function ($q) use ($activeDoctorIds) {
-                $q->whereIn('doctor_id', $activeDoctorIds);
-            })
             ->get()
             ->map(function (Queue $q) {
                 return (int) ($q->appointment?->doctor_id ?? 0);
@@ -332,7 +329,10 @@ class QueueController extends Controller
             ->values()
             ->all();
 
-        $occupied = count($servingDoctorIds);
+        $occupied = Queue::query()
+            ->whereDate('queue_datetime', $date)
+            ->where('status', 'serving')
+            ->count();
         if ($occupied >= $capacity) {
             return response()->json([
                 'message' => 'There are still '.$occupied.'/'.$capacity.' patients currently being served. Please wait until one slot is available.',
@@ -385,9 +385,23 @@ class QueueController extends Controller
         });
 
         if (! $next) {
+            $waitingForActiveDoctors = Queue::query()
+                ->whereDate('queue_datetime', $date)
+                ->where('status', 'waiting')
+                ->whereHas('appointment', function ($q) use ($activeDoctorIds) {
+                    $q->whereIn('doctor_id', $activeDoctorIds);
+                })
+                ->count();
             return response()->json([
-                'message' => 'No waiting patients are eligible to be called right now.',
+                'message' => $waitingForActiveDoctors > 0
+                    ? 'Waiting patients exist, but all active serving slots are currently occupied.'
+                    : 'No waiting patients are eligible to be called right now.',
                 'code' => 'NO_ELIGIBLE_WAITING',
+                'meta' => [
+                    'capacity' => $capacity,
+                    'occupied' => $occupied,
+                    'waiting_for_active_doctors' => $waitingForActiveDoctors,
+                ],
             ], 422);
         }
 
