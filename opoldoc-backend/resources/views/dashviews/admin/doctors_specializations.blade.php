@@ -93,11 +93,69 @@
                     </div>
                     <div>
                         <label for="admin_schedule_start_time" class="block text-[0.7rem] text-slate-600 mb-1">Start time</label>
-                        <input type="time" id="admin_schedule_start_time" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" step="900">
+                        <div class="grid grid-cols-3 gap-2">
+                            <select id="admin_schedule_start_hour" class="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                                <option value="">Hour</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="6">6</option>
+                                <option value="7">7</option>
+                                <option value="8">8</option>
+                                <option value="9">9</option>
+                                <option value="10">10</option>
+                                <option value="11">11</option>
+                                <option value="12">12</option>
+                            </select>
+                            <select id="admin_schedule_start_min" class="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                                <option value="">Min</option>
+                                <option value="00">00</option>
+                                <option value="15">15</option>
+                                <option value="30">30</option>
+                                <option value="45">45</option>
+                            </select>
+                            <select id="admin_schedule_start_ampm" class="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                                <option value="">AM/PM</option>
+                                <option value="am">AM</option>
+                                <option value="pm">PM</option>
+                            </select>
+                        </div>
+                        <input type="hidden" id="admin_schedule_start_time">
                     </div>
                     <div>
                         <label for="admin_schedule_end_time" class="block text-[0.7rem] text-slate-600 mb-1">End time</label>
-                        <input type="time" id="admin_schedule_end_time" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" step="900">
+                        <div class="grid grid-cols-3 gap-2">
+                            <select id="admin_schedule_end_hour" class="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                                <option value="">Hour</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="6">6</option>
+                                <option value="7">7</option>
+                                <option value="8">8</option>
+                                <option value="9">9</option>
+                                <option value="10">10</option>
+                                <option value="11">11</option>
+                                <option value="12">12</option>
+                            </select>
+                            <select id="admin_schedule_end_min" class="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                                <option value="">Min</option>
+                                <option value="00">00</option>
+                                <option value="15">15</option>
+                                <option value="30">30</option>
+                                <option value="45">45</option>
+                            </select>
+                            <select id="admin_schedule_end_ampm" class="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                                <option value="">AM/PM</option>
+                                <option value="am">AM</option>
+                                <option value="pm">PM</option>
+                            </select>
+                        </div>
+                        <input type="hidden" id="admin_schedule_end_time">
                     </div>
                     <div>
                         <label for="admin_schedule_max" class="block text-[0.7rem] text-slate-600 mb-1">Max patients</label>
@@ -848,6 +906,40 @@
             if (hEl) hEl.value = String(h12)
             if (mEl) mEl.value = m
             if (apEl) apEl.value = ap
+            syncScheduleTimeHidden(prefix)
+        }
+
+        function syncScheduleTimeHidden(prefix) {
+            var hourEl = document.getElementById('admin_schedule_' + prefix + '_hour')
+            var minEl = document.getElementById('admin_schedule_' + prefix + '_min')
+            var apEl = document.getElementById('admin_schedule_' + prefix + '_ampm')
+            var hiddenEl = document.getElementById('admin_schedule_' + prefix + '_time')
+            if (!hiddenEl) return
+
+            var hour = hourEl ? String(hourEl.value || '') : ''
+            var minute = minEl ? String(minEl.value || '') : ''
+            var ampm = apEl ? String(apEl.value || '') : ''
+            hiddenEl.value = to24Hour(hour, minute, ampm)
+        }
+
+        function clear12HourSelects(prefix) {
+            var hourEl = document.getElementById('admin_schedule_' + prefix + '_hour')
+            var minEl = document.getElementById('admin_schedule_' + prefix + '_min')
+            var apEl = document.getElementById('admin_schedule_' + prefix + '_ampm')
+            var hiddenEl = document.getElementById('admin_schedule_' + prefix + '_time')
+            if (hourEl) hourEl.value = ''
+            if (minEl) minEl.value = ''
+            if (apEl) apEl.value = ''
+            if (hiddenEl) hiddenEl.value = ''
+        }
+
+        function wire12HourPicker(prefix) {
+            var hourEl = document.getElementById('admin_schedule_' + prefix + '_hour')
+            var minEl = document.getElementById('admin_schedule_' + prefix + '_min')
+            var apEl = document.getElementById('admin_schedule_' + prefix + '_ampm')
+            if (hourEl) hourEl.addEventListener('change', function () { syncScheduleTimeHidden(prefix) })
+            if (minEl) minEl.addEventListener('change', function () { syncScheduleTimeHidden(prefix) })
+            if (apEl) apEl.addEventListener('change', function () { syncScheduleTimeHidden(prefix) })
         }
 
         function formatTimeLabel(hhmm) {
@@ -886,6 +978,11 @@
             if (m === '00') return String(h12) + ap
             return String(h12) + ':' + m + ap
         }
+
+        wire12HourPicker('start')
+        wire12HourPicker('end')
+        clear12HourSelects('start')
+        clear12HourSelects('end')
 
         function loadDoctors() {
             if (!tableBody) return
@@ -1037,8 +1134,8 @@
                     currentDoctorIdForSchedule = id
                     currentScheduleId = null
                     
-                    if (document.getElementById('admin_schedule_start_time')) document.getElementById('admin_schedule_start_time').value = ''
-                    if (document.getElementById('admin_schedule_end_time')) document.getElementById('admin_schedule_end_time').value = ''
+                    clear12HourSelects('start')
+                    clear12HourSelects('end')
                     if (scheduleMax) scheduleMax.value = ''
                     if (scheduleFromDay) scheduleFromDay.value = ''
                     if (scheduleToDay) scheduleToDay.value = ''
@@ -1106,6 +1203,8 @@
                             var endInput = document.getElementById('admin_schedule_end_time')
                             if (startInput) startInput.value = String(slot.start_time || '').slice(0, 5)
                             if (endInput) endInput.value = String(slot.end_time || '').slice(0, 5)
+                            set12HourSelects('start', startInput ? startInput.value : '')
+                            set12HourSelects('end', endInput ? endInput.value : '')
                             if (scheduleMax) scheduleMax.value = slot.max_patients != null ? String(slot.max_patients) : ''
                             if (scheduleRoom) scheduleRoom.value = slot.room_number != null ? String(slot.room_number) : ''
                             if (scheduleSubmitLabel) scheduleSubmitLabel.textContent = 'Save changes'
@@ -1583,8 +1682,8 @@
                 }
                 currentDoctorIdForSchedule = null
                 currentScheduleId = null
-                if (document.getElementById('admin_schedule_start_time')) document.getElementById('admin_schedule_start_time').value = ''
-                if (document.getElementById('admin_schedule_end_time')) document.getElementById('admin_schedule_end_time').value = ''
+                clear12HourSelects('start')
+                clear12HourSelects('end')
                 if (scheduleMax) scheduleMax.value = ''
                 if (scheduleRoom) scheduleRoom.value = ''
                 if (scheduleFromDay) scheduleFromDay.value = ''
@@ -1610,6 +1709,8 @@
                 showDoctorError('')
                 showDoctorSuccess('')
 
+                syncScheduleTimeHidden('start')
+                syncScheduleTimeHidden('end')
                 var start = document.getElementById('admin_schedule_start_time') ? document.getElementById('admin_schedule_start_time').value : ''
                 var end = document.getElementById('admin_schedule_end_time') ? document.getElementById('admin_schedule_end_time').value : ''
                 var maxPatients = scheduleMax ? scheduleMax.value : ''
@@ -1727,8 +1828,8 @@
                         showDoctorSuccess(successMsg)
                         
                         // Reset form
-                        if (document.getElementById('admin_schedule_start_time')) document.getElementById('admin_schedule_start_time').value = ''
-                        if (document.getElementById('admin_schedule_end_time')) document.getElementById('admin_schedule_end_time').value = ''
+                        clear12HourSelects('start')
+                        clear12HourSelects('end')
                         if (scheduleMax) scheduleMax.value = ''
                         if (scheduleRoom) scheduleRoom.value = ''
                         if (scheduleFromDay) scheduleFromDay.value = ''

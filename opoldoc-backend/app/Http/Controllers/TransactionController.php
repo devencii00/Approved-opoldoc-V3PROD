@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Appointment;
 use App\Models\LogEntry;
+use App\Models\Queue;
 use App\Models\Transaction;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -357,5 +358,17 @@ class TransactionController extends Controller
             $appointment->status = 'completed';
             $appointment->save();
         }
+
+        $typeRaw = strtolower(trim((string) ($appointment->appointment_type ?? '')));
+        $typeNormalized = str_replace(['-', ' '], '_', $typeRaw);
+        $isWalkIn = in_array($typeNormalized, ['walk_in', 'walkin'], true);
+        if (! $isWalkIn) {
+            return;
+        }
+
+        Queue::query()
+            ->where('appointment_id', (int) $appointment->appointment_id)
+            ->whereIn('status', ['waiting', 'serving'])
+            ->update(['status' => 'done']);
     }
 }

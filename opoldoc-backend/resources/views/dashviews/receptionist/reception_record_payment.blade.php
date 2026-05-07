@@ -415,23 +415,12 @@
         function renderAppointmentResults(items, q) {
             if (!appointmentResults) return
             var query = normalizeText(q || '')
-            var today = (function () {
-                var d = new Date()
-                var y = d.getFullYear()
-                var m = String(d.getMonth() + 1).padStart(2, '0')
-                var day = String(d.getDate()).padStart(2, '0')
-                return y + '-' + m + '-' + day
-            })()
-
             var list = (Array.isArray(items) ? items : []).filter(function (appt) {
                 var type = normalizeAppointmentType(appt && appt.appointment_type ? appt.appointment_type : '')
                 if (type !== 'scheduled' && type !== 'walk_in') return false
 
                 var status = String(appt && appt.status ? appt.status : '').toLowerCase()
-                if (status === 'completed') return false
-
-                var datePart = appt && appt.appointment_datetime ? String(appt.appointment_datetime).slice(0, 10) : ''
-                if (datePart !== today) return false
+                if (status === 'completed' || status === 'cancelled' || status === 'no_show') return false
 
                 var patient = appointmentPatientName(appt)
                 var doctor = appointmentDoctorName(appt)
@@ -470,12 +459,7 @@
         function searchAppointments(query) {
             if (typeof apiFetch !== 'function') return
             var q = String(query || '').trim()
-            var now = new Date()
-            var y = now.getFullYear()
-            var m = String(now.getMonth() + 1).padStart(2, '0')
-            var d = String(now.getDate()).padStart(2, '0')
-            var today = y + '-' + m + '-' + d
-            var url = "{{ url('/api/appointments') }}" + '?per_page=100&order=latest&start_date=' + encodeURIComponent(today) + '&end_date=' + encodeURIComponent(today)
+            var url = "{{ url('/api/appointments') }}" + '?per_page=100&order=latest&today_only=1'
             if (q) url += '&search=' + encodeURIComponent(q)
 
             apiFetch(url, { method: 'GET' })

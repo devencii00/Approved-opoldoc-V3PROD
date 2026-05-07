@@ -2600,7 +2600,8 @@ function updateManageTodayButton() {
                 var body = {}
                 var confirmText = 'Apply this action?'
                 if (action === 'check_in') {
-                    body.check_in_time = new Date().toISOString()
+                    var nowCheckIn = new Date()
+                    body.check_in_time = formatLocalDateIso(nowCheckIn) + ' ' + nowCheckIn.toTimeString().slice(0, 8)
                     confirmText = 'Mark this appointment as checked-in now?'
                 } else if (action === 'cancel') {
                     body.status = 'cancelled'
