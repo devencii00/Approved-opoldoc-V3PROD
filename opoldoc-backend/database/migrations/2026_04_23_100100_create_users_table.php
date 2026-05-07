@@ -38,6 +38,7 @@ return new class extends Migration
             $table->string('license_number')->nullable();
             $table->string('specialization')->nullable();
             $table->string('signature_path')->nullable();
+            $table->string('prof_path')->nullable();
             $table->string('employee_number')->nullable();
             $table->date('hire_date')->nullable();
 

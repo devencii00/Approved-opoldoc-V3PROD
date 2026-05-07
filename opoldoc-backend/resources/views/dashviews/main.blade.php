@@ -15,7 +15,7 @@
                     'admin' => 'admindb',
                     'doctor' => 'doctordb',
                     'receptionist' => 'receptdb',
-                    'patient' => null,
+                    'patient' => 'patientdb',
                 ];
 
                 $key = $mapping[$role] ?? null;

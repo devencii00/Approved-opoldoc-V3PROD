@@ -7,6 +7,7 @@ use App\Models\LogEntry;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
@@ -316,6 +317,56 @@ class UserController extends Controller
         }
 
         return $currentUser->refresh();
+    }
+
+    public function updateProfilePicture(Request $request)
+    {
+        $currentUser = $request->user();
+        if (! $currentUser) {
+            abort(401);
+        }
+
+        $data = $request->validate([
+            'prof_path' => ['required', 'file', 'image', 'max:5120'],
+        ]);
+
+        $file = $data['prof_path'];
+        $ext = strtolower($file->getClientOriginalExtension() ?: 'png');
+        if (! in_array($ext, ['png', 'jpg', 'jpeg', 'webp'], true)) {
+            return response()->json([
+                'message' => 'Unsupported profile image type.',
+            ], 422);
+        }
+
+        $oldPath = $currentUser->prof_path ?? null;
+
+        $filename = 'profile_'.$currentUser->user_id.'_'.now()->format('YmdHis').'.'.$ext;
+        $path = $file->storeAs('profiles', $filename, 'public');
+
+        // We use DB to update if model doesn't have it in fillable
+        DB::table('users')->where('user_id', $currentUser->user_id)->update([
+            'prof_path' => $path,
+        ]);
+
+        if (is_string($oldPath) && trim($oldPath) !== '' && $oldPath !== $path) {
+            Storage::disk('public')->delete($oldPath);
+        }
+
+        return $currentUser->refresh();
+    }
+
+    public function profilePicture(User $user)
+    {
+        $path = $user->prof_path ?? null;
+        if (! is_string($path) || trim($path) === '') {
+            abort(404);
+        }
+        if (! Storage::disk('public')->exists($path)) {
+            abort(404);
+        }
+
+        $absolute = storage_path('app/public/'.$path);
+        return response()->file($absolute);
     }
 
     public function verifyCurrentPassword(Request $request)

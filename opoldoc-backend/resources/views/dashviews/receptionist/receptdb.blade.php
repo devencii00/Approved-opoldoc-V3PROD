@@ -430,6 +430,8 @@ if (!next.length) {
             @include('dashviews.receptionist.reception_record_payment')
         @elseif ($sectionKey === 'verification-oversight')
             @include('dashviews.admin.verification_approvals')
+        @elseif ($sectionKey === 'settings-reception')
+            @include('dashviews.receptionist.reception_settings')
         @elseif ($sectionKey === 'messages')
             <div class="bg-white border border-slate-200 rounded-[18px] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
                 <div class="flex items-center justify-between mb-4">

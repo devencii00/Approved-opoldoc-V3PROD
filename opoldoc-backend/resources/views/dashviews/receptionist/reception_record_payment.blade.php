@@ -59,7 +59,7 @@
                     <select id="reception_payment_discount_type" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
                         <option value="none" selected>No discount</option>
                         <option value="pwd">PWD (15%)</option>
-                        <option value="pregnant">Pregnant (10%)</option>
+                        <!-- <option value="pregnant">Pregnant (10%)</option> -->
                         <option value="senior">Senior (5%)</option>
                     </select>
                 </div>

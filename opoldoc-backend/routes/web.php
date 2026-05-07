@@ -53,3 +53,4 @@ Route::get('/guest-walk-in/{token}', function (string $token) {
 Route::get('/print/prescriptions/{prescriptionId}', [PrescriptionReceiptController::class, 'show'])->name('print.prescription');
 
 Route::get('/signatures/{user}', [UserController::class, 'signature'])->name('public.signature');
+Route::get('/profiles/{user}', [UserController::class, 'profilePicture'])->name('public.profile_picture');

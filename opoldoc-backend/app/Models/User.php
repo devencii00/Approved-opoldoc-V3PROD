@@ -37,6 +37,7 @@ class User extends Authenticatable
         'license_number',
         'specialization',
         'signature_path',
+        'prof_path',
         'employee_number',
         'hire_date',
         'is_dependent',
@@ -65,6 +66,7 @@ class User extends Authenticatable
         'must_change_credentials',
         'current_role',
         'signature_url',
+        'prof_path_url',
     ];
 
     protected static function booted(): void
@@ -225,5 +227,19 @@ class User extends Authenticatable
         }
 
         return url('/signatures/'.$this->user_id);
+    }
+
+    public function getProfPathUrlAttribute(): ?string
+    {
+        $path = $this->prof_path ?? null;
+        if (! is_string($path) || trim($path) === '') {
+            return null;
+        }
+
+        if (! Storage::disk('public')->exists($path)) {
+            return null;
+        }
+
+        return url('/profiles/'.$this->user_id);
     }
 }

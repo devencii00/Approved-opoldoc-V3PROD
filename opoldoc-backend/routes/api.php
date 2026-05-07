@@ -40,6 +40,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/users/invite', [UserController::class, 'invite']);
     Route::get('/users/{user}/dependents', [UserController::class, 'dependents']);
     Route::post('/users/me/signature', [UserController::class, 'updateSignature']);
+    Route::post('/users/me/profile-picture', [UserController::class, 'updateProfilePicture']);
+    Route::get('/users/me/profile-picture/{user}', [UserController::class, 'profilePicture']);
     Route::post('/users/me/password/verify', [UserController::class, 'verifyCurrentPassword']);
     Route::post('/users/me/password/change', [UserController::class, 'changePassword']);
 

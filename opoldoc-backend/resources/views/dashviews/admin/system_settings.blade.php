@@ -15,24 +15,20 @@
             <div class="flex items-center justify-between mb-2">
                 <div>
                     <h3 class="text-xs font-semibold text-slate-900">Account profile</h3>
-                    <p class="text-[0.7rem] text-slate-500">Update admin name.</p>
+                    <p class="text-[0.7rem] text-slate-500">Update admin contact info.</p>
                 </div>
                 <x-lucide-badge class="w-[18px] h-[18px] text-slate-700" />
             </div>
 
             <form id="settingsNameForm" class="space-y-3">
                 <div>
-                    <label for="settings_first_name" class="block text-[0.7rem] text-slate-500 mb-1">First name</label>
-                    <input id="settings_first_name" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[0.78rem] text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
-                </div>
-                <div>
-                    <label for="settings_last_name" class="block text-[0.7rem] text-slate-500 mb-1">Last name</label>
-                    <input id="settings_last_name" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[0.78rem] text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                    <label for="settings_contact_number" class="block text-[0.7rem] text-slate-500 mb-1">Contact number (optional)</label>
+                    <input id="settings_contact_number" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[0.78rem] text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="09xx xxx xxxx">
                 </div>
                 <div class="flex items-center justify-end pt-1">
                     <button type="button" id="settings_name_save" class="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-3 py-2 text-[0.78rem] font-semibold text-white hover:bg-cyan-700 disabled:opacity-60 disabled:hover:bg-cyan-600">
                         <span id="settingsNameSaveSpinner" class="hidden w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
-                        Save name
+                        Save profile
                     </button>
                 </div>
             </form>
@@ -113,8 +109,7 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        var firstName = document.getElementById('settings_first_name')
-        var lastName = document.getElementById('settings_last_name')
+        var contactNumber = document.getElementById('settings_contact_number')
         var nameSave = document.getElementById('settings_name_save')
         var nameSaveSpinner = document.getElementById('settingsNameSaveSpinner')
         var currentUserId = null
@@ -392,8 +387,7 @@
                 .then(function (result) {
                     if (!result.ok || !result.data) return
                     currentUserId = result.data.user_id ? String(result.data.user_id) : null
-                    if (firstName) firstName.value = result.data.firstname ? String(result.data.firstname) : ''
-                    if (lastName) lastName.value = result.data.lastname ? String(result.data.lastname) : ''
+                    if (contactNumber) contactNumber.value = result.data.contact_number ? String(result.data.contact_number) : ''
                 })
                 .catch(function () {})
         }
@@ -408,19 +402,12 @@
                 return
             }
 
-            var fn = firstName ? String(firstName.value || '').trim() : ''
-            var ln = lastName ? String(lastName.value || '').trim() : ''
-
-            if (!fn && !ln) {
-                showAccountError('Please enter a first name or last name.')
-                return
-            }
+            var cn = contactNumber ? String(contactNumber.value || '').trim() : ''
 
             var body = {}
-            if (fn) body.firstname = fn
-            if (ln) body.lastname = ln
+            if (cn) body.contact_number = cn
 
-            confirmAction('Are you sure you want to update these changes?', { confirmText: 'Update' })
+            confirmAction('Are you sure you want to update your profile?', { confirmText: 'Update' })
                 .then(function (confirmed) {
                     if (!confirmed) return
 
@@ -432,8 +419,7 @@
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            firstname: body.firstname,
-                            lastname: body.lastname
+                            contact_number: body.contact_number
                         })
                     })
                         .then(function (response) {
@@ -452,15 +438,15 @@
                                         : 'Validation error.'
                                     showAccountError(String(msg))
                                 } else {
-                                    var msg2 = (result.data && result.data.message) ? String(result.data.message) : 'Unable to update name.'
+                                    var msg2 = (result.data && result.data.message) ? String(result.data.message) : 'Unable to update profile.'
                                     showAccountError(msg2)
                                 }
                                 return
                             }
-                            showAccountNotice('Name updated.')
+                            showAccountNotice('Profile updated.')
                         })
                         .catch(function () {
-                            showAccountError('Network error while updating name.')
+                            showAccountError('Network error while updating profile.')
                         })
                         .finally(function () {
                             setNameSubmitting(false)

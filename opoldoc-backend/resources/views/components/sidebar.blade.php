@@ -234,6 +234,7 @@
                 $isReceptionRecordPayments = $currentSection === 'record-payment';
                 $isReceptionVerificationOversight = $currentSection === 'verification-oversight';
                 $isReceptionMessages = $currentSection === 'messages';
+                $isReceptionSettings = $currentSection === 'settings-reception';
 
                 $groupHeaderBase = 'flex items-center justify-between gap-2 pt-4 pb-1 text-slate-400 text-[0.67rem] font-semibold uppercase tracking-widest';
                 $groupToggleBtn = 'inline-flex items-center justify-center w-7 h-7 rounded-lg hover:bg-slate-50 text-slate-400 hover:text-slate-700';
@@ -335,6 +336,23 @@
                     @endif
                 </a>
             </div>
+
+            <div class="{{ $groupHeaderBase }}">
+                <div>System</div>
+                <button type="button" class="{{ $groupToggleBtn }} sidebar-group-toggle" data-group="reception-system">
+                    <x-lucide-chevron-down class="sidebar-group-icon-expanded w-[18px] h-[18px]" />
+                    <x-lucide-chevron-right class="sidebar-group-icon-collapsed hidden w-[18px] h-[18px]" />
+                </button>
+            </div>
+            <div data-group-body="reception-system">
+                <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'settings-reception']) }}" class="{{ $navBase }} {{ $isReceptionSettings ? $navActive : $navInactive }}">
+                    <x-lucide-settings class="w-[18px] h-[18px] {{ $isReceptionSettings ? 'text-cyan-600' : '' }}" />
+                    Settings
+                    @if ($isReceptionSettings)
+                        <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                    @endif
+                </a>
+            </div>
         @elseif ($roleKey === 'doctor')
             @php
                 $isDoctorSchedule = $currentSection === 'my-schedule';
@@ -396,13 +414,28 @@
                     <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
                 @endif
             </a>
+        @elseif ($roleKey === 'patient')
+            @php
+                $isPatientSettings = $currentSection === 'settings-patient';
+            @endphp
+
+            <div class="text-slate-400 text-[0.67rem] font-semibold uppercase tracking-widest mt-4 mb-1">System</div>
+
+            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'settings-patient']) }}" class="{{ $navBase }} {{ $isPatientSettings ? $navActive : $navInactive }}">
+                <x-lucide-settings class="w-[18px] h-[18px] {{ $isPatientSettings ? 'text-cyan-600' : '' }}" />
+                Settings
+                @if ($isPatientSettings)
+                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                @endif
+            </a>
         @endif
     </nav>
 
     <div class="px-3 py-4 border-t border-slate-100">
         <div class="flex items-center gap-2.5 p-2 rounded-xl bg-slate-50 mb-2">
-            <div class="w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br from-cyan-400 to-cyan-700 text-white">
-                <x-lucide-user class="w-[18px] h-[18px]" />
+            <div class="w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br from-cyan-400 to-cyan-700 text-white overflow-hidden">
+                <img id="sidebarUserImage" src="" class="hidden w-full h-full object-cover" alt="Profile">
+                <x-lucide-user id="sidebarUserIcon" class="w-[18px] h-[18px]" />
             </div>
             <div>
                 <div id="sidebarUserName" class="text-slate-800 font-semibold text-[0.83rem] leading-tight">{{ $roleLabel }}</div>
@@ -519,6 +552,20 @@
                     var user = result.data
                     nameEl.textContent = formatUserName(user)
                     emailEl.textContent = user && user.email ? String(user.email) : ''
+
+                    var imgEl = document.getElementById('sidebarUserImage')
+                    var iconEl = document.getElementById('sidebarUserIcon')
+                    if (imgEl && iconEl) {
+                        if (user.prof_path_url) {
+                            imgEl.src = user.prof_path_url
+                            imgEl.classList.remove('hidden')
+                            iconEl.classList.add('hidden')
+                        } else {
+                            imgEl.src = ''
+                            imgEl.classList.add('hidden')
+                            iconEl.classList.remove('hidden')
+                        }
+                    }
                 })
                 .catch(function () {})
         })
