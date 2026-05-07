@@ -14,6 +14,14 @@
             <label for="admin_pr_patients_search" class="block text-[0.7rem] text-slate-600 mb-1">Search patient name</label>
             <input id="admin_pr_patients_search" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Search by name (starts with)">
         </div>
+        <div class="w-full md:w-44">
+            <label for="admin_pr_sort" class="block text-[0.7rem] text-slate-600 mb-1">Sort</label>
+            <select id="admin_pr_sort" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                <option value="name_asc">Name A-Z</option>
+                <option value="created_desc">Newest first</option>
+                <option value="created_asc">Oldest first</option>
+            </select>
+        </div>
     </div>
 
     <div class="mb-4">
@@ -182,6 +190,7 @@
     document.addEventListener('DOMContentLoaded', function () {
         var patientsError = document.getElementById('adminPrPatientsError')
         var patientsSearch = document.getElementById('admin_pr_patients_search')
+        var sortSelect = document.getElementById('admin_pr_sort')
         var patientsTableBody = document.getElementById('admin_pr_patients_table_body')
         var patientsRows = []
 
@@ -422,6 +431,7 @@
         function renderPatients() {
             if (!patientsTableBody) return
             var query = patientsSearch ? String(patientsSearch.value || '').toLowerCase().trim() : ''
+            var sortValue = sortSelect ? String(sortSelect.value || 'name_asc') : 'name_asc'
             var base = (patientsRows || []).slice()
 
             if (query) {
@@ -463,6 +473,16 @@
             })
 
             filtered.sort(function (a, b) {
+                if (sortValue === 'created_asc' || sortValue === 'created_desc') {
+                    var ta = a && a.created_at ? Date.parse(String(a.created_at)) : 0
+                    var tb = b && b.created_at ? Date.parse(String(b.created_at)) : 0
+                    if (isNaN(ta)) ta = 0
+                    if (isNaN(tb)) tb = 0
+                    if (ta < tb) return sortValue === 'created_asc' ? -1 : 1
+                    if (ta > tb) return sortValue === 'created_asc' ? 1 : -1
+                    return 0
+                }
+
                 var na = nameOnly(a).toLowerCase()
                 var nb = nameOnly(b).toLowerCase()
                 if (na < nb) return -1
@@ -813,6 +833,7 @@
         }
 
         if (patientsSearch) patientsSearch.addEventListener('input', renderPatients)
+        if (sortSelect) sortSelect.addEventListener('change', renderPatients)
 
         if (ageFilterButtons && ageFilterButtons.length) {
             ageFilterButtons.forEach(function (btn) {

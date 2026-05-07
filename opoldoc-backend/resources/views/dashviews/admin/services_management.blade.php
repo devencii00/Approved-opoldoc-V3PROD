@@ -8,6 +8,7 @@
     </p>
 
     <div id="adminServiceError" class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[0.75rem] text-red-700"></div>
+    <div id="adminServiceSuccess" class="hidden mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[0.75rem] text-emerald-700"></div>
 
     <form id="adminAddServiceForm" class="mb-4 grid gap-2 grid-cols-1 md:grid-cols-5 items-end">
         <div>
@@ -27,8 +28,9 @@
                 <label for="admin_service_price" class="block text-[0.7rem] text-slate-600 mb-1">Price (optional)</label>
                 <input id="admin_service_price" type="number" step="0.01" min="0" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
             </div>
-            <button type="submit" class="inline-flex h-[34px] items-center justify-center px-4 py-2 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700 transition-colors">
-                Add Service
+            <button type="submit" id="adminAddServiceBtn" class="inline-flex h-[34px] items-center justify-center px-4 py-2 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700 transition-colors disabled:opacity-60 disabled:hover:bg-cyan-600">
+                <span id="adminAddServiceSpinner" class="hidden w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin mr-2"></span>
+                <span>Add Service</span>
             </button>
         </div>
     </form>
@@ -53,6 +55,8 @@
                 <option value="name_desc">Name Z–A</option>
                 <option value="price_asc">Price low–high</option>
                 <option value="price_desc">Price high–low</option>
+                <option value="created_desc">Newest first</option>
+                <option value="created_asc">Oldest first</option>
             </select>
         </div>
     </div>
@@ -90,6 +94,7 @@
             <div class="flex-1">
                 <div class="text-sm font-semibold text-slate-900">Confirm</div>
                 <div id="adminServiceConfirmMessage" class="text-[0.78rem] text-slate-600 mt-0.5">Are you sure?</div>
+                <div id="adminServiceConfirmDetails" class="hidden text-[0.78rem] text-slate-600 mt-2"></div>
             </div>
         </div>
         <div class="mt-4 flex items-center justify-end gap-2">
@@ -144,6 +149,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         var errorBox = document.getElementById('adminServiceError')
+        var successBox = document.getElementById('adminServiceSuccess')
         var addForm = document.getElementById('adminAddServiceForm')
         var nameInput = document.getElementById('admin_service_name')
         var descInput = document.getElementById('admin_service_description')
@@ -153,6 +159,9 @@
         var statusFilter = document.getElementById('admin_service_status_filter')
         var sortSelect = document.getElementById('admin_service_sort')
         var tableBody = document.getElementById('admin_service_table_body')
+
+        var addServiceBtn = document.getElementById('adminAddServiceBtn')
+        var addServiceSpinner = document.getElementById('adminAddServiceSpinner')
 
         var services = []
         var editingServiceId = null
@@ -172,19 +181,83 @@
 
         var confirmOverlay = document.getElementById('adminServiceConfirmOverlay')
         var confirmMessage = document.getElementById('adminServiceConfirmMessage')
+        var confirmDetails = document.getElementById('adminServiceConfirmDetails')
         var confirmOk = document.getElementById('adminServiceConfirmOk')
         var confirmCancel = document.getElementById('adminServiceConfirmCancel')
         var confirmResolver = null
         var confirmCountdownTimer = null
         var confirmOkOriginalText = null
+        var serviceErrorTimer = null
+        var serviceSuccessTimer = null
+
+        function escapeHtml(text) {
+            return String(text || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;')
+        }
+
+        function stopBoxTimer(type) {
+            if (type === 'error' && serviceErrorTimer) {
+                clearTimeout(serviceErrorTimer)
+                serviceErrorTimer = null
+            }
+            if (type === 'success' && serviceSuccessTimer) {
+                clearTimeout(serviceSuccessTimer)
+                serviceSuccessTimer = null
+            }
+        }
+
+        function scheduleBoxDismiss(type, callback) {
+            stopBoxTimer(type)
+            var timer = setTimeout(function () {
+                callback()
+            }, 3200)
+            if (type === 'error') serviceErrorTimer = timer
+            if (type === 'success') serviceSuccessTimer = timer
+        }
+
+        function readApiMessage(result, fallback) {
+            if (!result) return fallback
+            if (result.data && result.data.errors) {
+                var all = []
+                Object.keys(result.data.errors).forEach(function (key) {
+                    var val = result.data.errors[key]
+                    if (Array.isArray(val)) {
+                        val.forEach(function (item) { all.push(String(item)) })
+                    } else if (val != null) {
+                        all.push(String(val))
+                    }
+                })
+                if (all.length) return all.join(' ')
+            }
+            if (result.data && result.data.message) return String(result.data.message)
+            return fallback
+        }
 
         function showServiceError(message) {
             if (!errorBox) return
+            stopBoxTimer('error')
             errorBox.textContent = message || ''
             if (message) {
                 errorBox.classList.remove('hidden')
+                scheduleBoxDismiss('error', function () { showServiceError('') })
             } else {
                 errorBox.classList.add('hidden')
+            }
+        }
+
+        function showServiceSuccess(message) {
+            if (!successBox) return
+            stopBoxTimer('success')
+            successBox.textContent = message || ''
+            if (message) {
+                successBox.classList.remove('hidden')
+                scheduleBoxDismiss('success', function () { showServiceSuccess('') })
+            } else {
+                successBox.classList.add('hidden')
             }
         }
 
@@ -192,6 +265,11 @@
             if (!el) return
             el.textContent = message || ''
             el.classList.toggle('hidden', !message)
+        }
+
+        function setServiceAddSubmitting(isSubmitting) {
+            if (addServiceBtn) addServiceBtn.disabled = !!isSubmitting
+            if (addServiceSpinner) addServiceSpinner.classList.toggle('hidden', !isSubmitting)
         }
 
         function setServiceEditSubmitting(isSubmitting) {
@@ -219,6 +297,10 @@
                 confirmOverlay.classList.add('hidden')
                 confirmOverlay.classList.remove('flex')
             }
+            if (confirmDetails) {
+                confirmDetails.innerHTML = ''
+                confirmDetails.classList.add('hidden')
+            }
             stopConfirmCountdown()
             var resolver = confirmResolver
             confirmResolver = null
@@ -236,6 +318,17 @@
                 var confirmText = options && options.confirmText ? String(options.confirmText) : 'Confirm'
                 confirmOk.textContent = confirmText
                 confirmOkOriginalText = confirmText
+
+                if (confirmDetails) {
+                    var details = options && options.details ? options.details : ''
+                    if (details) {
+                        confirmDetails.innerHTML = details
+                        confirmDetails.classList.remove('hidden')
+                    } else {
+                        confirmDetails.innerHTML = ''
+                        confirmDetails.classList.add('hidden')
+                    }
+                }
 
                 confirmResolver = resolve
                 confirmOverlay.classList.remove('hidden')
@@ -364,6 +457,17 @@
                     if (pa > pb) return sort === 'price_asc' ? 1 : -1
                     return 0
                 }
+
+                if (sort === 'created_asc' || sort === 'created_desc') {
+                    var ta = a && a.created_at ? Date.parse(String(a.created_at)) : 0
+                    var tb = b && b.created_at ? Date.parse(String(b.created_at)) : 0
+                    if (isNaN(ta)) ta = 0
+                    if (isNaN(tb)) tb = 0
+                    if (ta < tb) return sort === 'created_asc' ? -1 : 1
+                    if (ta > tb) return sort === 'created_asc' ? 1 : -1
+                    return 0
+                }
+
                 var na = (a.service_name || '').toLowerCase()
                 var nb = (b.service_name || '').toLowerCase()
                 if (na < nb) return sort === 'name_asc' ? -1 : 1
@@ -399,10 +503,10 @@
                     '</td>' +
                     '<td class="py-2 pr-4 text-[0.78rem]">' +
                         '<div class="flex items-center gap-2">' +
-                            '<button type="button" class="text-[0.72rem] text-cyan-700 hover:text-cyan-800 font-semibold admin-service-edit" data-service-id="' + service.service_id + '">Edit</button>' +
+                            '<button type="button" class="px-2 py-1 rounded-md border border-cyan-200 bg-cyan-50 text-cyan-700 hover:bg-cyan-100 text-[0.72rem] font-semibold admin-service-edit" data-service-id="' + service.service_id + '">Edit</button>' +
                             (isActive
-                                ? '<button type="button" class="text-[0.72rem] text-slate-700 hover:text-slate-900 font-semibold admin-service-disable" data-service-id="' + service.service_id + '">Disable</button>'
-                                : '<button type="button" class="text-[0.72rem] text-emerald-700 hover:text-emerald-800 font-semibold admin-service-enable" data-service-id="' + service.service_id + '">Re-enable</button>'
+                                ? '<button type="button" class="px-2 py-1 rounded-md border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 text-[0.72rem] font-semibold admin-service-disable" data-service-id="' + service.service_id + '">Disable</button>'
+                                : '<button type="button" class="px-2 py-1 rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-[0.72rem] font-semibold admin-service-enable" data-service-id="' + service.service_id + '">Re-enable</button>'
                             ) +
                         '</div>' +
                     '</td>'
@@ -417,6 +521,7 @@
                     var service = services.find(function (s) { return String(s.service_id) === String(id) })
                     if (!service) return
                     showServiceError('')
+                    showServiceSuccess('')
                     openServiceEditModal(service)
                 })
             })
@@ -451,13 +556,13 @@
                                 })
                                 .then(function (result) {
                                     if (!result.ok) {
-                                        var msg = (result.data && result.data.message) ? result.data.message : 'Failed to disable service.'
-                                        showServiceError(String(msg))
+                                        showServiceError(readApiMessage(result, 'Failed to disable service.'))
                                         self.disabled = false
                                         self.classList.remove('opacity-60', 'cursor-not-allowed')
                                         self.textContent = 'Disable'
                                         return
                                     }
+                                    showServiceSuccess('Service disabled.')
                                     loadServices()
                                 })
                                 .catch(function () {
@@ -500,13 +605,13 @@
                                 })
                                 .then(function (result) {
                                     if (!result.ok) {
-                                        var msg = (result.data && result.data.message) ? result.data.message : 'Failed to re-enable service.'
-                                        showServiceError(String(msg))
+                                        showServiceError(readApiMessage(result, 'Failed to re-enable service.'))
                                         self.disabled = false
                                         self.classList.remove('opacity-60', 'cursor-not-allowed')
                                         self.textContent = 'Re-enable'
                                         return
                                     }
+                                    showServiceSuccess('Service re-enabled.')
                                     loadServices()
                                 })
                                 .catch(function () {
@@ -598,6 +703,7 @@
                                 }
 
                                 closeServiceEditModal()
+                                showServiceSuccess('Service updated.')
                                 loadServices()
                             })
                             .catch(function () {
@@ -614,6 +720,7 @@
             addForm.addEventListener('submit', function (e) {
                 e.preventDefault()
                 showServiceError('')
+                showServiceSuccess('')
 
                 var name = nameInput ? nameInput.value.trim() : ''
                 var description = descInput ? descInput.value.trim() : ''
@@ -643,9 +750,18 @@
                     body.price = parseFloat(priceRaw)
                 }
 
-                confirmAction('Are you sure you want to add this service?', { confirmText: 'Add' })
+                var detailsHtml = '<div class="grid grid-cols-2 gap-x-4 gap-y-1">' +
+                    '<div class="text-slate-500">Name:</div><div class="text-slate-800 font-medium">' + escapeHtml(body.service_name) + '</div>' +
+                    (body.description ? '<div class="text-slate-500">Description:</div><div class="text-slate-800 font-medium">' + escapeHtml(body.description) + '</div>' : '') +
+                    (body.duration_minutes ? '<div class="text-slate-500">Duration:</div><div class="text-slate-800 font-medium">' + escapeHtml(body.duration_minutes) + ' minutes</div>' : '') +
+                    (body.price ? '<div class="text-slate-500">Price:</div><div class="text-slate-800 font-medium">₱' + escapeHtml(body.price) + '</div>' : '') +
+                '</div>'
+
+                confirmAction('Are you sure you want to add this service?', { confirmText: 'Add', details: detailsHtml })
                     .then(function (confirmed) {
                         if (!confirmed) return
+
+                        setServiceAddSubmitting(true)
 
                         apiFetch("{{ url('/api/services') }}", {
                             method: 'POST',
@@ -661,17 +777,21 @@
                             })
                             .then(function (result) {
                                 if (!result.ok) {
-                                    showServiceError('Failed to add service.')
+                                    showServiceError(readApiMessage(result, 'Failed to add service.'))
                                     return
                                 }
                                 if (nameInput) nameInput.value = ''
                                 if (descInput) descInput.value = ''
                                 if (durationInput) durationInput.value = ''
                                 if (priceInput) priceInput.value = ''
+                                showServiceSuccess('Service added.')
                                 loadServices()
                             })
                             .catch(function () {
                                 showServiceError('Network error while adding service.')
+                            })
+                            .finally(function () {
+                                setServiceAddSubmitting(false)
                             })
                     })
             })

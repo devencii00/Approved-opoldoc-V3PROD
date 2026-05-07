@@ -8,6 +8,7 @@
     </p>
 
     <div id="adminMedicineError" class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[0.75rem] text-red-700"></div>
+    <div id="adminMedicineSuccess" class="hidden mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[0.75rem] text-emerald-700"></div>
 
     <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 mb-4">
         <div class="flex items-center justify-between mb-3">
@@ -124,6 +125,7 @@
             <div class="flex-1">
                 <div class="text-sm font-semibold text-slate-900">Confirm</div>
                 <div id="adminMedicineConfirmMessage" class="text-[0.78rem] text-slate-600 mt-0.5">Are you sure?</div>
+                <div id="adminMedicineConfirmDetails" class="hidden text-[0.78rem] text-slate-600 mt-2"></div>
             </div>
         </div>
         <div class="mt-4 flex items-center justify-end gap-2">
@@ -136,6 +138,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         var errorBox = document.getElementById('adminMedicineError')
+        var successBox = document.getElementById('adminMedicineSuccess')
         var searchInput = document.getElementById('admin_medicine_search')
         var activeFilter = document.getElementById('admin_medicine_active_filter')
         var sortSelect = document.getElementById('admin_medicine_sort')
@@ -155,6 +158,7 @@
 
         var confirmOverlay = document.getElementById('adminMedicineConfirmOverlay')
         var confirmMessage = document.getElementById('adminMedicineConfirmMessage')
+        var confirmDetails = document.getElementById('adminMedicineConfirmDetails')
         var confirmOk = document.getElementById('adminMedicineConfirmOk')
         var confirmCancel = document.getElementById('adminMedicineConfirmCancel')
         var confirmResolver = null
@@ -172,9 +176,15 @@
 
         var medicines = []
         var editingId = null
+        var medicineErrorTimer = null
+        var medicineSuccessTimer = null
 
         function showError(message) {
             if (!errorBox) return
+            if (medicineErrorTimer) {
+                clearTimeout(medicineErrorTimer)
+                medicineErrorTimer = null
+            }
             if (!message) {
                 errorBox.textContent = ''
                 errorBox.classList.add('hidden')
@@ -182,6 +192,45 @@
             }
             errorBox.textContent = message
             errorBox.classList.remove('hidden')
+            medicineErrorTimer = setTimeout(function () {
+                showError('')
+            }, 3200)
+        }
+
+        function showSuccess(message) {
+            if (!successBox) return
+            if (medicineSuccessTimer) {
+                clearTimeout(medicineSuccessTimer)
+                medicineSuccessTimer = null
+            }
+            if (!message) {
+                successBox.textContent = ''
+                successBox.classList.add('hidden')
+                return
+            }
+            successBox.textContent = message
+            successBox.classList.remove('hidden')
+            medicineSuccessTimer = setTimeout(function () {
+                showSuccess('')
+            }, 3200)
+        }
+
+        function readApiMessage(result, fallback) {
+            if (!result) return fallback
+            if (result.data && result.data.errors) {
+                var all = []
+                Object.keys(result.data.errors).forEach(function (key) {
+                    var val = result.data.errors[key]
+                    if (Array.isArray(val)) {
+                        val.forEach(function (item) { all.push(String(item)) })
+                    } else if (val != null) {
+                        all.push(String(val))
+                    }
+                })
+                if (all.length) return all.join(' ')
+            }
+            if (result.data && result.data.message) return String(result.data.message)
+            return fallback
         }
 
         function escapeHtml(text) {
@@ -232,6 +281,10 @@
                 confirmOverlay.classList.add('hidden')
                 confirmOverlay.classList.remove('flex')
             }
+            if (confirmDetails) {
+                confirmDetails.innerHTML = ''
+                confirmDetails.classList.add('hidden')
+            }
             stopConfirmCountdown()
             var resolver = confirmResolver
             confirmResolver = null
@@ -250,6 +303,17 @@
                 var confirmText = options && options.confirmText ? String(options.confirmText) : 'Confirm'
                 confirmOk.textContent = confirmText
                 confirmOkOriginalText = confirmText
+
+                if (confirmDetails) {
+                    var details = options && options.details ? options.details : ''
+                    if (details) {
+                        confirmDetails.innerHTML = details
+                        confirmDetails.classList.remove('hidden')
+                    } else {
+                        confirmDetails.innerHTML = ''
+                        confirmDetails.classList.add('hidden')
+                    }
+                }
 
                 confirmResolver = resolve
                 confirmOverlay.classList.remove('hidden')
@@ -384,7 +448,6 @@
             if (contraindicationsInput) contraindicationsInput.value = ''
             setFormExpanded(true)
             setSaving(false)
-            showError('')
         }
 
         function loadMedicines() {
@@ -468,10 +531,10 @@
                     '<td class="py-2 pr-4 text-[0.78rem]">' + badge + '</td>' +
                     '<td class="py-2 pr-4 text-[0.78rem]">' +
                         '<div class="flex items-center gap-2">' +
-                            '<button type="button" class="text-[0.72rem] font-semibold text-cyan-700 hover:text-cyan-800 admin-medicine-edit" data-id="' + m.medicine_id + '">Edit</button>' +
+                            '<button type="button" class="px-2 py-1 rounded-md border border-cyan-200 bg-cyan-50 text-cyan-700 hover:bg-cyan-100 text-[0.72rem] font-semibold admin-medicine-edit" data-id="' + m.medicine_id + '">Edit</button>' +
                             (active
-                                ? '<button type="button" class="text-[0.72rem] font-semibold text-slate-700 hover:text-slate-900 admin-medicine-toggle" data-id="' + m.medicine_id + '" data-active="0">Deactivate</button>'
-                                : '<button type="button" class="text-[0.72rem] font-semibold text-emerald-700 hover:text-emerald-800 admin-medicine-toggle" data-id="' + m.medicine_id + '" data-active="1">Activate</button>') +
+                                ? '<button type="button" class="px-2 py-1 rounded-md border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 text-[0.72rem] font-semibold admin-medicine-toggle" data-id="' + m.medicine_id + '" data-active="0">Deactivate</button>'
+                                : '<button type="button" class="px-2 py-1 rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-[0.72rem] font-semibold admin-medicine-toggle" data-id="' + m.medicine_id + '" data-active="1">Activate</button>') +
                         '</div>' +
                     '</td>' +
                 '</tr>'
@@ -497,6 +560,7 @@
                     setFormExpanded(true)
                     setSaving(false)
                     showError('')
+                    showSuccess('')
                 })
             })
 
@@ -539,6 +603,7 @@
 
         function updateMedicine(id, body) {
             showError('')
+            showSuccess('')
             return apiFetch("{{ url('/api/medicines') }}/" + id, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -551,8 +616,13 @@
                 })
                 .then(function (result) {
                     if (!result.ok) {
-                        showError('Failed to update medicine.')
+                        showError(readApiMessage(result, 'Failed to update medicine.'))
                         return false
+                    }
+                    if (body && Object.prototype.hasOwnProperty.call(body, 'is_active')) {
+                        showSuccess(body.is_active ? 'Medicine activated.' : 'Medicine deactivated.')
+                    } else {
+                        showSuccess('Medicine updated.')
                     }
                     loadMedicines()
                     return true
@@ -568,6 +638,7 @@
                 e.preventDefault()
                 if (saveBtn && saveBtn.disabled) return
                 showError('')
+                showSuccess('')
                 var genericName = genericInput ? genericInput.value.trim() : ''
                 if (!genericName) {
                     showError('Generic name is required.')
@@ -580,17 +651,27 @@
                     contraindications: contraindicationsInput ? contraindicationsInput.value.trim() : ''
                 }
 
-                var url = "{{ url('/api/medicines') }}"
-                var method = 'POST'
+                var detailsHtml = '<div class="grid grid-cols-2 gap-x-4 gap-y-1">' +
+                    '<div class="text-slate-500">Generic Name:</div><div class="text-slate-800 font-medium">' + escapeHtml(body.generic_name) + '</div>' +
+                    (body.brand_name ? '<div class="text-slate-500">Brand Name:</div><div class="text-slate-800 font-medium">' + escapeHtml(body.brand_name) + '</div>' : '') +
+                    (body.indications ? '<div class="text-slate-500">Indications:</div><div class="text-slate-800 font-medium">' + escapeHtml(body.indications) + '</div>' : '') +
+                    (body.contraindications ? '<div class="text-slate-500">Contraindications:</div><div class="text-slate-800 font-medium">' + escapeHtml(body.contraindications) + '</div>' : '') +
+                '</div>'
+
                 if (editingId) {
-                    url = url + '/' + editingId
-                    method = 'PUT'
+                    confirmAction('Are you sure you want to save these changes?', { confirmText: 'Save', details: detailsHtml })
+                        .then(function (confirmed) {
+                            if (!confirmed) return
+                            setSaving(true)
+                            updateMedicine(editingId, body)
+                                .finally(function () {
+                                    setSaving(false)
+                                    resetForm()
+                                })
+                        })
                 } else {
                     body.is_active = true
-                }
-
-                var duplicates = []
-                if (!editingId) {
+                    var duplicates = []
                     var gNorm = normalizeText(body.generic_name)
                     var bNorm = normalizeText(body.brand_name)
                     duplicates = (medicines || []).filter(function (m) {
@@ -600,47 +681,48 @@
                         if (bNorm && mb && (bNorm === mb || bNorm.indexOf(mb) !== -1 || mb.indexOf(bNorm) !== -1)) return true
                         return false
                     }).slice(0, 3)
-                }
 
-                var duplicateConfirm = duplicates.length ? openDuplicateConfirm(duplicates) : Promise.resolve(true)
+                    var duplicateConfirm = duplicates.length ? openDuplicateConfirm(duplicates) : Promise.resolve(true)
 
-                duplicateConfirm.then(function (okToStoreAnyway) {
-                    if (!okToStoreAnyway) return
+                    duplicateConfirm.then(function (okToStoreAnyway) {
+                        if (!okToStoreAnyway) return
 
-                var saveConfirm = duplicates.length
-                        ? Promise.resolve(true)
-                        : confirmAction('Are you sure you want to save this medicine?', { confirmText: 'Save', countdownSeconds: 3 })
+                        var saveConfirm = duplicates.length
+                            ? Promise.resolve(true)
+                            : confirmAction('Are you sure you want to save this medicine?', { confirmText: 'Save', countdownSeconds: 3, details: detailsHtml })
 
-                    saveConfirm.then(function (confirmed) {
-                        if (!confirmed) return
-                        setSaving(true)
+                        saveConfirm.then(function (confirmed) {
+                            if (!confirmed) return
+                            setSaving(true)
 
-                        apiFetch(url, {
-                            method: method,
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(body)
-                        })
-                            .then(function (response) {
-                                return response.json().then(function (data) {
-                                    return { ok: response.ok, data: data }
+                            apiFetch("{{ url('/api/medicines') }}", {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(body)
+                            })
+                                .then(function (response) {
+                                    return response.json().then(function (data) {
+                                        return { ok: response.ok, data: data }
+                                    })
                                 })
-                            })
-                            .then(function (result) {
-                                if (!result.ok) {
-                                    showError('Failed to save medicine.')
-                                    return
-                                }
-                                resetForm()
-                                loadMedicines()
-                            })
-                            .catch(function () {
-                                showError('Network error while saving medicine.')
-                            })
-                            .finally(function () {
-                                setSaving(false)
-                            })
+                                .then(function (result) {
+                                    if (!result.ok) {
+                                        showError(readApiMessage(result, 'Failed to save medicine.'))
+                                        return
+                                    }
+                                    showSuccess('Medicine added.')
+                                    resetForm()
+                                    loadMedicines()
+                                })
+                                .catch(function () {
+                                    showError('Network error while saving medicine.')
+                                })
+                                .finally(function () {
+                                    setSaving(false)
+                                })
+                        })
                     })
-                })
+                }
             })
         }
 

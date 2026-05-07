@@ -281,19 +281,21 @@
                         </td>
                         <td class="py-2 pr-4 text-[0.78rem]">
                             <div class="flex items-center gap-2">
-                                <button type="button" class="text-[0.72rem] text-cyan-700 hover:text-cyan-800 font-semibold admin-user-edit" data-user-id="{{ $user->user_id }}">
+                                <button type="button" class="px-2 py-1 rounded-md border border-cyan-200 bg-cyan-50 text-cyan-700 hover:bg-cyan-100 text-[0.72rem] font-semibold admin-user-edit" data-user-id="{{ $user->user_id }}">
                                     Edit
                                 </button>
-                                <button type="button" class="text-[0.72rem] text-slate-700 hover:text-slate-900 font-semibold admin-user-dependents" data-user-id="{{ $user->user_id }}">
+                                <button type="button" class="px-2 py-1 rounded-md border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 text-[0.72rem] font-semibold admin-user-dependents" data-user-id="{{ $user->user_id }}">
                                     View dependents
                                 </button>
-                                <button type="button" class="text-[0.72rem] text-amber-700 hover:text-amber-800 font-semibold admin-user-toggle-status" data-user-id="{{ $user->user_id }}">
-                                    @if ($status === 'suspended' || $status === 'inactive')
+                                @if ($status === 'suspended' || $status === 'inactive')
+                                    <button type="button" class="px-2 py-1 rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-[0.72rem] font-semibold admin-user-toggle-status" data-user-id="{{ $user->user_id }}">
                                         Activate
-                                    @else
+                                    </button>
+                                @else
+                                    <button type="button" class="px-2 py-1 rounded-md border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 text-[0.72rem] font-semibold admin-user-toggle-status" data-user-id="{{ $user->user_id }}">
                                         Suspend
-                                    @endif
-                                </button>
+                                    </button>
+                                @endif
                             </div>
                         </td>
                     </tr>
