@@ -112,23 +112,27 @@ class PatientController extends Controller
             $plainPassword = Str::random(12);
         }
 
-        $user = User::create([
-            'email' => $data['email'],
-            'password_hash' => Hash::make($plainPassword),
-            'role' => 'patient',
-            'status' => 'active',
-            'firstname' => $data['firstname'] ?? null,
-            'lastname' => $data['lastname'] ?? null,
-            'middlename' => $data['middlename'] ?? null,
-            'birthdate' => $data['birthdate'] ?? null,
-            'sex' => $data['sex'] ?? null,
-            'address' => $data['address'] ?? null,
-            'contact_number' => $data['contact_number'] ?? null,
-            'is_first_login' => true,
-            'account_activated' => true,
-        ]);
+        $user = DB::transaction(function () use ($data, $plainPassword) {
+            $user = User::create([
+                'email' => $data['email'],
+                'password_hash' => Hash::make($plainPassword),
+                'role' => 'patient',
+                'status' => 'active',
+                'firstname' => $data['firstname'] ?? null,
+                'lastname' => $data['lastname'] ?? null,
+                'middlename' => $data['middlename'] ?? null,
+                'birthdate' => $data['birthdate'] ?? null,
+                'sex' => $data['sex'] ?? null,
+                'address' => $data['address'] ?? null,
+                'contact_number' => $data['contact_number'] ?? null,
+                'is_first_login' => true,
+                'account_activated' => true,
+            ]);
 
-        Mail::to($user->email)->send(new StaffInviteMail($user, $plainPassword));
+            Mail::to($user->email)->send(new StaffInviteMail($user, $plainPassword));
+
+            return $user;
+        });
 
         return response()->json([
             'user' => $user->refresh(),

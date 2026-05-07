@@ -249,19 +249,23 @@ class UserController extends Controller
         $data['status'] = $data['status'] ?? 'active';
         $data['is_first_login'] = true;
 
-        $user = User::create($data);
+        $user = \Illuminate\Support\Facades\DB::transaction(function () use ($data, $plainPassword, $request) {
+            $user = User::create($data);
 
-        Mail::to($user->email)->send(new StaffInviteMail($user, $plainPassword));
+            Mail::to($user->email)->send(new StaffInviteMail($user, $plainPassword));
 
-        LogEntry::write(
-            optional($request->user())->user_id ? (int) $request->user()->user_id : null,
-            'user_invited',
-            'users',
-            (int) $user->user_id,
-            [
-                'role' => $user->role,
-            ]
-        );
+            LogEntry::write(
+                optional($request->user())->user_id ? (int) $request->user()->user_id : null,
+                'user_invited',
+                'users',
+                (int) $user->user_id,
+                [
+                    'role' => $user->role,
+                ]
+            );
+
+            return $user;
+        });
 
         return response()->json($user, 201);
     }

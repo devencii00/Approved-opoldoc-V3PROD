@@ -44,8 +44,8 @@
                 <input id="reception_guest_firstname" type="text" required class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="First name">
             </div>
             <div>
-                <label for="reception_guest_middlename" class="block text-[0.7rem] text-slate-600 mb-1">Middle name</label>
-                <input id="reception_guest_middlename" type="text" required class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Middle name">
+                <label for="reception_guest_middlename" class="block text-[0.7rem] text-slate-600 mb-1">Middle name (optional)</label>
+                <input id="reception_guest_middlename" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Middle name">
             </div>
             <div>
                 <label for="reception_guest_lastname" class="block text-[0.7rem] text-slate-600 mb-1">Last name</label>
@@ -1047,8 +1047,8 @@ function setWalkInTab(tab) {
                 var reason = reasonInput ? String(reasonInput.value || '').trim() : ''
                 var priorityLevel = priorityInput && priorityInput.value ? parseInt(priorityInput.value, 10) : null
 
-                if (!firstName || !middleName || !lastName) {
-                    showGuestError('First name, middle name, and last name are required.')
+                if (!firstName || !lastName) {
+                    showGuestError('First name and last name are required.')
                     return
                 }
 

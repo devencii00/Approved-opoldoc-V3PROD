@@ -39,8 +39,8 @@
                 <label for="new_password_confirmation" class="block text-xs text-slate-600 mb-1">Confirm new password</label>
                 <input type="password" id="new_password_confirmation" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
             </div>
-            <button id="firstLoginSubmit" type="submit" class="w-full mt-2 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-700 text-white text-sm font-semibold hover:from-cyan-600 hover:to-cyan-800 transition-colors disabled:opacity-70 disabled:hover:from-cyan-500 disabled:hover:to-cyan-700">
-                <span id="firstLoginSpinner" class="hidden w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin align-[-3px]"></span>
+            <button id="firstLoginSubmit" type="submit" class="w-full mt-2 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-700 text-white text-sm font-semibold hover:from-cyan-600 hover:to-cyan-800 transition-colors disabled:opacity-70 disabled:hover:from-cyan-500 disabled:hover:to-cyan-700 relative flex items-center justify-center">
+                <span id="firstLoginSpinner" class="hidden absolute w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
                 <span id="firstLoginSubmitLabel">Save and continue</span>
             </button>
         </form>
@@ -142,10 +142,9 @@
                 }
                 if (spinner) {
                     spinner.classList.toggle('hidden', !isLoading);
-                    spinner.classList.toggle('inline-block', !!isLoading);
                 }
                 if (submitLabel) {
-                    submitLabel.classList.toggle('hidden', !!isLoading);
+                    submitLabel.classList.toggle('opacity-0', !!isLoading);
                 }
             }
 

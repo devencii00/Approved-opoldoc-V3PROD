@@ -46,7 +46,7 @@
             <input id="reception_patient_firstname" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Firstname">
         </div>
         <div>
-            <label for="reception_patient_middlename" class="block text-[0.7rem] text-slate-600 mb-1">Middlename</label>
+            <label for="reception_patient_middlename" class="block text-[0.7rem] text-slate-600 mb-1">Middlename (optional)</label>
             <input id="reception_patient_middlename" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Middlename">
         </div>
         <div>
@@ -562,8 +562,13 @@
                 var mName = middlenameInput ? normalizePersonName(middlenameInput.value) : ''
                 var lName = lastnameInput ? normalizePersonName(lastnameInput.value) : ''
 
-                if (!isValidPersonName(fName) || !isValidPersonName(mName) || !isValidPersonName(lName)) {
+                if (!isValidPersonName(fName) || (mName !== '' && !isValidPersonName(mName)) || !isValidPersonName(lName)) {
                     showRegisterPatientError('Name fields must contain letters only (accents allowed), plus hyphens, apostrophes, periods, and middle dots.')
+                    return
+                }
+
+                if (!fName || !lName) {
+                    showRegisterPatientError('Firstname and lastname are required.')
                     return
                 }
 

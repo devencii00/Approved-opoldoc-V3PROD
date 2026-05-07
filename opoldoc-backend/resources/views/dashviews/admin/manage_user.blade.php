@@ -48,7 +48,7 @@
             </div>
             <div class="mt-4 flex items-center justify-end gap-2">
                 <button type="button" id="adminUserConfirmCancel" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
-                <button type="button" id="adminUserConfirmOk" class="px-3 py-2 rounded-xl bg-slate-900 text-white text-[0.78rem] font-semibold hover:bg-slate-800">Confirm</button>
+                <button type="button" id="adminUserConfirmOk" class="px-3 py-2 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700">Confirm</button>
             </div>
         </div>
     </div>
@@ -127,7 +127,7 @@
                     </div>
                     <div class="flex items-center justify-end gap-2 pt-1">
                         <button type="button" id="adminUserStatusCancel" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
-                        <button type="submit" id="adminUserStatusSave" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white text-[0.78rem] font-semibold hover:bg-slate-800 transition-colors disabled:opacity-60 disabled:hover:bg-slate-900">
+                        <button type="submit" id="adminUserStatusSave" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700 transition-colors disabled:opacity-60 disabled:hover:bg-cyan-600">
                             <span id="adminUserStatusSpinner" class="hidden w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
                             <span>Set status</span>
                         </button>
