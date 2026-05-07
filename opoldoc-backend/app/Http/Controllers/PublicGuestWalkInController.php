@@ -251,12 +251,12 @@ class PublicGuestWalkInController extends Controller
             ->where('end_time', '>', $time)
             ->exists();
 
-        if (! $hasAnyScheduleNow) {
-            return [
-                'is_open' => false,
-                'message' => 'The clinic is currently closed. Please return later.',
-            ];
-        }
+        // if (! $hasAnyScheduleNow) {
+        //     return [
+        //         'is_open' => false,
+        //         'message' => 'The clinic is currently closed. Please return later.',
+        //     ];
+        // }
 
         return [
             'is_open' => true,

@@ -56,44 +56,55 @@
                 </div>
 
             </div>
+<!-- 1. Fix the main card height (e.g., h-[600px] or h-full if parent is fixed) -->
+<div class="bg-white border border-slate-200 rounded-[18px] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)] flex flex-col h-[600px] overflow-hidden">
+    <div class="flex items-center justify-between mb-3 shrink-0">
+        <h2 class="text-sm font-semibold text-slate-900">Queue & schedule</h2>
+        <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Preview</span>
+    </div>
 
-            <div class="bg-white border border-slate-200 rounded-[18px] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)] flex flex-col h-full">
-                <div class="flex items-center justify-between mb-3 shrink-0">
-                    <h2 class="text-sm font-semibold text-slate-900">Queue & schedule</h2>
-                    <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Preview</span>
-                </div>
+    <!-- 2. The grey container -->
+    <div class="flex-1 min-h-0 rounded-xl border border-slate-100 bg-slate-50 p-3.5 flex flex-col gap-3 overflow-hidden">
+        
+        <!-- 3. TOP BOX: Queue (Added basis-1/2 and overflow-hidden) -->
+        <div class="basis-1/2 min-h-0 rounded-lg border border-slate-100 bg-white p-3 flex flex-col overflow-hidden">
+            <div class="flex items-center justify-between gap-2 shrink-0">
+                <div class="text-[0.72rem] font-semibold text-slate-700">Next 5 in queue</div>
+                <div class="flex items-center gap-2">
+                    <div id="receptionNextQueueMeta" class="text-[0.68rem] text-slate-400"></div>
+              <button type="button" id="receptionNextQueueNextBtn" class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900 text-white text-[0.75rem] font-semibold hover:bg-slate-800 transition-all shadow-sm disabled:opacity-60 disabled:pointer-events-none">
+    <span id="receptionNextQueueNextSpinner" class="hidden w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+    <x-lucide-megaphone class="w-[16px] h-[16px]" />
+    <span id="receptionNextQueueNextLabel">Call next</span>
+</button>
 
-                <div class="flex-1 min-h-0 rounded-xl border border-slate-100 bg-slate-50 p-3.5 flex flex-col gap-3">
-                    <div class="flex-1 min-h-0 rounded-lg border border-slate-100 bg-white p-3 flex flex-col">
-                        <div class="flex items-center justify-between gap-2 shrink-0">
-                            <div class="text-[0.72rem] font-semibold text-slate-700">Next 5 in queue</div>
-                            <div class="flex items-center gap-2">
-                                <div id="receptionNextQueueMeta" class="text-[0.68rem] text-slate-400"></div>
-                                <button type="button" id="receptionNextQueueNextBtn" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 text-[0.75rem] font-semibold hover:bg-slate-50 transition-colors disabled:opacity-60 disabled:hover:bg-white">
-                                    <span id="receptionNextQueueNextSpinner" class="hidden w-3 h-3 border-2 border-slate-700/20 border-t-slate-700 rounded-full animate-spin"></span>
-                                    <x-lucide-megaphone class="w-[18px] h-[18px]" />
-                                    <span id="receptionNextQueueNextLabel">Call next</span>
-                                </button>
-                            </div>
-                        </div>
-                        <div id="receptionNextQueueInlineMessage" class="hidden mt-2 rounded-lg border px-2.5 py-2 text-[0.72rem]"></div>
-                        <div class="mt-2 flex-1 min-h-0 overflow-y-auto scrollbar-hidden">
-                            <ul id="receptionNextQueue" class="space-y-1 text-[0.78rem] text-slate-700"></ul>
-                        </div>
-                    </div>
 
-                    <div class="flex-1 min-h-0 rounded-lg border border-slate-100 bg-white p-3 flex flex-col">
-                        <div class="flex items-center justify-between shrink-0">
-                            <div class="text-[0.72rem] font-semibold text-slate-700">Next appointments</div>
-                            <div id="receptionNextAppointmentsMeta" class="text-[0.68rem] text-slate-400"></div>
-                        </div>
-                        <div class="mt-2 flex-1 min-h-0 overflow-y-auto scrollbar-hidden">
-                            <ul id="receptionNextAppointments" class="space-y-1 text-[0.78rem] text-slate-700"></ul>
-                        </div>
-                    </div>
+
+
+                    
                 </div>
             </div>
+            <div id="receptionNextQueueInlineMessage" class="hidden mt-2 rounded-lg border px-2.5 py-2 text-[0.72rem]"></div>
+            
+            <div class="mt-2 flex-1 min-h-0 overflow-y-auto scrollbar-hidden">
+                <ul id="receptionNextQueue" class="space-y-1 text-[0.78rem] text-slate-700"></ul>
+            </div>
         </div>
+
+        <!-- 4. BOTTOM BOX: Appointments (Added basis-1/2 and overflow-hidden) -->
+        <div class="basis-1/2 min-h-0 rounded-lg border border-slate-100 bg-white p-3 flex flex-col overflow-hidden">
+            <div class="flex items-center justify-between shrink-0">
+                <div class="text-[0.72rem] font-semibold text-slate-700">Next appointments</div>
+                <div id="receptionNextAppointmentsMeta" class="text-[0.68rem] text-slate-400"></div>
+            </div>
+            <div class="mt-2 flex-1 min-h-0 overflow-y-auto scrollbar-hidden">
+                <ul id="receptionNextAppointments" class="space-y-1 text-[0.78rem] text-slate-700"></ul>
+            </div>
+        </div>
+
+    </div>
+</div>
+</div>
 
         <script>
             document.addEventListener('DOMContentLoaded', function () {
@@ -244,20 +255,52 @@
                                 })
 
                                 var html = ''
-                                html += '<li class="text-[0.78rem] text-slate-700"><span class="font-semibold">Now serving:</span> ' + (nowServingLabels.length ? escapeHtml(nowServingLabels.join(', ')) : '—') + '</li>'
+                               const labels = nowServingLabels.length 
+    ? nowServingLabels.map(label => `<span class="bg-slate-100 px-2 py-0.5 rounded text-slate-800">${escapeHtml(label)}</span>`).join(' ')
+    : '<span class="text-slate-400">—</span>';
 
-                                if (!next.length) {
-                                    html += '<li class="text-[0.78rem] text-slate-500">No one waiting.</li>'
-                                } else {
-                                    html += next.map(function (q) {
-                                        var nm = q && q.patient && q.patient.name ? String(q.patient.name) : 'Patient'
-                                        var qn = queueLabel(q)
-                                        var doctorName = q && q.doctor && q.doctor.name ? String(q.doctor.name) : 'Doctor'
-                                        var est = q && q.estimated_wait_minutes != null ? parseInt(String(q.estimated_wait_minutes), 10) : null
-                                        var estLabel = (est != null && !isNaN(est) && est > 0) ? (' <span class="text-slate-500">(est. ' + est + ' min)</span>') : ''
-                                        return '<li class="text-[0.78rem] text-slate-700">Next #' + escapeHtml(qn) + ': ' + escapeHtml(nm) + ' <span class="text-slate-500">— ' + escapeHtml(doctorName) + '</span>' + estLabel + '</li>'
-                                    }).join('')
-                                }
+html += `
+<li class="text-[0.78rem] flex items-start gap-2 py-2">
+    <span class="font-semibold text-slate-700 mt-0.5">Now serving:</span>
+    <div class="flex flex-wrap gap-1">
+        ${labels}
+    </div>
+</li>`;
+
+if (!next.length) {
+    html += '<li class="text-[0.78rem] text-slate-500 py-2">No one waiting.</li>';
+} else {
+    // Start the container with the single header
+    html += `
+    <li class="flex items-start gap-2 py-2 border-t border-slate-50 mt-1">
+        <span class="text-[0.78rem] font-semibold text-slate-700 mt-1 shrink-0">Next in line:</span>
+        <div class="flex flex-col gap-2 w-full">
+            ${next.map(function (q) {
+                var nm = q && q.patient && q.patient.name ? String(q.patient.name) : 'Patient';
+                var qn = queueLabel(q);
+                var doctorName = q && q.doctor && q.doctor.name ? String(q.doctor.name) : 'Doctor';
+                var est = q && q.estimated_wait_minutes != null ? parseInt(String(q.estimated_wait_minutes), 10) : null;
+                
+                var estLabel = (est != null && !isNaN(est) && est > 0) 
+                    ? `<span class="text-slate-400 text-[0.7rem] block mt-0.5">(est. ${est} min)</span>` 
+                    : '';
+
+                return `
+                <div class="text-[0.78rem] leading-tight">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="text-slate-700 px-1.5 py-0.5 rounded font-medium border border-indigo-100 text-[0.7rem]">
+                            #${escapeHtml(qn)}
+                        </span>
+                        <span class="text-slate-800 font-medium">${escapeHtml(nm)}</span>
+                        <span class="text-slate-400">— ${escapeHtml(doctorName)}</span>
+                    </div>
+                    ${estLabel}
+                </div>`;
+            }).join('')}
+        </div>
+    </li>`;
+}
+
 
                                 nextQueueList.innerHTML = html
                                 if (nextQueueBtn) nextQueueBtn.disabled = waitingCount < 1

@@ -356,7 +356,7 @@
             <button id="receptionConfirmCancel" type="button" class="inline-flex items-center justify-center px-3 py-2 rounded-xl bg-slate-100 text-slate-800 text-[0.78rem] font-semibold hover:bg-slate-200 border border-slate-200">
                 Cancel
             </button>
-            <button id="receptionConfirmOk" type="button" class="inline-flex items-center justify-center px-3 py-2 rounded-xl bg-slate-900 text-white text-[0.78rem] font-semibold hover:bg-slate-800">
+            <button id="receptionConfirmOk" type="button" class="inline-flex items-center justify-center px-3 py-2 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700">
                 Confirm
             </button>
         </div>
