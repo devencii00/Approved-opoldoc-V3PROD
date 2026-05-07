@@ -19,12 +19,12 @@
         </div>
 
         <div class="grid gap-4 grid-cols-1 lg:grid-cols-3">
-            <div class="bg-white border border-slate-200 rounded-[18px] p-5 lg:col-span-2 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
-                <div class="flex items-center justify-between mb-3">
+            <div class="bg-white border border-slate-200 rounded-[18px] p-5 lg:col-span-2 shadow-[0_2px_10px_rgba(15,23,42,0.04)] flex flex-col h-[600px] overflow-hidden">
+                <div class="flex items-center justify-between mb-3 shrink-0">
                     <h2 class="text-sm font-semibold text-slate-900">Today at a glance</h2>
                     <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Front desk</span>
                 </div>
-                <div class="grid gap-3 grid-cols-1 sm:grid-cols-3 text-sm text-slate-600">
+                <div class="grid gap-3 grid-cols-1 sm:grid-cols-3 text-sm text-slate-600 shrink-0">
                     <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
                         <div class="text-xs text-slate-500 mb-1">New registrations</div>
                         <div class="font-serif font-bold text-xl text-slate-900">{{ number_format($newRegistrationsToday) }}</div>
@@ -52,6 +52,37 @@
                     <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 sm:col-span-3">
                         <div class="text-xs text-slate-500 mb-1">Today&apos;s transactions (paid)</div>
                         <div class="font-serif font-bold text-xl text-slate-900">₱{{ number_format($transactionsToday, 2) }}</div>
+                    </div>
+                </div>
+
+                <!-- Today's Transactions Table View -->
+                <div class="mt-4 flex-1 min-h-0 border border-slate-200 rounded-xl overflow-hidden flex flex-col bg-white">
+                    <div class="bg-slate-50 px-4 py-2.5 border-b border-slate-200 shrink-0 flex justify-between items-center">
+                        <h3 class="text-[0.75rem] font-semibold text-slate-700 uppercase tracking-wider">Today's Transactions</h3>
+                    </div>
+                    <div class="flex-1 overflow-y-auto scrollbar-hidden">
+                        <table class="w-full text-left text-[0.75rem] text-slate-600 whitespace-nowrap">
+                            <thead class="bg-white text-slate-500 sticky top-0 border-b border-slate-100 shadow-sm z-10">
+                                <tr>
+                                    <th class="px-4 py-2.5 font-medium">Date</th>
+                                    <th class="px-4 py-2.5 font-medium">Reference</th>
+                                    <th class="px-4 py-2.5 font-medium">Patient</th>
+                                    <th class="px-4 py-2.5 font-medium">Service Type</th>
+                                    <th class="px-4 py-2.5 font-medium">Gross</th>
+                                    <th class="px-4 py-2.5 font-medium">Discount</th>
+                                    <th class="px-4 py-2.5 font-medium">Net</th>
+                                    <th class="px-4 py-2.5 font-medium">Mode</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100" id="receptionTodaysTransactionsTableBody">
+                                <!-- Placeholder / Empty state -->
+                                <tr>
+                                    <td colspan="8" class="px-4 py-8 text-center text-slate-400">
+                                        No transactions recorded today.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
