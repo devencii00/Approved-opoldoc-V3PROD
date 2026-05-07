@@ -71,26 +71,42 @@
     </div>
 
     <div class="grid gap-4 grid-cols-1 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <div class="border border-slate-100 rounded-2xl overflow-hidden">
+        <div class="border border-slate-100 rounded-2xl overflow-hidden bg-white shadow-sm h-fit">
             <div class="flex w-full bg-white border-b border-slate-100">
-                <button id="adminReportsTabTransactions" type="button" class="flex-1 px-4 py-3 text-xs font-semibold border-r border-slate-100 bg-slate-900 text-white">
+                <button id="adminReportsTabTransactions" type="button" class="flex-1 px-4 py-3 text-xs font-semibold border-r border-slate-100 bg-slate-900 text-white transition-colors">
                     Transactions
                 </button>
-                <button id="adminReportsTabAppointments" type="button" class="flex-1 px-4 py-3 text-xs font-semibold bg-white text-slate-700 hover:bg-slate-50">
+                <button id="adminReportsTabAppointments" type="button" class="flex-1 px-4 py-3 text-xs font-semibold bg-white text-slate-700 hover:bg-slate-50 transition-colors">
                     Appointments
                 </button>
             </div>
 
             <div id="adminReportsPanelTransactions" class="p-4">
                 <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between mb-3">
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center flex-wrap">
                         <div>
                             <label for="admin_txn_search" class="block text-[0.7rem] text-slate-600 mb-1">Search</label>
-                            <input id="admin_txn_search" type="text" class="w-full sm:w-56 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Date, mode, status…" />
+                            <input id="admin_txn_search" type="text" class="w-full sm:w-40 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Date, mode, status…" />
                         </div>
                         <div>
-                            <label for="admin_txn_status" class="block text-[0.7rem] text-slate-600 mb-1">Filter</label>
-                            <select id="admin_txn_status" class="w-full sm:w-40 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                            <label for="admin_txn_date_from" class="block text-[0.7rem] text-slate-600 mb-1">From</label>
+                            <input id="admin_txn_date_from" type="date" class="w-full sm:w-36 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" />
+                        </div>
+                        <div>
+                            <label for="admin_txn_date_to" class="block text-[0.7rem] text-slate-600 mb-1">To</label>
+                            <input id="admin_txn_date_to" type="date" class="w-full sm:w-36 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" />
+                        </div>
+                        <div>
+                            <label for="admin_txn_mode" class="block text-[0.7rem] text-slate-600 mb-1">Mode</label>
+                            <select id="admin_txn_mode" class="w-full sm:w-32 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                                <option value="all">All</option>
+                                <option value="cash">Cash</option>
+                                <option value="hmo">HMO</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="admin_txn_status" class="block text-[0.7rem] text-slate-600 mb-1">Status</label>
+                            <select id="admin_txn_status" class="w-full sm:w-32 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
                                 <option value="all">All</option>
                                 <option value="paid">Paid</option>
                                 <option value="pending">Pending</option>
@@ -98,7 +114,7 @@
                             </select>
                         </div>
                     </div>
-                    <div class="md:text-right">
+                    <div class="md:text-right shrink-0">
                         <label for="admin_txn_sort" class="block text-[0.7rem] text-slate-600 mb-1">Sort</label>
                         <select id="admin_txn_sort" class="w-full md:w-48 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
                             <option value="when_desc">Newest</option>
@@ -174,24 +190,45 @@
 
             <div id="adminReportsPanelAppointments" class="p-4 hidden">
                 <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between mb-3">
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center flex-wrap">
                         <div>
                             <label for="admin_appt_search" class="block text-[0.7rem] text-slate-600 mb-1">Search</label>
-                            <input id="admin_appt_search" type="text" class="w-full sm:w-56 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Status…" />
+                            <input id="admin_appt_search" type="text" class="w-full sm:w-40 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Search…" />
                         </div>
                         <div>
-                            <label for="admin_appt_filter" class="block text-[0.7rem] text-slate-600 mb-1">Filter</label>
-                            <select id="admin_appt_filter" class="w-full sm:w-40 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                            <label for="admin_appt_type_filter" class="block text-[0.7rem] text-slate-600 mb-1">Type</label>
+                            <select id="admin_appt_type_filter" class="w-full sm:w-32 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                                <option value="all">All</option>
+                                <option value="scheduled">Scheduled</option>
+                                <option value="walk-in">Walk-in</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="admin_appt_status_filter" class="block text-[0.7rem] text-slate-600 mb-1">Status</label>
+                            <select id="admin_appt_status_filter" class="w-full sm:w-32 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                                <option value="all">All</option>
+                                <option value="pending">Pending</option>
+                                <option value="confirmed">Confirmed</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
+                                <option value="no_show">No-show</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="admin_appt_filter" class="block text-[0.7rem] text-slate-600 mb-1">Count Filter</label>
+                            <select id="admin_appt_filter" class="w-full sm:w-32 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
                                 <option value="all">All</option>
                                 <option value="nonzero">Non-zero only</option>
                             </select>
                         </div>
                     </div>
-                    <div class="md:text-right">
+                    <div class="md:text-right shrink-0">
                         <label for="admin_appt_sort" class="block text-[0.7rem] text-slate-600 mb-1">Sort</label>
                         <select id="admin_appt_sort" class="w-full md:w-48 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
                             <option value="count_desc">Count (high)</option>
                             <option value="count_asc">Count (low)</option>
+                            <option value="type_asc">Type (A–Z)</option>
+                            <option value="type_desc">Type (Z–A)</option>
                             <option value="status_asc">Status (A–Z)</option>
                             <option value="status_desc">Status (Z–A)</option>
                         </select>
@@ -202,6 +239,7 @@
                     <table class="min-w-full text-left text-xs text-slate-600">
                         <thead>
                             <tr class="border-b border-slate-100 text-[0.68rem] uppercase tracking-widest text-slate-400">
+                                <th class="py-2 pr-4 font-semibold">Type</th>
                                 <th class="py-2 pr-4 font-semibold">Status</th>
                                 <th class="py-2 pr-4 font-semibold">Count</th>
                             </tr>
@@ -214,9 +252,14 @@
                                 @php
                                     $status = $row->status ?? 'unknown';
                                     $statusLabel = ucfirst(str_replace('_', ' ', $status));
+                                    $type = $row->appointment_type ?? 'unknown';
+                                    $typeLabel = ucfirst(str_replace('_', '-', $type));
                                     $countValue = (int) ($row->total_count ?? 0);
                                 @endphp
-                                <tr class="border-b border-slate-50 last:border-0 admin-appt-row" data-status="{{ strtolower((string) $statusLabel) }}" data-count="{{ $countValue }}">
+                                <tr class="border-b border-slate-50 last:border-0 admin-appt-row" data-status="{{ strtolower((string) $statusLabel) }}" data-type="{{ strtolower((string) $typeLabel) }}" data-count="{{ $countValue }}">
+                                    <td class="py-2 pr-4 text-[0.78rem] text-slate-700">
+                                        {{ $typeLabel }}
+                                    </td>
                                     <td class="py-2 pr-4 text-[0.78rem] text-slate-700">
                                         {{ $statusLabel }}
                                     </td>
@@ -226,13 +269,13 @@
                                 </tr>
                             @empty
                                 <tr class="admin-appt-empty">
-                                    <td colspan="2" class="py-4 text-center text-[0.78rem] text-slate-400">
+                                    <td colspan="3" class="py-4 text-center text-[0.78rem] text-slate-400">
                                         No appointments recorded for today.
                                     </td>
                                 </tr>
                             @endforelse
                             <tr id="admin_appt_empty_filtered" class="hidden">
-                                <td colspan="2" class="py-4 text-center text-[0.78rem] text-slate-400">
+                                <td colspan="3" class="py-4 text-center text-[0.78rem] text-slate-400">
                                     No results.
                                 </td>
                             </tr>
@@ -303,12 +346,17 @@
         var panelAppointments = document.getElementById('adminReportsPanelAppointments')
 
         var txnSearch = document.getElementById('admin_txn_search')
+        var txnDateFrom = document.getElementById('admin_txn_date_from')
+        var txnDateTo = document.getElementById('admin_txn_date_to')
+        var txnMode = document.getElementById('admin_txn_mode')
         var txnStatus = document.getElementById('admin_txn_status')
         var txnSort = document.getElementById('admin_txn_sort')
         var txnBody = document.getElementById('admin_txn_tbody')
         var txnEmptyFiltered = document.getElementById('admin_txn_empty_filtered')
 
         var apptSearch = document.getElementById('admin_appt_search')
+        var apptTypeFilter = document.getElementById('admin_appt_type_filter')
+        var apptStatusFilter = document.getElementById('admin_appt_status_filter')
         var apptFilter = document.getElementById('admin_appt_filter')
         var apptSort = document.getElementById('admin_appt_sort')
         var apptBody = document.getElementById('admin_appt_tbody')
@@ -316,7 +364,7 @@
 
         function setTabButtonActive(btn, isActive, isLeft) {
             if (!btn) return
-            btn.classList.remove('bg-slate-900', 'text-white', 'bg-white', 'text-slate-700', 'hover:bg-slate-50')
+            btn.classList.remove('bg-slate-900', 'text-white', 'bg-white', 'text-slate-700', 'hover:bg-slate-50', 'bg-cyan-600')
             if (isLeft) {
                 btn.classList.toggle('border-r', true)
                 btn.classList.toggle('border-slate-100', true)
@@ -346,16 +394,28 @@
         function applyTransactionFilters() {
             if (!txnBody) return
             var q = normalizeText(txnSearch ? txnSearch.value : '')
+            var dateFrom = txnDateFrom && txnDateFrom.value ? new Date(txnDateFrom.value).getTime() / 1000 : null
+            var dateTo = txnDateTo && txnDateTo.value ? new Date(txnDateTo.value).getTime() / 1000 : null
+            var mode = normalizeText(txnMode ? txnMode.value : 'all')
             var status = normalizeText(txnStatus ? txnStatus.value : 'all')
             var rows = Array.prototype.slice.call(txnBody.querySelectorAll('tr.admin-txn-row'))
             var visibleCount = 0
 
             rows.forEach(function (row) {
+                var rowTimestamp = parseInt(row.getAttribute('data-when') || '0', 10)
+                var rowMode = normalizeText(row.getAttribute('data-mode'))
                 var rowStatus = normalizeText(row.getAttribute('data-status'))
                 var rowText = normalizeText(row.textContent)
+
                 var matchesQuery = !q || rowText.indexOf(q) !== -1
+                var matchesMode = mode === 'all' || rowMode === mode
                 var matchesStatus = status === 'all' || rowStatus === status
-                var show = matchesQuery && matchesStatus
+
+                var matchesDate = true
+                if (dateFrom && rowTimestamp < dateFrom) matchesDate = false
+                if (dateTo && rowTimestamp > dateTo + 86400) matchesDate = false
+
+                var show = matchesQuery && matchesMode && matchesStatus && matchesDate
                 row.classList.toggle('hidden', !show)
                 if (show) visibleCount++
             })
@@ -397,16 +457,23 @@
         function applyAppointmentFilters() {
             if (!apptBody) return
             var q = normalizeText(apptSearch ? apptSearch.value : '')
+            var typeFilter = normalizeText(apptTypeFilter ? apptTypeFilter.value : 'all')
+            var statusFilter = normalizeText(apptStatusFilter ? apptStatusFilter.value : 'all')
             var filter = normalizeText(apptFilter ? apptFilter.value : 'all')
             var rows = Array.prototype.slice.call(apptBody.querySelectorAll('tr.admin-appt-row'))
             var visibleCount = 0
 
             rows.forEach(function (row) {
                 var statusText = normalizeText(row.getAttribute('data-status'))
+                var typeText = normalizeText(row.getAttribute('data-type'))
                 var countVal = parseInt(row.getAttribute('data-count') || '0', 10) || 0
-                var matchesQuery = !q || statusText.indexOf(q) !== -1
+
+                var matchesQuery = !q || statusText.indexOf(q) !== -1 || typeText.indexOf(q) !== -1
+                var matchesType = typeFilter === 'all' || typeText === typeFilter
+                var matchesStatus = statusFilter === 'all' || statusText === statusFilter
                 var matchesFilter = filter === 'all' || countVal > 0
-                var show = matchesQuery && matchesFilter
+
+                var show = matchesQuery && matchesType && matchesStatus && matchesFilter
                 row.classList.toggle('hidden', !show)
                 if (show) visibleCount++
             })
@@ -431,6 +498,12 @@
                     var bs = normalizeText(b.getAttribute('data-status'))
                     if (as === bs) return 0
                     return as > bs ? factor : -factor
+                }
+                if (type === 'type') {
+                    var at = normalizeText(a.getAttribute('data-type'))
+                    var bt = normalizeText(b.getAttribute('data-type'))
+                    if (at === bt) return 0
+                    return at > bt ? factor : -factor
                 }
                 var av = parseInt(a.getAttribute('data-count') || '0', 10) || 0
                 var bv = parseInt(b.getAttribute('data-count') || '0', 10) || 0
@@ -468,10 +541,15 @@
 
         if (txnSort) txnSort.addEventListener('change', function () { sortTransactionRows(); applyTransactionFilters() })
         if (txnSearch) txnSearch.addEventListener('input', applyTransactionFilters)
+        if (txnDateFrom) txnDateFrom.addEventListener('change', applyTransactionFilters)
+        if (txnDateTo) txnDateTo.addEventListener('change', applyTransactionFilters)
+        if (txnMode) txnMode.addEventListener('change', applyTransactionFilters)
         if (txnStatus) txnStatus.addEventListener('change', applyTransactionFilters)
 
         if (apptSort) apptSort.addEventListener('change', function () { sortAppointmentRows(); applyAppointmentFilters() })
         if (apptSearch) apptSearch.addEventListener('input', applyAppointmentFilters)
+        if (apptTypeFilter) apptTypeFilter.addEventListener('change', applyAppointmentFilters)
+        if (apptStatusFilter) apptStatusFilter.addEventListener('change', applyAppointmentFilters)
         if (apptFilter) apptFilter.addEventListener('change', applyAppointmentFilters)
 
         applyAnalyticsFilter()

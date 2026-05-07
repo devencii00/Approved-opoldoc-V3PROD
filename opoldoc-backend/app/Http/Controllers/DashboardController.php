@@ -178,14 +178,20 @@ class DashboardController extends Controller
                 ],
             ];
 
-            $appointmentsByStatusToday = Appointment::selectRaw('status, COUNT(*) as total_count')
+            $appointmentsByStatusToday = Appointment::selectRaw('status, appointment_type, COUNT(*) as total_count')
                 ->whereDate('appointment_datetime', $today)
-                ->groupBy('status')
+                ->groupBy('status', 'appointment_type')
                 ->get();
 
-            $noShowCount = Appointment::whereDate('appointment_datetime', $today)
+            $noShowApptIds = Appointment::whereDate('appointment_datetime', $today)
                 ->where('status', 'no_show')
-                ->count();
+                ->pluck('appointment_id');
+
+            $noShowQueueApptIds = Queue::whereDate('queue_datetime', $today)
+                ->where('status', 'no_show')
+                ->pluck('appointment_id');
+
+            $noShowCount = $noShowApptIds->concat($noShowQueueApptIds)->unique()->count();
 
             $data['adminReports'] = [
                 'appointmentsByStatusToday' => $appointmentsByStatusToday,

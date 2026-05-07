@@ -1,18 +1,20 @@
-<div class="bg-white border border-slate-200 rounded-[18px] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
-    <div class="flex items-center justify-between mb-3">
-        <h2 class="text-sm font-semibold text-slate-900">Logs</h2>
-        <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Activity</span>
-    </div>
-    <p class="text-xs text-slate-500 mb-3">
-        View recent system activities and filter by user or action.
-    </p>
-
-    <div class="flex items-center gap-2 mb-4">
-        <button type="button" id="adminLogsTabAudit" class="px-3 py-2 rounded-xl text-[0.78rem] font-semibold border border-slate-200 bg-slate-900 text-white">Logs</button>
-        <button type="button" id="adminLogsTabAccess" class="px-3 py-2 rounded-xl text-[0.78rem] font-semibold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50">Record access logs</button>
+<div class="bg-white border border-slate-200 rounded-[18px] shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
+    <div class="grid grid-cols-2 border-b border-slate-200">
+        <button type="button" id="adminLogsTabAudit" class="px-4 py-3 text-xs font-semibold text-white bg-cyan-600 border-b-2 border-cyan-700 rounded-tl-[18px]">Logs</button>
+        <button type="button" id="adminLogsTabAccess" class="px-4 py-3 text-xs font-semibold text-slate-900 bg-white hover:bg-slate-50 border-l border-slate-200 rounded-tr-[18px]">Record access logs</button>
     </div>
 
-    <div id="adminLogsPanelAudit">
+    <div class="p-5 pb-0">
+        <div class="flex items-center justify-between mb-3">
+            <div>
+                <h2 id="adminLogsHeaderTitle" class="text-sm font-semibold text-slate-900">Logs</h2>
+                <p id="adminLogsHeaderDesc" class="text-xs text-slate-500 mt-1">View recent system activities and filter by user or action.</p>
+            </div>
+            <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Activity</span>
+        </div>
+    </div>
+
+    <div id="adminLogsPanelAudit" class="p-5 pt-0">
         <div class="mb-3 flex flex-col gap-2 md:flex-row md:items-end">
             <div class="flex-1">
                 <label for="admin_audit_search" class="block text-[0.7rem] text-slate-600 mb-1">Filter by user / action</label>
@@ -73,7 +75,7 @@
         </div>
     </div>
 
-    <div id="adminLogsPanelAccess" class="hidden">
+    <div id="adminLogsPanelAccess" class="hidden p-5 pt-0">
         <div class="mb-3 flex flex-col gap-2 md:flex-row md:items-end">
             <div class="flex-1">
                 <label for="admin_access_search" class="block text-[0.7rem] text-slate-600 mb-1">Search record access</label>
@@ -137,22 +139,17 @@
         var tabAccess = document.getElementById('adminLogsTabAccess')
         var panelAudit = document.getElementById('adminLogsPanelAudit')
         var panelAccess = document.getElementById('adminLogsPanelAccess')
+        var headerTitle = document.getElementById('adminLogsHeaderTitle')
+        var headerDesc = document.getElementById('adminLogsHeaderDesc')
 
-        function setTabButtonActive(btn, isActive) {
+        function setTabButtonActive(btn, isActive, isLeft) {
             if (!btn) return
-            btn.classList.remove(
-                'bg-slate-900',
-                'text-white',
-                'border-slate-900',
-                'bg-white',
-                'text-slate-700',
-                'border-slate-200',
-                'hover:bg-slate-50'
-            )
+            btn.classList.remove('bg-cyan-600', 'text-white', 'border-b-2', 'border-cyan-700', 'bg-white', 'text-slate-900', 'hover:bg-slate-50', 'border-transparent')
+            
             if (isActive) {
-                btn.classList.add('bg-cyan-600', 'text-white', 'bg-cyan-600')
+                btn.classList.add('bg-cyan-600', 'text-white', 'border-b-2', 'border-cyan-700')
             } else {
-                btn.classList.add('bg-white', 'text-slate-700', 'border-slate-200', 'hover:bg-slate-50')
+                btn.classList.add('bg-white', 'text-slate-900', 'hover:bg-slate-50', 'border-b-2', 'border-transparent')
             }
         }
 
@@ -160,8 +157,18 @@
             var isAudit = key !== 'access'
             if (panelAudit) panelAudit.classList.toggle('hidden', !isAudit)
             if (panelAccess) panelAccess.classList.toggle('hidden', isAudit)
-            setTabButtonActive(tabAudit, isAudit)
-            setTabButtonActive(tabAccess, !isAudit)
+            setTabButtonActive(tabAudit, isAudit, true)
+            setTabButtonActive(tabAccess, !isAudit, false)
+
+            if (headerTitle && headerDesc) {
+                if (isAudit) {
+                    headerTitle.textContent = 'Logs'
+                    headerDesc.textContent = 'View recent system activities and filter by user or action.'
+                } else {
+                    headerTitle.textContent = 'Record access logs'
+                    headerDesc.textContent = 'Track when specific records and tables were viewed by users.'
+                }
+            }
 
             try {
                 localStorage.setItem('admin_logs_tab', isAudit ? 'audit' : 'access')
