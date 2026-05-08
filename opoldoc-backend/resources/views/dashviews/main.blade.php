@@ -132,13 +132,13 @@
                 }
 
                 var actualRole = result.data && result.data.role ? String(result.data.role).toLowerCase() : ''
-                var userId = result.data && result.data.user_id ? String(result.data.user_id) : ''
+                var userUuid = result.data && result.data.uuid ? String(result.data.uuid) : ''
                 if (!actualRole) return
                 if (actualRole === expectedRole) return
 
                 var target = "{{ request()->getBaseUrl() }}/dashboard/" + encodeURIComponent(actualRole)
-                if (actualRole !== 'admin' && userId) {
-                    target += '?user_id=' + encodeURIComponent(userId)
+                if (actualRole !== 'admin' && userUuid) {
+                    target += '?user_uuid=' + encodeURIComponent(userUuid)
                 }
                 window.location.href = target
             })

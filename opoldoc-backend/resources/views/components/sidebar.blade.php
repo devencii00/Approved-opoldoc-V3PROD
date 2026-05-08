@@ -442,7 +442,7 @@
                 <div id="sidebarUserEmail" class="text-slate-400 text-[0.7rem]"></div>
             </div>
         </div>
-        <button type="button" onclick="if(confirm('Are you sure you want to log out?')) { try { if (window.localStorage) { window.localStorage.removeItem('api_token'); window.localStorage.removeItem('current_user_id'); } } catch (_) {} window.location.href='{{ route('webadmin.login') }}'; }" class="w-full flex items-center justify-center gap-2.5 p-2 rounded-xl border border-red-400/25 bg-red-50 text-red-600 text-[0.83rem] font-semibold hover:bg-red-100 hover:border-red-400/40">
+        <button type="button" onclick="if(confirm('Are you sure you want to log out?')) { try { if (window.localStorage) { window.localStorage.removeItem('api_token'); window.localStorage.removeItem('current_user_id'); window.localStorage.removeItem('current_user_uuid'); } } catch (_) {} window.location.href='{{ route('webadmin.login') }}'; }" class="w-full flex items-center justify-center gap-2.5 p-2 rounded-xl border border-red-400/25 bg-red-50 text-red-600 text-[0.83rem] font-semibold hover:bg-red-100 hover:border-red-400/40">
             <x-lucide-log-out class="w-[16px] h-[16px]" />
             Sign Out
         </button>
@@ -526,16 +526,22 @@
                 return
             }
 
-            var userId = null
+            var userRef = null
             try {
-                userId = window.localStorage ? window.localStorage.getItem('current_user_id') : null
+                userRef = window.localStorage ? window.localStorage.getItem('current_user_uuid') : null
             } catch (_) {
-                userId = null
+                userRef = null
             }
 
-            if (!userId) {
-                return
+            if (!userRef) {
+                try {
+                    userRef = window.localStorage ? window.localStorage.getItem('current_user_id') : null
+                } catch (_) {
+                    userRef = null
+                }
             }
+
+            if (!userRef) return
 
             try {
                 var dashboardLinks = document.querySelectorAll('a[href*="/dashboard/"]')
@@ -544,14 +550,15 @@
                     var u = new URL(anchor.href, window.location.origin)
                     var path = String(u.pathname || '').toLowerCase()
                     if (path.indexOf('/dashboard/admin') === 0) return
-                    if (!u.searchParams.get('user_id')) {
-                        u.searchParams.set('user_id', String(userId))
-                        anchor.href = u.toString()
+                    u.searchParams.delete('user_id')
+                    if (!u.searchParams.get('user_uuid')) {
+                        u.searchParams.set('user_uuid', String(userRef))
                     }
+                    anchor.href = u.toString()
                 })
             } catch (_) {}
 
-            sidebarApiFetch("{{ url('/api/users') }}/" + encodeURIComponent(userId), { method: 'GET' })
+            sidebarApiFetch("{{ url('/api/users') }}/" + encodeURIComponent(userRef), { method: 'GET' })
                 .then(function (response) {
                     return response.json().then(function (data) {
                         return { ok: response.ok, data: data }

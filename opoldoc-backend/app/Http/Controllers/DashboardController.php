@@ -26,13 +26,17 @@ class DashboardController extends Controller
         }
 
         $section = $request->query('section');
+        $userUuid = $request->query('user_uuid');
         $userId = $request->query('user_id');
 
         $currentUser = null;
         $doctorId = null;
 
-        if ($userId && $role !== 'admin') {
-            $currentUser = User::find($userId);
+        if ($role !== 'admin') {
+            $publicUserKey = $userUuid ?: $userId;
+            if ($publicUserKey) {
+                $currentUser = User::findByPublicIdentifier($publicUserKey);
+            }
         }
 
         if ($role === 'doctor' && $currentUser) {

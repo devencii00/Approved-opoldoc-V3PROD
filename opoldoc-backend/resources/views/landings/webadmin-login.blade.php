@@ -176,6 +176,12 @@
 
                 const user = data.user || {};
 
+                if (user.uuid) {
+                    try {
+                        window.localStorage.setItem('current_user_uuid', user.uuid);
+                    } catch (_) {
+                    }
+                }
                 if (user.user_id) {
                     try {
                         window.localStorage.setItem('current_user_id', user.user_id);
@@ -204,8 +210,8 @@
                 }
 
                 let target = "{{ url('/dashboard') }}/" + role;
-                if (user.user_id) {
-                    target += '?user_id=' + encodeURIComponent(user.user_id);
+                if (user.uuid) {
+                    target += '?user_uuid=' + encodeURIComponent(user.uuid);
                 }
 
                 window.location.href = target;

@@ -137,14 +137,22 @@
                     return
                 }
 
-                var userId = null
+                var userRef = null
                 try {
-                    userId = window.localStorage ? window.localStorage.getItem('current_user_id') : null
+                    userRef = window.localStorage ? window.localStorage.getItem('current_user_uuid') : null
                 } catch (_) {
-                    userId = null
+                    userRef = null
                 }
 
-                if (!userId) {
+                if (!userRef) {
+                    try {
+                        userRef = window.localStorage ? window.localStorage.getItem('current_user_id') : null
+                    } catch (_) {
+                        userRef = null
+                    }
+                }
+
+                if (!userRef) {
                     if (errorBox) {
                         errorBox.textContent = 'User information is missing. Please sign in again.'
                         errorBox.classList.remove('hidden')
@@ -152,7 +160,7 @@
                     return
                 }
 
-                staffApiFetch("{{ url('/api/users') }}/" + userId, {
+                staffApiFetch("{{ url('/api/users') }}/" + userRef, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
@@ -189,7 +197,11 @@
                         }
 
                         setTimeout(function () {
-                            window.location.href = "{{ url('/dashboard') }}/" + role
+                            var target = "{{ url('/dashboard') }}/" + role
+                            if (result.data && result.data.uuid) {
+                                target += '?user_uuid=' + encodeURIComponent(String(result.data.uuid))
+                            }
+                            window.location.href = target
                         }, 1000)
                     })
                     .catch(function () {

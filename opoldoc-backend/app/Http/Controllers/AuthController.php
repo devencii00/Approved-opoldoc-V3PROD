@@ -139,6 +139,11 @@ class AuthController extends Controller
         RateLimiter::clear($rateKey);
         RateLimiter::clear($slowKey);
 
+        if (! is_string($user->uuid ?? null) || trim((string) $user->uuid) === '') {
+            $user->uuid = (string) Str::uuid();
+            $user->save();
+        }
+
         LogEntry::write(
             (int) $user->user_id,
             'auth_login_attempt',

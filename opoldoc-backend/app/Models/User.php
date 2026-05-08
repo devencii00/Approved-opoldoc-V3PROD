@@ -8,6 +8,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -22,6 +23,7 @@ class User extends Authenticatable
     protected $primaryKey = 'user_id';
 
     protected $fillable = [
+        'uuid',
         'parent_user_id',
         'email',
         'password_hash',
@@ -72,6 +74,11 @@ class User extends Authenticatable
     protected static function booted(): void
     {
         static::creating(function (self $user) {
+            $currentUuid = is_string($user->uuid ?? null) ? trim((string) $user->uuid) : '';
+            if ($currentUuid === '') {
+                $user->uuid = (string) Str::uuid();
+            }
+
             if (! in_array($user->role, ['doctor', 'receptionist'], true)) {
                 return;
             }
@@ -226,7 +233,11 @@ class User extends Authenticatable
             return null;
         }
 
-        return url('/signatures/'.$this->user_id);
+        $routeUserKey = is_string($this->uuid ?? null) && trim((string) $this->uuid) !== ''
+            ? $this->uuid
+            : $this->user_id;
+
+        return url('/signatures/'.$routeUserKey);
     }
 
     public function getProfPathUrlAttribute(): ?string
@@ -240,6 +251,46 @@ class User extends Authenticatable
             return null;
         }
 
-        return url('/profiles/'.$this->user_id);
+        $routeUserKey = is_string($this->uuid ?? null) && trim((string) $this->uuid) !== ''
+            ? $this->uuid
+            : $this->user_id;
+
+        return url('/profiles/'.$routeUserKey);
+    }
+
+    public static function findByPublicIdentifier($value): ?self
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $key = trim((string) $value);
+        if ($key === '') {
+            return null;
+        }
+
+        if (Str::isUuid($key)) {
+            return static::query()->where('uuid', $key)->first();
+        }
+
+        if (ctype_digit($key)) {
+            return static::query()->where('user_id', (int) $key)->first();
+        }
+
+        return null;
+    }
+
+    public function resolveRouteBinding($value, $field = null)
+    {
+        if (is_string($field) && trim($field) !== '') {
+            return parent::resolveRouteBinding($value, $field);
+        }
+
+        $user = self::findByPublicIdentifier($value);
+        if (! $user) {
+            abort(404);
+        }
+
+        return $user;
     }
 }

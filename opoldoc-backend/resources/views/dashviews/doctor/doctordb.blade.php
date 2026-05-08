@@ -12,7 +12,7 @@
     $todayQueue = $doctorTodayQueue ?? [];
     $recentNotifications = $doctorRecentNotifications ?? collect();
     $todayIso = now()->toDateString();
-    $currentUserIdQuery = request()->query('user_id');
+    $currentUserUuidQuery = request()->query('user_uuid') ?: request()->query('user_id');
     $todayUpcomingAppointments = collect($recentAppointments)
         ->filter(function ($appointment) use ($todayIso) {
             return optional($appointment->appointment_datetime)->format('Y-m-d') === $todayIso;
@@ -127,8 +127,8 @@
                                         'section' => 'consultation',
                                         'appointment_id' => $appointment->appointment_id,
                                     ];
-                                    if ($currentUserIdQuery) {
-                                        $consultationParams['user_id'] = $currentUserIdQuery;
+                                    if ($currentUserUuidQuery) {
+                                        $consultationParams['user_uuid'] = $currentUserUuidQuery;
                                     }
                                 @endphp
                                 <tr class="border-b border-slate-100 last:border-0">
