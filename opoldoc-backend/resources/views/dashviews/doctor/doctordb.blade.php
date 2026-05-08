@@ -269,40 +269,107 @@
                 </div>
             </div>
 
-            <div class="bg-white border border-slate-200 rounded-[18px] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
-                <h2 class="text-sm font-semibold text-slate-900 mb-3">Queue list</h2>
-                <div class="max-h-80 overflow-y-auto scrollbar-hidden">
-                    @if (count($todayQueue))
-                        <ul class="space-y-2 text-xs text-slate-600">
-                            @foreach ($todayQueue as $queue)
-                                @php
-                                    $patientName = $formatUserName(optional(optional($queue->appointment)->patient));
-                                    $dateKey = optional($queue->queue_datetime)->format('Y-m-d') ?? '—';
-                                    $timeKey = optional($queue->queue_datetime)->format('H:i') ?? '—';
-                                    $statusLabel = $queue->status ? ucfirst(str_replace('_', ' ', $queue->status)) : '—';
-                                @endphp
-                                <li class="flex items-start justify-between gap-2 border-b border-slate-50 pb-2 last:border-0 last:pb-0">
-                                    <div>
-                                        <div class="font-semibold text-slate-900 text-[0.8rem]">
-                                            Queue #{{ $queue->queue_number }}
-                                        </div>
-                                        <div class="text-[0.7rem] text-slate-500">
-                                            {{ $patientName }}
-                                        </div>
-                                    </div>
-                                    <div class="text-right text-[0.7rem] text-slate-400 whitespace-nowrap">
-                                        <div>{{ $dateKey }} {{ $timeKey }}</div>
-                                        <div>{{ $statusLabel }}</div>
-                                    </div>
-                                </li>
-                            @endforeach
-                        </ul>
-                    @else
-                        <p class="text-[0.72rem] text-slate-400">No queue entries yet.</p>
-                    @endif
+           
+           
+           
+            <div class="bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden">
+    <!-- Header with gradient accent -->
+    <div class="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-white to-slate-50/50">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-xl bg-cyan-50 border border-cyan-100 flex items-center justify-center text-cyan-600">
+                    <x-lucide-list class="w-4 h-4" />
+                </div>
+                <div>
+                    <h2 class="text-sm font-semibold text-slate-800 tracking-tight">Queue List</h2>
+                    <p class="text-[0.7rem] text-slate-500 mt-0.5">Today's scheduled appointments</p>
                 </div>
             </div>
+            @if (count($todayQueue))
+                <div class="px-2.5 py-1 rounded-full bg-cyan-50 border border-cyan-100">
+                    <span class="text-[0.7rem] font-semibold text-cyan-700">{{ count($todayQueue) }} {{ Str::plural('patient', count($todayQueue)) }}</span>
+                </div>
+            @endif
         </div>
+    </div>
+    
+    <!-- Queue items container -->
+    <div class="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-slate-50">
+        @if (count($todayQueue))
+            <div class="divide-y divide-slate-100">
+                @foreach ($todayQueue as $queue)
+                    @php
+                        $patientName = $formatUserName(optional(optional($queue->appointment)->patient));
+                        $dateKey = optional($queue->queue_datetime)->format('Y-m-d') ?? '—';
+                        $timeKey = optional($queue->queue_datetime)->format('H:i') ?? '—';
+                        $statusLabel = $queue->status ? ucfirst(str_replace('_', ' ', $queue->status)) : '—';
+                        
+                        // Status badge styling
+                        $statusColors = [
+                            'waiting' => 'bg-amber-50 text-amber-700 border-amber-100',
+                            'in_progress' => 'bg-blue-50 text-blue-700 border-blue-100',
+                            'completed' => 'bg-emerald-50 text-emerald-700 border-emerald-100',
+                            'cancelled' => 'bg-red-50 text-red-700 border-red-100',
+                            'no_show' => 'bg-slate-100 text-slate-600 border-slate-200',
+                        ];
+                        $statusColor = $statusColors[strtolower($queue->status)] ?? 'bg-slate-50 text-slate-600 border-slate-100';
+                    @endphp
+                    <div class="px-5 py-3.5 hover:bg-slate-50/50 transition-all duration-150">
+                        <div class="flex items-start justify-between gap-3">
+                            <!-- Left side - Queue info -->
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="inline-flex items-center gap-1.5 text-[0.8rem] font-semibold text-slate-800">
+                                        <x-lucide-hash class="w-3.5 h-3.5 text-slate-400" />
+                                        {{ $queue->queue_code }}
+                                    </span>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[0.65rem] font-medium border {{ $statusColor }}">
+                                        {{ $statusLabel }}
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-1.5 mt-1.5">
+                                    <x-lucide-user class="w-3 h-3 text-slate-400" />
+                                    <span class="text-[0.75rem] text-slate-600 truncate">{{ $patientName }}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Right side - Time info -->
+                            <div class="text-right flex-shrink-0">
+                                <div class="flex items-center gap-1.5 text-[0.7rem] text-slate-500">
+                                    <x-lucide-calendar class="w-3 h-3 text-slate-400" />
+                                    <span>{{ $dateKey }}</span>
+                                </div>
+                                <div class="flex items-center gap-1.5 mt-1 text-[0.7rem] text-slate-500">
+                                    <x-lucide-clock class="w-3 h-3 text-slate-400" />
+                                    <span>{{ $timeKey }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @else
+            <div class="flex flex-col items-center justify-center py-12 px-4 text-center">
+                <div class="w-12 h-12 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center mb-3">
+                    <x-lucide-calendar-x class="w-6 h-6 text-slate-300" />
+                </div>
+                <p class="text-[0.8rem] font-medium text-slate-500">No queue entries yet</p>
+                <p class="text-[0.7rem] text-slate-400 mt-1">Today's schedule is empty</p>
+            </div>
+        @endif
+    </div>
+    
+    <!-- Optional footer with refresh indicator -->
+    @if (count($todayQueue))
+        <div class="px-5 py-2.5 border-t border-slate-100 bg-slate-50/30">
+            <div class="flex items-center justify-center gap-1.5 text-[0.65rem] text-slate-400">
+                <x-lucide-clock class="w-3 h-3" />
+                <span>Last updated just now</span>
+            </div>
+        </div>
+    @endif
+</div>
+
         <script>
             document.addEventListener('DOMContentLoaded', function () {
                 var toggleBtn = document.getElementById('doctorUpcomingTodayFilter')

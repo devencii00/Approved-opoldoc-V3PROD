@@ -90,11 +90,11 @@
             </form>
 
             <!-- Divider -->
-            <div class="flex items-center gap-2 my-4">
+            <!-- <div class="flex items-center gap-2 my-4">
                 <div class="flex-1 h-px bg-slate-200"></div>
                 <span class="text-xs text-slate-400 font-medium">or</span>
                 <div class="flex-1 h-px bg-slate-200"></div>
-            </div>
+            </div> -->
 
         </div>
 

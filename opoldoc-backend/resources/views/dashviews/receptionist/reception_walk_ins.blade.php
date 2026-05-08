@@ -92,7 +92,7 @@
                 </select>
             </div>
        <div class="flex items-end self-end">
-    <button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-slate-800 transition-colors">
+    <button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700 transition-colors">
         Create guest walk-in
     </button>
 </div>
@@ -224,39 +224,116 @@
         </div>
     </div>
 </div>
-
-<div id="receptionWalkInConfirmOverlay" class="hidden fixed inset-0 z-50 bg-slate-900/40 items-center justify-center p-4">
-    <div class="w-full max-w-sm rounded-2xl bg-white border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.24)] p-4">
-        <div class="flex items-start gap-3">
-            <div class="w-9 h-9 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-700">
-                <x-lucide-info class="w-[18px] h-[18px]" />
-            </div>
-            <div class="flex-1">
-                <div class="text-sm font-semibold text-slate-900">Confirm</div>
-                <div id="receptionWalkInConfirmMessage" class="text-[0.78rem] text-slate-600 mt-0.5">Are you sure?</div>
+<div id="receptionWalkInConfirmOverlay" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm items-center justify-center p-4 transition-all duration-200">
+    <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-100 overflow-hidden">
+        <!-- Header area with refined spacing and visual hierarchy -->
+        <div class="px-5 pt-5 pb-3 border-b border-slate-100 bg-gradient-to-r from-white to-slate-50/50">
+            <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 flex-shrink-0">
+                    <x-lucide-info class="w-5 h-5" />
+                </div>
+                <div class="flex-1">
+                    <h3 id="receptionWalkInConfirmMessage" class="text-base font-semibold text-slate-800 tracking-tight">Confirm action</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Please review before confirming</p>
+                </div>
             </div>
         </div>
-        <div class="mt-4 flex items-center justify-end gap-2">
-            <button type="button" id="receptionWalkInConfirmCancel" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
-            <button type="button" id="receptionWalkInConfirmOk" class="px-3 py-2 rounded-xl bg-slate-900 text-white text-[0.78rem] font-semibold hover:bg-slate-800">Yes</button>
+        
+        <!-- Body with clear, scannable details section -->
+        <div class="px-5 py-4 bg-white">
+            <div class="bg-slate-50/80 rounded-xl border border-slate-100 p-4 text-sm text-slate-700 leading-relaxed space-y-2">
+                <div class="flex items-start gap-2 text-slate-600">
+                    <x-lucide-alert-circle class="w-3.5 h-3.5 mt-0.5 text-slate-400 flex-shrink-0" />
+                    <span class="text-slate-700">Are you sure you want to perform this action?</span>
+                </div>
+                <div class="mt-3 pt-2 border-t border-slate-200 text-xs text-amber-600 bg-amber-50/50 -mx-2 px-2 py-1.5 rounded-md flex items-center gap-2">
+                    <x-lucide-info class="w-3.5 h-3.5" />
+                    <span>This action cannot be undone</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer with improved button hierarchy and spacing -->
+        <div class="px-5 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-end gap-2.5">
+            <button type="button" id="receptionWalkInConfirmCancel" class="px-4 py-2 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-offset-1">
+                Cancel
+            </button>
+            <button type="button" id="receptionWalkInConfirmOk" class="px-5 py-2 rounded-lg bg-cyan-600 text-white text-sm font-semibold hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 shadow-sm transition-all duration-150">
+                Confirm
+            </button>
         </div>
     </div>
 </div>
 
-<div id="receptionWalkInReviewOverlay" class="hidden fixed inset-0 z-[55] bg-slate-900/40 items-center justify-center p-4">
-    <div class="w-full max-w-lg rounded-2xl bg-white border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.24)] p-4">
-        <div class="flex items-start gap-3">
-            <div class="w-9 h-9 rounded-xl bg-cyan-50 border border-cyan-100 flex items-center justify-center text-cyan-700">
-                <x-lucide-info class="w-[18px] h-[18px]" />
-            </div>
-            <div class="flex-1 min-w-0">
-                <div id="receptionWalkInReviewTitle" class="text-sm font-semibold text-slate-900">Review Details</div>
-                <div id="receptionWalkInReviewContent" class="mt-1 text-[0.78rem] text-slate-600"></div>
+<div id="receptionWalkInReviewOverlay" class="hidden fixed inset-0 z-[55] bg-slate-900/50 backdrop-blur-sm items-center justify-center p-4 transition-all duration-200">
+    <div class="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-100 overflow-hidden">
+        <!-- Header section with icon and title - refined spacing -->
+        <div class="px-5 pt-5 pb-3 border-b border-slate-100 bg-gradient-to-r from-white to-slate-50/50">
+            <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-full bg-cyan-50 border border-cyan-200 flex items-center justify-center text-cyan-600 shadow-sm flex-shrink-0">
+                    <x-lucide-info class="w-5 h-5" />
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 id="receptionWalkInReviewTitle" class="text-base font-semibold text-slate-800 tracking-tight">Review Walk-in Details</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Please verify all information before confirming</p>
+                </div>
             </div>
         </div>
-        <div class="mt-4 flex items-center justify-end gap-2">
-            <button type="button" id="receptionWalkInReviewCancel" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
-            <button type="button" id="receptionWalkInReviewOk" class="px-3 py-2 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700">Confirm</button>
+
+        <!-- Content area - improved typography and visual hierarchy -->
+        <div class="px-5 py-4 bg-white">
+            <div id="receptionWalkInReviewContent" class="bg-slate-50/80 rounded-xl border border-slate-100 p-4 text-sm text-slate-700 leading-relaxed space-y-3">
+                <!-- Dynamic content will be injected here -->
+                <div class="flex items-start gap-2.5">
+                    <x-lucide-user class="w-4 h-4 mt-0.5 text-slate-400 flex-shrink-0" />
+                    <div class="flex flex-wrap items-baseline gap-1">
+                        <span class="font-medium text-slate-800">Patient:</span>
+                        <span class="text-slate-600">—</span>
+                    </div>
+                </div>
+                <div class="flex items-start gap-2.5">
+                    <x-lucide-calendar-days class="w-4 h-4 mt-0.5 text-slate-400 flex-shrink-0" />
+                    <div class="flex flex-wrap items-baseline gap-1">
+                        <span class="font-medium text-slate-800">Date:</span>
+                        <span class="text-slate-600">—</span>
+                    </div>
+                </div>
+                <div class="flex items-start gap-2.5">
+                    <x-lucide-clock class="w-4 h-4 mt-0.5 text-slate-400 flex-shrink-0" />
+                    <div class="flex flex-wrap items-baseline gap-1">
+                        <span class="font-medium text-slate-800">Time:</span>
+                        <span class="text-slate-600">—</span>
+                    </div>
+                </div>
+                <div class="flex items-start gap-2.5">
+                    <x-lucide-stethoscope class="w-4 h-4 mt-0.5 text-slate-400 flex-shrink-0" />
+                    <div class="flex flex-wrap items-baseline gap-1">
+                        <span class="font-medium text-slate-800">Doctor / Department:</span>
+                        <span class="text-slate-600">—</span>
+                    </div>
+                </div>
+                <div class="flex items-start gap-2.5">
+                    <x-lucide-file-text class="w-4 h-4 mt-0.5 text-slate-400 flex-shrink-0" />
+                    <div class="flex flex-wrap items-baseline gap-1">
+                        <span class="font-medium text-slate-800">Reason / Notes:</span>
+                        <span class="text-slate-600">—</span>
+                    </div>
+                </div>
+                <div class="mt-3 pt-2 border-t border-slate-200 text-xs text-amber-600 bg-amber-50/50 -mx-2 px-2 py-1.5 rounded-md flex items-center gap-2">
+                    <x-lucide-alert-circle class="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>Please ensure all details are correct before confirming the walk-in appointment.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer buttons - improved hierarchy -->
+        <div class="px-5 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-end gap-2.5">
+            <button type="button" id="receptionWalkInReviewCancel" class="px-4 py-2 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-offset-1">
+                Cancel
+            </button>
+            <button type="button" id="receptionWalkInReviewOk" class="px-5 py-2 rounded-lg bg-cyan-600 text-white text-sm font-semibold hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 shadow-sm transition-all duration-150">
+                Confirm Walk-in
+            </button>
         </div>
     </div>
 </div>

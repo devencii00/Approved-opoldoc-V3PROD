@@ -88,6 +88,10 @@
         Email is required for patient accounts. Dependent accounts may be registered without an email.
     </p>
 </div>
+
+
+
+
 <div id="receptionRegisterPatientConfirmOverlay" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm items-center justify-center p-4 transition-all duration-200">
     <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-100 overflow-hidden">
         <!-- Header area with refined spacing and visual hierarchy -->

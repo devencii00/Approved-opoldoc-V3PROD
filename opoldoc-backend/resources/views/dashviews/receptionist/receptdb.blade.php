@@ -62,7 +62,7 @@
                     </div>
                     <div class="flex-1 overflow-y-auto scrollbar-hidden">
                         <table class="w-full text-left text-[0.75rem] text-slate-600 whitespace-nowrap">
-                            <thead class="bg-white text-slate-500 sticky top-0 border-b border-slate-100 shadow-sm z-10">
+                            <thead class="bg-white text-slate-500  top-0 border-b  border-slate-100 shadow-sm z-10">
                                 <tr>
                                     <th class="px-4 py-2.5 font-medium">Date</th>
                                     <th class="px-4 py-2.5 font-medium">Reference</th>
@@ -87,54 +87,91 @@
                 </div>
 
             </div>
-<!-- 1. Fix the main card height (e.g., h-[600px] or h-full if parent is fixed) -->
-<div class="bg-white border border-slate-200 rounded-[18px] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)] flex flex-col h-[600px] overflow-hidden">
-    <div class="flex items-center justify-between mb-3 shrink-0">
-        <h2 class="text-sm font-semibold text-slate-900">Queue & schedule</h2>
-        <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Preview</span>
-    </div>
 
-    <!-- 2. The grey container -->
-    <div class="flex-1 min-h-0 rounded-xl border border-slate-100 bg-slate-50 p-3.5 flex flex-col gap-3 overflow-hidden">
-        
-        <!-- 3. TOP BOX: Queue (Added basis-1/2 and overflow-hidden) -->
-        <div class="basis-1/2 min-h-0 rounded-lg border border-slate-100 bg-white p-3 flex flex-col overflow-hidden">
-            <div class="flex items-center justify-between gap-2 shrink-0">
-                <div class="text-[0.72rem] font-semibold text-slate-700">Next 5 in queue</div>
-                <div class="flex items-center gap-2">
-                    <div id="receptionNextQueueMeta" class="text-[0.68rem] text-slate-400"></div>
-              <button type="button" id="receptionNextQueueNextBtn" class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900 text-white text-[0.75rem] font-semibold hover:bg-slate-800 transition-all shadow-sm disabled:opacity-60 disabled:pointer-events-none">
-    <span id="receptionNextQueueNextSpinner" class="hidden w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
-    <x-lucide-megaphone class="w-[16px] h-[16px]" />
-    <span id="receptionNextQueueNextLabel">Call next</span>
-</button>
-
-
-
-
-                    
+            <!-- Queue & Schedule Panel -->
+<div class="bg-white border border-slate-100 rounded-2xl shadow-xl flex flex-col h-[600px] overflow-hidden">
+    <!-- Header with gradient accent -->
+    <div class="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-white to-slate-50/50 shrink-0">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <div class="">
+                    <!-- <x-lucide-calendar-clock class="w-4 h-4" /> -->
+                </div>
+                <div>
+                    <h2 class="text-sm font-semibold text-slate-800 tracking-tight">Queue & Schedule</h2>
+                    <p class="text-[0.7rem] text-slate-500 mt-0.5">Today's patient flow</p>
                 </div>
             </div>
-            <div id="receptionNextQueueInlineMessage" class="hidden mt-2 rounded-lg border px-2.5 py-2 text-[0.72rem]"></div>
-            
-            <div class="mt-2 flex-1 min-h-0 overflow-y-auto scrollbar-hidden">
-                <ul id="receptionNextQueue" class="space-y-1 text-[0.78rem] text-slate-700"></ul>
-            </div>
+            <span class="text-[0.65rem] text-slate-400 uppercase tracking-wider bg-slate-50 px-2 py-1 rounded-full border border-slate-100">Live Preview</span>
         </div>
-
-        <!-- 4. BOTTOM BOX: Appointments (Added basis-1/2 and overflow-hidden) -->
-        <div class="basis-1/2 min-h-0 rounded-lg border border-slate-100 bg-white p-3 flex flex-col overflow-hidden">
-            <div class="flex items-center justify-between shrink-0">
-                <div class="text-[0.72rem] font-semibold text-slate-700">Next appointments</div>
-                <div id="receptionNextAppointmentsMeta" class="text-[0.68rem] text-slate-400"></div>
-            </div>
-            <div class="mt-2 flex-1 min-h-0 overflow-y-auto scrollbar-hidden">
-                <ul id="receptionNextAppointments" class="space-y-1 text-[0.78rem] text-slate-700"></ul>
-            </div>
-        </div>
-
     </div>
-</div>
+
+    <!-- Main content container -->
+    <div class="flex-1 min-h-0 p-4 bg-slate-50/30">
+        <div class="h-full rounded-xl border border-slate-100 bg-white shadow-sm flex flex-col gap-3 overflow-hidden">
+            
+            <!-- TOP BOX: Queue Section -->
+            <div class="flex-1 min-h-0 rounded-xl border border-slate-100 bg-white p-4 flex flex-col overflow-hidden">
+                <!-- Queue Header -->
+                <div class="flex items-center justify-between gap-3 shrink-0">
+                    <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-lg bg-cyan-50 border border-cyan-100 flex items-center justify-center text-cyan-600">
+                            <x-lucide-users class="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                            <div class="text-[0.72rem] font-semibold text-slate-800">Active Queue</div>
+                            <div id="receptionNextQueueMeta" class="text-[0.65rem] text-slate-400 mt-0.5">Waiting patients</div>
+                        </div>
+                    </div>
+                    <button type="button" id="receptionNextQueueNextBtn" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 text-white text-[0.72rem] font-semibold hover:bg-slate-700 transition-all duration-150 shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 disabled:opacity-60 disabled:pointer-events-none">
+                        <span id="receptionNextQueueNextSpinner" class="hidden w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                        <x-lucide-megaphone class="w-3.5 h-3.5" />
+                        <span id="receptionNextQueueNextLabel">Call next</span>
+                    </button>
+                </div>
+                
+                <!-- Queue Message Area -->
+                <div id="receptionNextQueueInlineMessage" class="hidden mt-3 rounded-lg border px-3 py-2 text-[0.7rem]"></div>  
+                
+                <!-- Queue List -->
+                <div class="mt-3 flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-slate-50">
+                    <ul id="receptionNextQueue" class="space-y-2">
+                        <!-- Dynamic queue items will be injected here -->
+                        <li class="text-center text-[0.7rem] text-slate-400 py-4">No patients in queue</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- BOTTOM BOX: Appointments Section -->
+            <div class="flex-1 min-h-0 rounded-xl border border-slate-100 bg-white p-4 flex flex-col overflow-hidden">
+                <!-- Appointments Header -->
+                <div class="flex items-center justify-between shrink-0">
+                    <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-lg bg-cyan-50 border border-cyan-100 flex items-center justify-center text-cyan-600">
+                            <x-lucide-calendar-check class="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                            <div class="text-[0.72rem] font-semibold text-slate-800">Upcoming Appointments</div>
+                            <div id="receptionNextAppointmentsMeta" class="text-[0.65rem] text-slate-400 mt-0.5">Scheduled visits</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <x-lucide-clock class="w-3 h-3 text-slate-300" />
+                        <span class="text-[0.6rem] text-slate-400">Today</span>
+                    </div>
+                </div>
+                
+                <!-- Appointments List -->
+                <div class="mt-3 flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-slate-50">
+                    <ul id="receptionNextAppointments" class="space-y-2">
+                        <!-- Dynamic appointment items will be injected here -->
+                        <li class="text-center text-[0.7rem] text-slate-400 py-4">No appointments scheduled</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+    </div>
 </div>
 
         <script>

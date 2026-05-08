@@ -151,21 +151,68 @@
         </div>
     </div>
 </div>
-
-<div id="receptionPaymentReviewOverlay" class="hidden fixed inset-0 z-[80] bg-slate-900/40 items-center justify-center p-4">
-    <div class="w-full max-w-lg rounded-2xl bg-white border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.24)] p-4">
-        <div class="flex items-start gap-3">
-            <div class="w-9 h-9 rounded-xl bg-cyan-50 border border-cyan-100 flex items-center justify-center text-cyan-700">
-                <x-lucide-info class="w-[18px] h-[18px]" />
-            </div>
-            <div class="flex-1 min-w-0">
-                <div class="text-sm font-semibold text-slate-900">Review Payment Details</div>
-                <div id="receptionPaymentReviewContent" class="mt-1 text-[0.78rem] text-slate-600"></div>
+<div id="receptionPaymentReviewOverlay" class="hidden fixed inset-0 z-[80] bg-slate-900/50 backdrop-blur-sm items-center justify-center p-4 transition-all duration-200">
+    <div class="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-100 overflow-hidden">
+        <!-- Header section with icon and title - refined spacing -->
+        <div class="px-5 pt-5 pb-3 border-b border-slate-100 bg-gradient-to-r from-white to-slate-50/50">
+            <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-full bg-cyan-50 border border-cyan-200 flex items-center justify-center text-cyan-600 shadow-sm flex-shrink-0">
+                    <x-lucide-info class="w-5 h-5" />
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="text-base font-semibold text-slate-800 tracking-tight">Review Payment Details</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Please verify all payment information before confirming</p>
+                </div>
             </div>
         </div>
-        <div class="mt-4 flex items-center justify-end gap-2">
-            <button type="button" id="receptionPaymentReviewCancel" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
-            <button type="button" id="receptionPaymentReviewConfirm" class="px-3 py-2 rounded-xl bg-slate-900 text-white text-[0.78rem] font-semibold hover:bg-slate-800">Confirm</button>
+
+        <!-- Content area - improved typography and visual hierarchy -->
+        <div class="px-5 py-4 bg-white">
+            <div id="receptionPaymentReviewContent" class="bg-slate-50/80 rounded-xl border border-slate-100 p-4 text-sm text-slate-700 leading-relaxed space-y-3">
+                <!-- Dynamic content will be injected here -->
+                <div class="flex items-start gap-2.5">
+                    <x-lucide-receipt class="w-4 h-4 mt-0.5 text-slate-400 flex-shrink-0" />
+                    <div class="flex flex-wrap items-baseline gap-1">
+                        <span class="font-medium text-slate-800">Invoice #:</span>
+                        <span class="text-slate-600">—</span>
+                    </div>
+                </div>
+                <div class="flex items-start gap-2.5">
+                    <x-lucide-dollar-sign class="w-4 h-4 mt-0.5 text-slate-400 flex-shrink-0" />
+                    <div class="flex flex-wrap items-baseline gap-1">
+                        <span class="font-medium text-slate-800">Amount:</span>
+                        <span class="text-slate-600">—</span>
+                    </div>
+                </div>
+                <div class="flex items-start gap-2.5">
+                    <x-lucide-credit-card class="w-4 h-4 mt-0.5 text-slate-400 flex-shrink-0" />
+                    <div class="flex flex-wrap items-baseline gap-1">
+                        <span class="font-medium text-slate-800">Payment Method:</span>
+                        <span class="text-slate-600">—</span>
+                    </div>
+                </div>
+                <div class="flex items-start gap-2.5">
+                    <x-lucide-calendar class="w-4 h-4 mt-0.5 text-slate-400 flex-shrink-0" />
+                    <div class="flex flex-wrap items-baseline gap-1">
+                        <span class="font-medium text-slate-800">Date:</span>
+                        <span class="text-slate-600">—</span>
+                    </div>
+                </div>
+                <div class="mt-3 pt-2 border-t border-slate-200 text-xs text-amber-600 bg-amber-50/50 -mx-2 px-2 py-1.5 rounded-md flex items-center gap-2">
+                    <x-lucide-alert-circle class="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>Please verify all payment details before confirming. This transaction will be recorded.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer buttons - improved hierarchy -->
+        <div class="px-5 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-end gap-2.5">
+            <button type="button" id="receptionPaymentReviewCancel" class="px-4 py-2 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-offset-1">
+                Cancel
+            </button>
+            <button type="button" id="receptionPaymentReviewConfirm" class="px-5 py-2 rounded-lg bg-cyan-600 text-white text-sm font-semibold hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 shadow-sm transition-all duration-150">
+                Confirm Payment
+            </button>
         </div>
     </div>
 </div>

@@ -25,7 +25,7 @@
         </div>
         <div class="flex items-end gap-2">
             <div class="flex-1">
-                <label for="admin_service_price" class="block text-[0.7rem] text-slate-600 mb-1">Price (optional)</label>
+                <label for="admin_service_price" class="block text-[0.7rem] text-slate-600 mb-1">Fee</label>
                 <input id="admin_service_price" type="number" step="0.01" min="0" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
             </div>
             <button type="submit" id="adminAddServiceBtn" class="inline-flex h-[34px] items-center justify-center px-4 py-2 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700 transition-colors disabled:opacity-60 disabled:hover:bg-cyan-600">
@@ -84,26 +84,47 @@
         </table>
     </div>
 </div>
-
-<div id="adminServiceConfirmOverlay" class="hidden fixed inset-0 z-[70] bg-slate-900/40 items-center justify-center p-4">
-    <div class="w-full max-w-sm rounded-2xl bg-white border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.24)] p-4">
-        <div class="flex items-start gap-3">
-            <div class="w-9 h-9 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-700">
-                <x-lucide-info class="w-[18px] h-[18px]" />
-            </div>
-            <div class="flex-1">
-                <div class="text-sm font-semibold text-slate-900">Confirm</div>
-                <div id="adminServiceConfirmMessage" class="text-[0.78rem] text-slate-600 mt-0.5">Are you sure?</div>
-                <div id="adminServiceConfirmDetails" class="hidden text-[0.78rem] text-slate-600 mt-2"></div>
+<div id="adminServiceConfirmOverlay" class="hidden fixed inset-0 z-[70] bg-slate-900/50 backdrop-blur-sm items-center justify-center p-4 transition-all duration-200">
+    <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-100 overflow-hidden">
+        <!-- Header area with refined spacing and visual hierarchy -->
+        <div class="px-5 pt-5 pb-3 border-b border-slate-100 bg-gradient-to-r from-white to-slate-50/50">
+            <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 flex-shrink-0">
+                    <x-lucide-info class="w-5 h-5" />
+                </div>
+                <div class="flex-1">
+                    <h3 id="adminServiceConfirmMessage" class="text-base font-semibold text-slate-800 tracking-tight">Confirm action</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Please review before confirming</p>
+                </div>
             </div>
         </div>
-        <div class="mt-4 flex items-center justify-end gap-2">
-            <button type="button" id="adminServiceConfirmCancel" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
-            <button type="button" id="adminServiceConfirmOk" class="px-3 py-2 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700">Confirm</button>
+        
+        <!-- Body with clear, scannable details section -->
+        <div class="px-5 py-4 bg-white">
+            <div id="adminServiceConfirmDetails" class="bg-slate-50/80 rounded-xl border border-slate-100 p-4 text-sm text-slate-700 leading-relaxed space-y-2">
+                <!-- Dynamic content will be injected here -->
+                <div class="flex items-start gap-2 text-slate-600">
+                    <x-lucide-alert-circle class="w-3.5 h-3.5 mt-0.5 text-slate-400 flex-shrink-0" />
+                    <span class="text-slate-700">Are you sure you want to perform this action?</span>
+                </div>
+                <div class="mt-3 pt-2 border-t border-slate-200 text-xs text-amber-600 bg-amber-50/50 -mx-2 px-2 py-1.5 rounded-md flex items-center gap-2">
+                    <x-lucide-info class="w-3.5 h-3.5" />
+                    <span>This action cannot be undone</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer with improved button hierarchy and spacing -->
+        <div class="px-5 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-end gap-2.5">
+            <button type="button" id="adminServiceConfirmCancel" class="px-4 py-2 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-offset-1">
+                Cancel
+            </button>
+            <button type="button" id="adminServiceConfirmOk" class="px-5 py-2 rounded-lg bg-cyan-600 text-white text-sm font-semibold hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 shadow-sm transition-all duration-150">
+                Confirm
+            </button>
         </div>
     </div>
 </div>
-
 <div id="adminServiceEditOverlay" class="hidden fixed inset-0 z-50 bg-slate-900/40 items-center justify-center p-4">
     <div class="w-full max-w-lg rounded-2xl bg-white border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.24)] overflow-hidden">
         <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">

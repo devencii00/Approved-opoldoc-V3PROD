@@ -29,11 +29,11 @@
                     </div>
                 </div>
 
-                <div style="margin-top:14px;">
+                <!-- <div style="margin-top:14px;">
                     <a href="{{ url('/webadmin') }}" style="display:inline-block;background:#0f172a;color:#ffffff;text-decoration:none;padding:10px 14px;border-radius:12px;font-weight:700;font-size:13px;">
                         Sign in
                     </a>
-                </div>
+                </div> -->
 
                 <div style="margin-top:16px;font-size:12px;color:#64748b;line-height:1.6;">
                     If you did not expect this email, you can ignore it. For security, do not share this password with anyone.

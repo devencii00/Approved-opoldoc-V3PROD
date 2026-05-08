@@ -20,7 +20,7 @@ return new class extends Migration
             $table->integer('queue_number')->nullable();
             $table->string('queue_code', 20)->nullable()->unique();
             $table->dateTime('queue_datetime')->nullable();
-            $table->enum('status', ['waiting', 'serving', 'done', 'cancelled','no_show'])->default('waiting');
+            $table->enum('status', ['waiting', 'serving', 'consulted', 'done', 'cancelled','no_show'])->default('waiting');
 
             $table->integer('priority_level')->default(5);
 
