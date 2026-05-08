@@ -2063,8 +2063,6 @@ function setAppointmentTab(tab) {
 
         function setManageSubmitting(isSubmitting) {
             var disabled = !!isSubmitting
-            if (manageSearchInput) manageSearchInput.disabled = disabled
-            if (manageServiceSearch) manageServiceSearch.disabled = disabled
             if (manageSortSelect) manageSortSelect.disabled = disabled
             if (manageStatusSelect) manageStatusSelect.disabled = disabled
             if (manageRefreshBtn) manageRefreshBtn.disabled = disabled

@@ -11,6 +11,13 @@
     $todayAppointments = $doctorTodayAppointments ?? [];
     $todayQueue = $doctorTodayQueue ?? [];
     $recentNotifications = $doctorRecentNotifications ?? collect();
+    $todayIso = now()->toDateString();
+    $currentUserIdQuery = request()->query('user_id');
+    $todayUpcomingAppointments = collect($recentAppointments)
+        ->filter(function ($appointment) use ($todayIso) {
+            return optional($appointment->appointment_datetime)->format('Y-m-d') === $todayIso;
+        })
+        ->values();
 
     $formatUserName = function ($user) {
         if (! $user) {
@@ -66,7 +73,7 @@
     @if ($sectionKey === 'overview')
         <div>
             <h1 class="text-2xl font-semibold text-slate-900 mb-1">Doctor Dashboard</h1>
-            <p class="text-sm text-slate-500">Today’s appointments, queue list, and notifications for your clinic day.</p>
+            <p class="text-sm text-slate-500">Today’s appointments and queue list for your clinic day.</p>
         </div>
 
     <div class="grid gap-4 grid-cols-1 lg:grid-cols-3">
@@ -94,7 +101,8 @@
                     </div>
                 </div>
 
-                <div class="mt-5 overflow-x-auto scrollbar-hidden border border-slate-100 rounded-xl bg-slate-50">
+                <div class="mt-5 border border-slate-100 rounded-xl bg-slate-50 overflow-hidden">
+                    <div class="max-h-[11.5rem] overflow-auto scrollbar-hidden">
                     <table class="min-w-full text-left text-xs text-slate-600">
                         <thead>
                             <tr class="border-b border-slate-100 text-[0.68rem] uppercase tracking-widest text-slate-400">
@@ -112,6 +120,16 @@
                                     $time = optional($appointment->appointment_datetime)->format('H:i') ?? '—';
                                     $typeLabel = $appointment->appointment_type ? ucfirst(str_replace('_', '-', $appointment->appointment_type)) : '—';
                                     $statusLabel = $appointment->status ? ucfirst(str_replace('_', ' ', $appointment->status)) : '—';
+                                    $statusKey = strtolower((string) ($appointment->status ?? ''));
+                                    $showScheduleActions = $statusKey !== 'completed';
+                                    $consultationParams = [
+                                        'role' => 'doctor',
+                                        'section' => 'consultation',
+                                        'appointment_id' => $appointment->appointment_id,
+                                    ];
+                                    if ($currentUserIdQuery) {
+                                        $consultationParams['user_id'] = $currentUserIdQuery;
+                                    }
                                 @endphp
                                 <tr class="border-b border-slate-100 last:border-0">
                                     <td class="py-2 px-3 text-[0.78rem] text-slate-500">{{ $time }}</td>
@@ -119,16 +137,22 @@
                                     <td class="py-2 px-3 text-[0.78rem] text-slate-500">{{ $typeLabel }}</td>
                                     <td class="py-2 px-3 text-[0.78rem] text-slate-500">{{ $statusLabel }}</td>
                                     <td class="py-2 px-3">
-                                        <div class="flex flex-wrap gap-1.5">
-                                            <a href="{{ route('dashboard', ['role' => 'doctor', 'section' => 'consultation', 'appointment_id' => $appointment->appointment_id]) }}"
-                                                class="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-2 py-1 text-[0.7rem] font-medium text-slate-700 hover:bg-slate-50">
-                                                👁 Open
-                                            </a>
-                                            <a href="{{ route('dashboard', ['role' => 'doctor', 'section' => 'consultation', 'appointment_id' => $appointment->appointment_id]) }}"
-                                                class="inline-flex items-center justify-center rounded-lg border border-cyan-200 bg-cyan-50 px-2 py-1 text-[0.7rem] font-semibold text-cyan-700 hover:bg-cyan-100">
-                                                ▶ Start
-                                            </a>
-                                        </div>
+                                        @if ($showScheduleActions)
+                                            <div class="flex flex-wrap gap-1.5">
+                                                <a href="{{ route('dashboard', $consultationParams) }}"
+                                                    class="inline-flex items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[0.7rem] font-medium text-slate-700 hover:bg-slate-50">
+                                                    <x-lucide-eye class="w-3.5 h-3.5" />
+                                                    Open
+                                                </a>
+                                                <a href="{{ route('dashboard', $consultationParams) }}"
+                                                    class="inline-flex items-center justify-center gap-1 rounded-lg border border-cyan-200 bg-cyan-50 px-2 py-1 text-[0.7rem] font-semibold text-cyan-700 hover:bg-cyan-100">
+                                                    <x-lucide-play class="w-3.5 h-3.5" />
+                                                    Start
+                                                </a>
+                                            </div>
+                                        @else
+                                            <span class="text-[0.72rem] text-slate-400">—</span>
+                                        @endif
                                     </td>
                                 </tr>
                             @empty
@@ -140,12 +164,13 @@
                             @endforelse
                         </tbody>
                     </table>
+                    </div>
                 </div>
 
                 <div class="mt-5 grid gap-3 grid-cols-1 md:grid-cols-2">
                     <div class="p-3.5 rounded-xl border border-slate-100 bg-slate-50">
                         <div class="text-xs font-semibold text-slate-700 mb-1">Recent visits</div>
-                        <div class="max-h-52 overflow-y-auto scrollbar-hidden">
+                        <div class="h-36 overflow-y-auto scrollbar-hidden">
                             @if (count($recentVisits))
                                 <ul class="space-y-2 text-xs text-slate-600">
                                     @foreach ($recentVisits as $visit)
@@ -174,8 +199,14 @@
                         </div>
                     </div>
                     <div class="p-3.5 rounded-xl border border-slate-100 bg-slate-50">
-                        <div class="text-xs font-semibold text-slate-700 mb-1">Upcoming appointments</div>
-                        <div class="max-h-52 overflow-y-auto scrollbar-hidden">
+                        <div class="flex items-center justify-between mb-1">
+                            <div class="text-xs font-semibold text-slate-700">Upcoming appointments</div>
+                            <button type="button" id="doctorUpcomingTodayFilter" class="inline-flex items-center rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-[0.68rem] font-semibold text-slate-700 hover:bg-slate-50">
+                                Today
+                            </button>
+                        </div>
+                        <div class="h-36 overflow-y-auto scrollbar-hidden">
+                            <div id="doctorUpcomingAppointmentsAll">
                             @if (count($recentAppointments))
                                 <ul class="space-y-2 text-xs text-slate-600">
                                     @foreach ($recentAppointments as $appointment)
@@ -203,6 +234,36 @@
                             @else
                                 <p class="text-[0.72rem] text-slate-400">No appointments found.</p>
                             @endif
+                            </div>
+                            <div id="doctorUpcomingAppointmentsToday" class="hidden">
+                            @if (count($todayUpcomingAppointments))
+                                <ul class="space-y-2 text-xs text-slate-600">
+                                    @foreach ($todayUpcomingAppointments as $appointment)
+                                        @php
+                                            $patientName = $formatUserName($appointment->patient);
+                                            $dateKey = optional($appointment->appointment_datetime)->format('Y-m-d') ?? '—';
+                                            $timeKey = optional($appointment->appointment_datetime)->format('H:i') ?? '—';
+                                        @endphp
+                                        <li class="flex items-start justify-between gap-2">
+                                            <div>
+                                                <div class="font-semibold text-slate-900 text-[0.8rem]">
+                                                    {{ $patientName }}
+                                                </div>
+                                                <div class="text-[0.7rem] text-slate-500">
+                                                    {{ \Illuminate\Support\Str::limit($appointment->reason_for_visit ?? 'No reason specified', 60) }}
+                                                </div>
+                                            </div>
+                                            <div class="text-[0.7rem] text-slate-400 text-right">
+                                                <div>{{ $dateKey }}</div>
+                                                <div>{{ $timeKey }}</div>
+                                            </div>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            @else
+                                <p class="text-[0.72rem] text-slate-400">No appointments for today.</p>
+                            @endif
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -242,53 +303,34 @@
                 </div>
             </div>
         </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                var toggleBtn = document.getElementById('doctorUpcomingTodayFilter')
+                var allWrap = document.getElementById('doctorUpcomingAppointmentsAll')
+                var todayWrap = document.getElementById('doctorUpcomingAppointmentsToday')
+                if (!toggleBtn || !allWrap || !todayWrap) return
 
-        <div class="grid gap-4 grid-cols-1 lg:grid-cols-3">
-            <div class="lg:col-span-2"></div>
-            <div class="bg-white border border-slate-200 rounded-[18px] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
-                <div class="flex items-center justify-between mb-3">
-                    <div class="flex items-center gap-2">
-                        <h2 class="text-sm font-semibold text-slate-900">Notifications</h2>
-                        @if ($unreadNotificationsCount > 0)
-                            <span class="inline-flex items-center rounded-full bg-red-50 border border-red-200 px-2 py-0.5 text-[0.68rem] font-semibold text-red-700">
-                                {{ $unreadNotificationsCount }}
-                            </span>
-                        @endif
-                    </div>
-                    <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Updates</span>
-                </div>
-                <p class="text-xs text-slate-500 mb-3">
-                    Appointment updates, queue alerts, and system messages.
-                </p>
-                <div class="max-h-64 overflow-y-auto scrollbar-hidden">
-                    @if (count($recentNotifications))
-                        <ul class="space-y-2 text-xs text-slate-600">
-                            @foreach ($recentNotifications as $notif)
-                                @php
-                                    $typeLabel = $notif->type ? ucfirst($notif->type) : 'System';
-                                @endphp
-                                <li class="flex items-start justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 {{ $notif->is_read ? '' : 'ring-1 ring-cyan-200/60' }}">
-                                    <div>
-                                        <div class="font-semibold text-slate-900 text-[0.8rem]">
-                                            {{ $typeLabel }}
-                                        </div>
-                                        <div class="text-[0.7rem] text-slate-500">
-                                            {{ \Illuminate\Support\Str::limit($notif->message ?? '', 120) }}
-                                        </div>
-                                    </div>
-                                    <div class="text-[0.7rem] text-slate-400 text-right whitespace-nowrap">
-                                        <div>{{ optional($notif->created_at)->format('Y-m-d') }}</div>
-                                        <div>{{ optional($notif->created_at)->format('H:i') }}</div>
-                                    </div>
-                                </li>
-                            @endforeach
-                        </ul>
-                    @else
-                        <p class="text-[0.72rem] text-slate-400">No notifications for today.</p>
-                    @endif
-                </div>
-            </div>
-        </div>
+                var todayOnly = false
+                function applyFilterState() {
+                    allWrap.classList.toggle('hidden', todayOnly)
+                    todayWrap.classList.toggle('hidden', !todayOnly)
+                    toggleBtn.classList.toggle('bg-cyan-600', todayOnly)
+                    toggleBtn.classList.toggle('text-white', todayOnly)
+                    toggleBtn.classList.toggle('border-cyan-600', todayOnly)
+                    toggleBtn.classList.toggle('hover:bg-cyan-700', todayOnly)
+                    toggleBtn.classList.toggle('bg-white', !todayOnly)
+                    toggleBtn.classList.toggle('text-slate-700', !todayOnly)
+                    toggleBtn.classList.toggle('border-slate-200', !todayOnly)
+                    toggleBtn.classList.toggle('hover:bg-slate-50', !todayOnly)
+                }
+
+                toggleBtn.addEventListener('click', function () {
+                    todayOnly = !todayOnly
+                    applyFilterState()
+                })
+                applyFilterState()
+            })
+        </script>
     @else
         @php
             $title = $sectionTitles[$effectiveSectionKey] ?? 'Doctor workspace';

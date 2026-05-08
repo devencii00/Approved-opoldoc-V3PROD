@@ -537,6 +537,20 @@
                 return
             }
 
+            try {
+                var dashboardLinks = document.querySelectorAll('a[href*="/dashboard/"]')
+                dashboardLinks.forEach(function (anchor) {
+                    if (!anchor || !anchor.href) return
+                    var u = new URL(anchor.href, window.location.origin)
+                    var path = String(u.pathname || '').toLowerCase()
+                    if (path.indexOf('/dashboard/admin') === 0) return
+                    if (!u.searchParams.get('user_id')) {
+                        u.searchParams.set('user_id', String(userId))
+                        anchor.href = u.toString()
+                    }
+                })
+            } catch (_) {}
+
             sidebarApiFetch("{{ url('/api/users') }}/" + encodeURIComponent(userId), { method: 'GET' })
                 .then(function (response) {
                     return response.json().then(function (data) {

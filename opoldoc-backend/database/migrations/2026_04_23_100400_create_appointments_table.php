@@ -24,7 +24,7 @@ return new class extends Migration
 
             $table->dateTime('appointment_datetime')->nullable();
             $table->enum('appointment_type', ['walk_in', 'scheduled']);
-            $table->enum('status', ['pending', 'confirmed', 'completed', 'cancelled', 'no_show'])->default('pending');
+            $table->enum('status', ['pending', 'confirmed', 'consulted' ,  'completed', 'cancelled', 'no_show'])->default('pending');
 
             $table->text('reason_for_visit')->nullable();
             $table->integer('priority_level')->default(5);
