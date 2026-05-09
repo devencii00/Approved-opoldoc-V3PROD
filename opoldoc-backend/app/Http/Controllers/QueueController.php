@@ -7,6 +7,7 @@ use App\Models\Conversation;
 use App\Models\DoctorSchedule;
 use App\Models\Message;
 use App\Models\Queue;
+use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -277,7 +278,7 @@ class QueueController extends Controller
     public function callNext(Request $request)
     {
         $currentUser = $request->user();
-        if (! $currentUser || ! in_array((string) $currentUser->role, ['admin', 'receptionist'], true)) {
+        if (! $currentUser || ! in_array((string) $currentUser->role, ['admin', 'receptionist', 'doctor'], true)) {
             abort(403);
         }
 
@@ -288,6 +289,19 @@ class QueueController extends Controller
         $selectedDoctorId = array_key_exists('doctor_id', $data) && $data['doctor_id'] !== null
             ? (int) $data['doctor_id']
             : null;
+
+        $isDoctorUser = (string) $currentUser->role === 'doctor';
+        if ($isDoctorUser) {
+            $ownDoctorId = (int) $currentUser->user_id;
+            if ($selectedDoctorId && $selectedDoctorId !== $ownDoctorId) {
+                return response()->json([
+                    'message' => 'Doctors can only call patients from their own queue.',
+                    'code' => 'DOCTOR_QUEUE_MISMATCH',
+                ], 403);
+            }
+
+            $selectedDoctorId = $ownDoctorId;
+        }
 
         if ($selectedDoctorId) {
             $isDoctor = User::query()
@@ -304,6 +318,63 @@ class QueueController extends Controller
 
         $now = now();
         $date = $now->toDateString();
+
+        if ($isDoctorUser && $selectedDoctorId) {
+            $doctorServingCount = Queue::query()
+                ->whereDate('queue_datetime', $date)
+                ->where('status', 'serving')
+                ->whereHas('appointment', function ($q) use ($selectedDoctorId) {
+                    $q->where('doctor_id', $selectedDoctorId);
+                })
+                ->count();
+
+            if ($doctorServingCount > 0) {
+                return response()->json([
+                    'message' => 'You still have a patient marked as serving.',
+                    'code' => 'DOCTOR_SLOT_OCCUPIED',
+                ], 422);
+            }
+
+            $nextForDoctor = DB::transaction(function () use ($date, $selectedDoctorId) {
+                $candidate = Queue::query()
+                    ->with(['appointment.patient', 'appointment.doctor'])
+                    ->whereDate('queue_datetime', $date)
+                    ->where('status', 'waiting')
+                    ->whereHas('appointment', function ($q) use ($selectedDoctorId) {
+                        $q->where('doctor_id', $selectedDoctorId);
+                    })
+                    ->orderByRaw('COALESCE(queue_number, 999999) ASC')
+                    ->orderByRaw('COALESCE(queue_datetime, NOW()) ASC')
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $candidate) {
+                    return null;
+                }
+
+                $candidate->update(['status' => 'serving']);
+
+                return $candidate->refresh()->load(['appointment.patient', 'appointment.doctor']);
+            });
+
+            if (! $nextForDoctor) {
+                return response()->json([
+                    'message' => 'No waiting patients are queued for you right now.',
+                    'code' => 'NO_WAITING_FOR_SELECTED_DOCTOR',
+                    'meta' => [
+                        'selected_doctor_id' => $selectedDoctorId,
+                    ],
+                ], 422);
+            }
+
+            return response()->json([
+                'queue' => $nextForDoctor,
+                'meta' => [
+                    'selected_doctor_id' => $selectedDoctorId,
+                ],
+            ]);
+        }
+
         $dayKey = strtolower($now->format('D'));
         $time = $now->format('H:i:s');
 
@@ -581,11 +652,30 @@ class QueueController extends Controller
         $data = $request->validate([
             'queue_number' => ['sometimes', 'integer'],
             'queue_datetime' => ['sometimes', 'nullable', 'date'],
-            'status' => ['sometimes', 'in:waiting,serving,done,cancelled,no_show'],
+            'status' => ['sometimes', 'in:waiting,serving,consulted,done,cancelled,no_show'],
             'priority_level' => ['sometimes', 'integer'],
         ]);
 
         $nextStatus = array_key_exists('status', $data) ? $data['status'] : null;
+
+        if ($nextStatus === 'done') {
+            $queue->loadMissing('appointment');
+            $appointmentId = (int) (optional($queue->appointment)->appointment_id ?? 0);
+
+            $hasPaidTransaction = $appointmentId > 0
+                ? Transaction::query()
+                    ->where('appointment_id', $appointmentId)
+                    ->where('payment_status', 'paid')
+                    ->exists()
+                : false;
+
+            if (! $hasPaidTransaction) {
+                return response()->json([
+                    'message' => 'Queue can only be marked done after the appointment payment is recorded.',
+                    'code' => 'QUEUE_DONE_REQUIRES_PAYMENT',
+                ], 422);
+            }
+        }
 
         DB::transaction(function () use ($queue, $data, $nextStatus) {
             $queue->update($data);
@@ -606,6 +696,15 @@ class QueueController extends Controller
                         ->update(['status' => 'waiting']);
                 }
             }
+
+            if ($nextStatus === 'done') {
+                $queue->loadMissing('appointment');
+                $appointment = $queue->appointment;
+
+                if ($appointment && (string) $appointment->status !== 'completed') {
+                    $appointment->update(['status' => 'completed']);
+                }
+            }
         });
 
         $queue->refresh()->load(['appointment.patient', 'appointment.doctor']);
@@ -623,6 +722,8 @@ class QueueController extends Controller
                     $messageText = 'Queue update: You are now waiting in the queue.';
                 } elseif ($queue->status === 'serving') {
                     $messageText = 'Queue update: You are now being served.';
+                } elseif ($queue->status === 'consulted') {
+                    $messageText = 'Queue update: Your consultation is done and payment is pending.';
                 } elseif ($queue->status === 'done') {
                     $messageText = 'Queue update: Your queue entry is marked as done.';
                 } elseif ($queue->status === 'cancelled') {

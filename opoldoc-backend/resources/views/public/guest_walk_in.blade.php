@@ -43,8 +43,8 @@
                             <input id="public_guest_firstname" type="text" required class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="First name">
                         </div>
                         <div>
-                            <label for="public_guest_middlename" class="block text-[0.7rem] text-slate-600 mb-1">Middle name</label>
-                            <input id="public_guest_middlename" type="text" required class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Middle name">
+                            <label for="public_guest_middlename" class="block text-[0.7rem] text-slate-600 mb-1">Middle name (optional)</label>
+                            <input id="public_guest_middlename" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Middle name">
                         </div>
                         <div>
                             <label for="public_guest_lastname" class="block text-[0.7rem] text-slate-600 mb-1">Last name</label>
@@ -631,8 +631,8 @@
                     var serviceIds = serviceIdsInput && serviceIdsInput.value ? String(serviceIdsInput.value).split(',').map(function (v) { return parseInt(v, 10) }).filter(function (v) { return !!v && !isNaN(v) }) : []
                     var priorityLevel = priorityInput && priorityInput.value ? parseInt(priorityInput.value, 10) : null
 
-                    if (!firstName || !middleName || !lastName) {
-                        showError('First name, middle name, and last name are required.')
+                    if (!firstName || !lastName) {
+                        showError('First name and last name are required.')
                         return
                     }
                     if (!serviceIds.length) {
@@ -648,7 +648,7 @@
                     var serviceNames = selectedServices.map(function(s) { return s.service_name }).join(', ')
                     
                     var confirmMsg = 'Please review your details:\n\n' +
-                        'Name: ' + firstName + ' ' + middleName + ' ' + lastName + '\n' +
+                        'Name: ' + [firstName, middleName, lastName].filter(function (part) { return String(part || '').trim() !== '' }).join(' ') + '\n' +
                         'Doctor: Dr. ' + doctorName + '\n' +
                         'Services: ' + serviceNames + '\n';
                     

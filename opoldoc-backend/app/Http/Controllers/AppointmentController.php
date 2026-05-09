@@ -10,6 +10,7 @@ use App\Models\MedicalBackground;
 use App\Models\Message;
 use App\Models\Queue;
 use App\Models\Service;
+use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -212,7 +213,7 @@ class AppointmentController extends Controller
             'doctor_id' => ['required', 'exists:users,user_id'],
             'appointment_datetime' => ['nullable', 'date'],
             'appointment_type' => ['required', 'in:walk_in,scheduled'],
-            'status' => ['nullable', 'in:pending,confirmed,completed,cancelled,no_show'],
+            'status' => ['nullable', 'in:pending,confirmed,consulted,completed,cancelled,no_show'],
             'reason_for_visit' => ['nullable', 'string'],
             'priority_level' => ['nullable', 'integer'],
             'service_id' => ['nullable', 'exists:services,service_id'],
@@ -274,6 +275,13 @@ class AppointmentController extends Controller
         if ($data['appointment_type'] === 'scheduled' && ! $queueRequest && empty($data['appointment_datetime'])) {
             return response()->json([
                 'message' => 'Appointment datetime is required.',
+            ], 422);
+        }
+
+        if (($data['status'] ?? null) === 'completed') {
+            return response()->json([
+                'message' => 'Appointments can only be marked completed after payment is recorded.',
+                'code' => 'APPOINTMENT_COMPLETION_REQUIRES_PAYMENT',
             ], 422);
         }
 
@@ -574,7 +582,7 @@ class AppointmentController extends Controller
             'doctor_id' => ['sometimes', 'exists:users,user_id'],
             'appointment_datetime' => ['sometimes', 'date'],
             'appointment_type' => ['sometimes', 'in:walk_in,scheduled'],
-            'status' => ['sometimes', 'in:pending,confirmed,completed,cancelled,no_show'],
+            'status' => ['sometimes', 'in:pending,confirmed,consulted,completed,cancelled,no_show'],
             'reason_for_visit' => ['sometimes', 'nullable', 'string'],
             'priority_level' => ['sometimes', 'integer'],
             'check_in_time' => ['sometimes', 'nullable', 'date'],
@@ -668,6 +676,20 @@ class AppointmentController extends Controller
                 return response()->json([
                     'message' => 'Doctor is currently unavailable.',
                     'code' => 'DOCTOR_UNAVAILABLE',
+                ], 422);
+            }
+        }
+
+        if (array_key_exists('status', $data) && $data['status'] === 'completed') {
+            $hasPaidTransaction = Transaction::query()
+                ->where('appointment_id', (int) $appointment->appointment_id)
+                ->where('payment_status', 'paid')
+                ->exists();
+
+            if (! $hasPaidTransaction) {
+                return response()->json([
+                    'message' => 'Appointments can only be marked completed after payment is recorded.',
+                    'code' => 'APPOINTMENT_COMPLETION_REQUIRES_PAYMENT',
                 ], 422);
             }
         }

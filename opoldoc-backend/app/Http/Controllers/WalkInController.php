@@ -45,7 +45,7 @@ class WalkInController extends Controller
             'reason_for_visit' => ['nullable', 'string'],
             'priority_level' => ['nullable', 'integer'],
             'firstname' => ['required', 'string'],
-            'middlename' => ['required', 'string'],
+            'middlename' => ['nullable', 'string'],
             'lastname' => ['required', 'string'],
             'birthdate' => ['nullable', 'date'],
             'sex' => ['nullable', 'string'],
@@ -102,7 +102,7 @@ class WalkInController extends Controller
                 'role' => 'patient',
                 'status' => 'active',
                 'firstname' => trim((string) $data['firstname']),
-                'middlename' => trim((string) $data['middlename']),
+                'middlename' => array_key_exists('middlename', $data) ? trim((string) ($data['middlename'] ?? '')) : null,
                 'lastname' => trim((string) $data['lastname']),
                 'birthdate' => $data['birthdate'] ?? null,
                 'sex' => $data['sex'] ?? null,
@@ -176,15 +176,15 @@ class WalkInController extends Controller
 
         $data = $request->validate([
             'firstname' => ['required', 'string'],
-            'middlename' => ['required', 'string'],
+            'middlename' => ['nullable', 'string'],
             'lastname' => ['required', 'string'],
         ]);
 
         $first = trim((string) $data['firstname']);
-        $middle = trim((string) $data['middlename']);
+        $middle = trim((string) ($data['middlename'] ?? ''));
         $last = trim((string) $data['lastname']);
 
-        if ($first === '' || $middle === '' || $last === '') {
+        if ($first === '' || $last === '') {
             return response()->json([
                 'match_count' => 0,
                 'similar_in_queue' => false,
@@ -194,15 +194,23 @@ class WalkInController extends Controller
         }
 
         $likeFirst = '%'.$first.'%';
-        $likeMiddle = '%'.$middle.'%';
         $likeLast = '%'.$last.'%';
 
-        $patientIds = User::query()
+        $patientQuery = User::query()
             ->where('role', 'patient')
             ->where('firstname', 'like', $likeFirst)
-            ->where('middlename', 'like', $likeMiddle)
             ->where('lastname', 'like', $likeLast)
-            ->limit(25)
+            ->when($middle !== '', function ($q) use ($middle) {
+                $likeMiddle = '%'.$middle.'%';
+                $q->where('middlename', 'like', $likeMiddle);
+            }, function ($q) {
+                $q->where(function ($inner) {
+                    $inner->whereNull('middlename')->orWhere('middlename', '');
+                });
+            })
+            ->limit(25);
+
+        $patientIds = $patientQuery
             ->pluck('user_id')
             ->map(fn ($v) => (int) $v)
             ->filter(fn ($v) => $v > 0)

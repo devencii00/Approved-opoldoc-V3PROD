@@ -91,9 +91,10 @@
                     <option value="5">5 : General</option>
                 </select>
             </div>
-       <div class="flex items-end self-end">
-    <button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700 transition-colors">
-        Create guest walk-in
+<div class="flex items-end self-end">
+    <button id="receptionGuestWalkInSubmit" type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700 transition-colors disabled:opacity-60 disabled:hover:bg-cyan-600">
+        <span id="receptionGuestWalkInSpinner" class="hidden w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+        <span id="receptionGuestWalkInSubmitLabel">Create guest walk-in</span>
     </button>
 </div>
         </form>
@@ -531,6 +532,9 @@ function setWalkInTab(tab) {
         var guestDoctorIdInput = document.getElementById('reception_guest_doctor_id')
         var guestDoctorResults = document.getElementById('receptionGuestDoctorResults')
         var guestDoctorPreview = document.getElementById('receptionGuestDoctorPreview')
+        var guestSubmitBtn = document.getElementById('receptionGuestWalkInSubmit')
+        var guestSubmitSpinner = document.getElementById('receptionGuestWalkInSpinner')
+        var guestSubmitLabel = document.getElementById('receptionGuestWalkInSubmitLabel')
 
         var guestServices = []
         var guestPopularServices = []
@@ -575,6 +579,12 @@ function setWalkInTab(tab) {
             } else {
                 guestCredsBox.classList.add('hidden')
             }
+        }
+
+        function setGuestSubmitting(isSubmitting) {
+            if (guestSubmitBtn) guestSubmitBtn.disabled = !!isSubmitting
+            if (guestSubmitSpinner) guestSubmitSpinner.classList.toggle('hidden', !isSubmitting)
+            if (guestSubmitLabel) guestSubmitLabel.textContent = isSubmitting ? 'Creating…' : 'Create guest walk-in'
         }
 
         function escapeHtml(text) {
@@ -1148,6 +1158,7 @@ function setWalkInTab(tab) {
                 }
 
                 function submitGuestWalkIn() {
+                    setGuestSubmitting(true)
                     apiFetch("{{ url('/api/walk-ins/guest') }}", {
                         method: 'POST',
                         headers: {
@@ -1193,6 +1204,9 @@ function setWalkInTab(tab) {
                         })
                         .catch(function () {
                             showGuestError('Network error while creating guest walk-in.')
+                        })
+                        .finally(function () {
+                            setGuestSubmitting(false)
                         })
                 }
                 var askReview = window.receptionWalkInReview

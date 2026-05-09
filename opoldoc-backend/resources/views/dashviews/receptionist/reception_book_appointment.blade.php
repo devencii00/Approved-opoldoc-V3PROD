@@ -2298,16 +2298,12 @@ function updateManageTodayButton() {
             var statusKey = String(appt && appt.status ? appt.status : '').toLowerCase()
             var canAct = statusKey === 'pending' || statusKey === 'confirmed'
             var canCheckIn = statusKey === 'confirmed' && !(appt && appt.check_in_time)
-            var canComplete = statusKey === 'confirmed'
             var canCancel = statusKey === 'pending' || statusKey === 'confirmed'
 
             var actions = ''
             if (canAct) {
                 if (canCheckIn) {
                     actions += '<button type="button" data-action="check_in" data-id="' + escapeHtml(id) + '" class="px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-semibold">Check-in</button>'
-                }
-                if (canComplete) {
-                    actions += '<button type="button" data-action="complete" data-id="' + escapeHtml(id) + '" class="px-2.5 py-1 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-semibold">Complete</button>'
                 }
                 if (canCancel) {
                     actions += '<button type="button" data-action="cancel" data-id="' + escapeHtml(id) + '" class="px-2.5 py-1 rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 font-semibold">Cancel</button>'
@@ -2604,9 +2600,6 @@ function updateManageTodayButton() {
                 } else if (action === 'cancel') {
                     body.status = 'cancelled'
                     confirmText = 'Cancel this appointment?'
-                } else if (action === 'complete') {
-                    body.status = 'completed'
-                    confirmText = 'Mark this appointment as completed?'
                 } else {
                     setManageSubmitting(false)
                     return

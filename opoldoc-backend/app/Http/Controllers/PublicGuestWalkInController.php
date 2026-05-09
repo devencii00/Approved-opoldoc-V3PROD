@@ -142,15 +142,15 @@ class PublicGuestWalkInController extends Controller
 
         $data = $request->validate([
             'firstname' => ['required', 'string'],
-            'middlename' => ['required', 'string'],
+            'middlename' => ['nullable', 'string'],
             'lastname' => ['required', 'string'],
         ]);
 
         $first = trim((string) $data['firstname']);
-        $middle = trim((string) $data['middlename']);
+        $middle = trim((string) ($data['middlename'] ?? ''));
         $last = trim((string) $data['lastname']);
 
-        if ($first === '' || $middle === '' || $last === '') {
+        if ($first === '' || $last === '') {
             return response()->json([
                 'match_count' => 0,
                 'similar_in_queue' => false,
@@ -160,15 +160,23 @@ class PublicGuestWalkInController extends Controller
         }
 
         $likeFirst = '%'.$first.'%';
-        $likeMiddle = '%'.$middle.'%';
         $likeLast = '%'.$last.'%';
 
-        $patientIds = User::query()
+        $patientQuery = User::query()
             ->where('role', 'patient')
             ->where('firstname', 'like', $likeFirst)
-            ->where('middlename', 'like', $likeMiddle)
             ->where('lastname', 'like', $likeLast)
-            ->limit(25)
+            ->when($middle !== '', function ($q) use ($middle) {
+                $likeMiddle = '%'.$middle.'%';
+                $q->where('middlename', 'like', $likeMiddle);
+            }, function ($q) {
+                $q->where(function ($inner) {
+                    $inner->whereNull('middlename')->orWhere('middlename', '');
+                });
+            })
+            ->limit(25);
+
+        $patientIds = $patientQuery
             ->pluck('user_id')
             ->map(fn ($v) => (int) $v)
             ->filter(fn ($v) => $v > 0)

@@ -19,6 +19,7 @@ const T = {
   cyan600: '#0891b2',
   cyan700: '#0e7490',
   cyan400: '#22d3ee',
+  cyan100: '#cffafe',
   slate50:  '#f8fafc',
   slate100: '#f1f5f9',
   slate200: '#e2e8f0',
@@ -110,87 +111,154 @@ function AnimatedCard({ children, delay = 0, style }: AnimatedCardProps) {
   );
 }
 
+// ─── Info Stat Card ───────────────────────────────────────────────────────────
+type InfoCardProps = {
+  icon: string;
+  label: string;
+  value: string;
+  sub?: string;
+  delay?: number;
+  onPress?: () => void;
+};
+
+function InfoCard({ icon, label, value, sub, delay = 0, onPress }: InfoCardProps) {
+  return (
+    <AnimatedCard delay={delay} style={styles.infoCard}>
+      <Pressable style={({ pressed }) => [styles.infoCardInner, pressed && { opacity: 0.85 }]} onPress={onPress}>
+        <View style={styles.infoIconCircle}>
+          <Text style={styles.infoIconText}>{icon}</Text>
+        </View>
+        <Text style={styles.infoLabel}>{label}</Text>
+        <Text style={styles.infoValue}>{value}</Text>
+        {sub ? <Text style={styles.infoSub}>{sub}</Text> : null}
+      </Pressable>
+    </AnimatedCard>
+  );
+}
+
+// ─── Quick Action Tile ────────────────────────────────────────────────────────
+type ActionTileProps = {
+  icon: string;
+  title: string;
+  subtitle: string;
+  delay?: number;
+  onPress?: () => void;
+};
+
+function ActionTile({ icon, title, subtitle, delay = 0, onPress }: ActionTileProps) {
+  return (
+    <AnimatedCard delay={delay} style={styles.actionTile}>
+      <Pressable style={({ pressed }) => [styles.actionTileInner, pressed && { opacity: 0.85 }]} onPress={onPress}>
+        <View style={styles.actionTileTop}>
+          <View style={styles.actionIconCircle}>
+            <Text style={styles.actionIcon}>{icon}</Text>
+          </View>
+          <View style={styles.actionArrow}>
+            <Text style={styles.actionArrowText}>→</Text>
+          </View>
+        </View>
+        <Text style={styles.actionTitle}>{title}</Text>
+        <Text style={styles.actionSubtitle}>{subtitle}</Text>
+      </Pressable>
+    </AnimatedCard>
+  );
+}
+
+// ─── Section List Card ────────────────────────────────────────────────────────
 type SectionCardProps = {
   title: string;
-  subtitle?: string;
   badge?: string;
   children: ReactNode;
   delay?: number;
   style?: StyleProp<ViewStyle>;
 };
 
-// ─── Section Card ─────────────────────────────────────────────────────────────
-function SectionCard({ title, subtitle, badge, children, delay, style }: SectionCardProps) {
+function SectionCard({ title, badge, children, delay, style }: SectionCardProps) {
   return (
-    <AnimatedCard delay={delay} style={[styles.card, style]}>
-      <View style={styles.cardHeader}>
-        <View style={{ flex: 1 }}>
-          {badge && (
-            <View style={styles.eyebrowRow}>
-              <View style={styles.eyebrowDot} />
-              <Text style={styles.eyebrowText}>{badge}</Text>
-            </View>
-          )}
-          <Text style={styles.cardTitle}>{title}</Text>
-          {subtitle && <Text style={styles.cardSubtitle}>{subtitle}</Text>}
-        </View>
+    <AnimatedCard delay={delay} style={[styles.sectionCard, style]}>
+      <View style={styles.sectionHeader}>
+        {badge && (
+          <View style={styles.sectionBadge}>
+            <Text style={styles.sectionBadgeText}>{badge}</Text>
+          </View>
+        )}
+        <Text style={styles.sectionTitle}>{title}</Text>
       </View>
-      <View style={styles.cardBody}>{children}</View>
+      <View style={styles.sectionBody}>{children}</View>
     </AnimatedCard>
   );
 }
 
+// ─── Row Item ─────────────────────────────────────────────────────────────────
 type RowItemProps = {
+  icon?: string;
   title: string;
   subtitle: string;
   pill?: string;
   onPress?: () => void;
 };
 
-// ─── Row Item ─────────────────────────────────────────────────────────────────
-function RowItem({ title, subtitle, pill, onPress }: RowItemProps) {
+function RowItem({ icon, title, subtitle, pill, onPress }: RowItemProps) {
   return (
-    <View style={styles.row}>
-      <View style={styles.rowDot} />
+    <Pressable
+      style={({ pressed }) => [styles.rowItem, pressed && { backgroundColor: T.slate50 }]}
+      onPress={onPress}
+    >
+      <View style={styles.rowIconWrap}>
+        <Text style={styles.rowIcon}>{icon ?? '📋'}</Text>
+      </View>
       <View style={styles.rowMain}>
         <Text style={styles.rowTitle}>{title}</Text>
         <Text style={styles.rowSubtitle}>{subtitle}</Text>
         {pill && (
-          <View style={styles.pillWrap}>
-            <View style={styles.pill}>
-              <Text style={styles.pillText}>{pill}</Text>
-            </View>
+          <View style={styles.pill}>
+            <Text style={styles.pillText}>{pill}</Text>
           </View>
         )}
       </View>
-      <Pressable
-        style={({ pressed }) => [styles.viewBtn, pressed && { opacity: 0.7 }]}
-        onPress={onPress}
-      >
-        <Text style={styles.viewBtnText}>View</Text>
-      </Pressable>
-    </View>
+      <Text style={styles.rowChevron}>›</Text>
+    </Pressable>
   );
 }
 
-type NotifRowProps = {
-  title: string;
-  body: string;
-};
-
 // ─── Notification Row ─────────────────────────────────────────────────────────
-function NotifRow({ title, body }: NotifRowProps) {
+function NotifRow({ title, body }: { title: string; body: string }) {
   return (
     <View style={styles.notifRow}>
-      <View style={styles.notifIconWrap}>
-        <View style={styles.notifIcon}>
-          <View style={styles.notifIconInner} />
-        </View>
-      </View>
+      <View style={styles.notifDot} />
       <View style={styles.notifBody}>
         <Text style={styles.notifTitle}>{title}</Text>
         <Text style={styles.notifText}>{body}</Text>
       </View>
+    </View>
+  );
+}
+
+// ─── Bottom Tab Bar ───────────────────────────────────────────────────────────
+type TabBarProps = {
+  active?: 'profile' | 'home' | 'settings';
+  onProfile?: () => void;
+  onHome?: () => void;
+  onSettings?: () => void;
+};
+
+function TabBar({ active = 'home', onProfile, onHome, onSettings }: TabBarProps) {
+  return (
+    <View style={styles.tabBar}>
+      <Pressable style={styles.tabItem} onPress={onProfile}>
+        <Text style={[styles.tabIcon, active === 'profile' && styles.tabIconActive]}>👤</Text>
+        <Text style={[styles.tabLabel, active === 'profile' && styles.tabLabelActive]}>Profile</Text>
+      </Pressable>
+
+      {/* Center home button */}
+      <Pressable style={styles.tabHomeBtn} onPress={onHome}>
+        <Text style={styles.tabHomeIcon}>⌂</Text>
+      </Pressable>
+
+      <Pressable style={styles.tabItem} onPress={onSettings}>
+        <Text style={[styles.tabIcon, active === 'settings' && styles.tabIconActive]}>⚙️</Text>
+        <Text style={[styles.tabLabel, active === 'settings' && styles.tabLabelActive]}>Settings</Text>
+      </Pressable>
     </View>
   );
 }
@@ -205,6 +273,9 @@ export default function PatientDashboardScreen() {
   const [queueStatus, setQueueStatus] = useState<DashboardQueueStatus | null>(null);
   const [error, setError] = useState('');
 
+  // Dummy pending payment for demo (replace with real API call)
+  const pendingPayment = 'P 720.00';
+
   useEffect(() => {
     let cancelled = false;
 
@@ -213,13 +284,8 @@ export default function PatientDashboardScreen() {
         const queuesRes = await fetch(`${API_BASE_URL}/queues?per_page=10`, {
           headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
         });
-
         const queuesData = await queuesRes.json().catch(() => ({}));
-        if (!queuesRes.ok) {
-          if (!cancelled) setQueueStatus(null);
-          return;
-        }
-
+        if (!queuesRes.ok) { if (!cancelled) setQueueStatus(null); return; }
         const queueRaw = Array.isArray(queuesData?.data) ? queuesData.data : [];
         const activeQueue = queueRaw.find((q: any) => q?.status === 'waiting' || q?.status === 'serving') ?? null;
         const mappedQueue: DashboardQueueStatus | null = activeQueue
@@ -231,120 +297,70 @@ export default function PatientDashboardScreen() {
               estimatedWaitMinutes:
                 typeof activeQueue.estimated_wait_minutes === 'number' ? activeQueue.estimated_wait_minutes : null,
               doctor: (() => {
-                const doctorFirst = activeQueue?.appointment?.doctor?.firstname
-                  ? String(activeQueue.appointment.doctor.firstname)
-                  : '';
-                const doctorLast = activeQueue?.appointment?.doctor?.lastname
-                  ? String(activeQueue.appointment.doctor.lastname)
-                  : '';
-                const doctorName = `Dr. ${[doctorFirst, doctorLast].filter(Boolean).join(' ')}`.trim();
-                return doctorName === 'Dr.' ? 'Doctor' : doctorName;
+                const f = activeQueue?.appointment?.doctor?.firstname ? String(activeQueue.appointment.doctor.firstname) : '';
+                const l = activeQueue?.appointment?.doctor?.lastname ? String(activeQueue.appointment.doctor.lastname) : '';
+                const n = `Dr. ${[f, l].filter(Boolean).join(' ')}`.trim();
+                return n === 'Dr.' ? 'Doctor' : n;
               })(),
             }
           : null;
-
         if (!cancelled) setQueueStatus(mappedQueue);
-      } catch {
-        if (!cancelled) setQueueStatus(null);
-      }
+      } catch { if (!cancelled) setQueueStatus(null); }
     }
 
     async function loadDashboard(token: string) {
       try {
         const [appointmentsRes, prescriptionsRes, visitsRes, notificationsRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/appointments?upcoming_only=1&per_page=5`, {
-            headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
-          }),
-          fetch(`${API_BASE_URL}/prescriptions?per_page=5`, {
-            headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
-          }),
-          fetch(`${API_BASE_URL}/visits?per_page=5`, {
-            headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
-          }),
-          fetch(`${API_BASE_URL}/notifications?per_page=5`, {
-            headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
-          }),
+          fetch(`${API_BASE_URL}/appointments?upcoming_only=1&per_page=5`, { headers: { Accept: 'application/json', Authorization: `Bearer ${token}` } }),
+          fetch(`${API_BASE_URL}/prescriptions?per_page=5`, { headers: { Accept: 'application/json', Authorization: `Bearer ${token}` } }),
+          fetch(`${API_BASE_URL}/visits?per_page=5`, { headers: { Accept: 'application/json', Authorization: `Bearer ${token}` } }),
+          fetch(`${API_BASE_URL}/notifications?per_page=5`, { headers: { Accept: 'application/json', Authorization: `Bearer ${token}` } }),
         ]);
-
         const [appointmentsData, prescriptionsData, visitsData, notificationsData] = await Promise.all([
           appointmentsRes.json().catch(() => ({})),
           prescriptionsRes.json().catch(() => ({})),
           visitsRes.json().catch(() => ({})),
           notificationsRes.json().catch(() => ({})),
         ]);
-
         if (!appointmentsRes.ok || !prescriptionsRes.ok || !visitsRes.ok || !notificationsRes.ok) {
-          const anyMessage =
-            appointmentsData?.message ||
-            prescriptionsData?.message ||
-            visitsData?.message ||
-            notificationsData?.message;
-          setError(typeof anyMessage === 'string' && anyMessage.length > 0 ? anyMessage : 'Unable to load dashboard.');
+          const msg = appointmentsData?.message || prescriptionsData?.message || visitsData?.message || notificationsData?.message;
+          setError(typeof msg === 'string' && msg.length > 0 ? msg : 'Unable to load dashboard.');
           return;
         }
 
         const apptsRaw = Array.isArray(appointmentsData?.data) ? appointmentsData.data : [];
-        const apptsMapped: DashboardAppointment[] = apptsRaw
-          .filter((a: any) => a?.appointment_datetime)
-          .map((a: any) => {
-            const dt = new Date(a.appointment_datetime);
-            const doctorFirst = a?.doctor?.firstname ? String(a.doctor.firstname) : '';
-            const doctorLast = a?.doctor?.lastname ? String(a.doctor.lastname) : '';
-            const doctorName = `Dr. ${[doctorFirst, doctorLast].filter(Boolean).join(' ')}`.trim();
-            return {
-              id: String(a.appointment_id),
-              date: dt.toLocaleDateString(),
-              time: dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              doctor: doctorName === 'Dr.' ? 'Doctor' : doctorName,
-              type: a?.appointment_type === 'scheduled' ? 'Scheduled' : 'Walk-in',
-              status: typeof a?.status === 'string' ? a.status : '',
-            };
-          });
+        const apptsMapped: DashboardAppointment[] = apptsRaw.filter((a: any) => a?.appointment_datetime).map((a: any) => {
+          const dt = new Date(a.appointment_datetime);
+          const f = a?.doctor?.firstname ? String(a.doctor.firstname) : '';
+          const l = a?.doctor?.lastname ? String(a.doctor.lastname) : '';
+          const n = `Dr. ${[f, l].filter(Boolean).join(' ')}`.trim();
+          return { id: String(a.appointment_id), date: dt.toLocaleDateString(), time: dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), doctor: n === 'Dr.' ? 'Doctor' : n, type: a?.appointment_type === 'scheduled' ? 'Scheduled' : 'Walk-in', status: typeof a?.status === 'string' ? a.status : '' };
+        });
 
         const presRaw = Array.isArray(prescriptionsData?.data) ? prescriptionsData.data : [];
         const presMapped: DashboardPrescription[] = presRaw.map((p: any) => {
           const dt = p?.prescribed_datetime ? new Date(p.prescribed_datetime) : null;
-          const doctorFirst = p?.doctor?.firstname ? String(p.doctor.firstname) : '';
-          const doctorLast = p?.doctor?.lastname ? String(p.doctor.lastname) : '';
-          const doctorName = `Dr. ${[doctorFirst, doctorLast].filter(Boolean).join(' ')}`.trim();
-          const firstItem = Array.isArray(p?.items) && p.items.length > 0 ? p.items[0] : null;
-          const summary = firstItem?.medicine_name ? String(firstItem.medicine_name) : 'Prescription';
-          return {
-            id: String(p.prescription_id),
-            date: dt ? dt.toLocaleDateString() : '',
-            doctor: doctorName === 'Dr.' ? 'Doctor' : doctorName,
-            summary,
-          };
+          const f = p?.doctor?.firstname ? String(p.doctor.firstname) : '';
+          const l = p?.doctor?.lastname ? String(p.doctor.lastname) : '';
+          const n = `Dr. ${[f, l].filter(Boolean).join(' ')}`.trim();
+          const first = Array.isArray(p?.items) && p.items.length > 0 ? p.items[0] : null;
+          return { id: String(p.prescription_id), date: dt ? dt.toLocaleDateString() : '', doctor: n === 'Dr.' ? 'Doctor' : n, summary: first?.medicine_name ? String(first.medicine_name) : 'Prescription' };
         });
 
         const visitsRaw = Array.isArray(visitsData?.data) ? visitsData.data : [];
         const visitsMapped: DashboardVisit[] = visitsRaw.map((v: any) => {
           const dt = v?.visit_datetime ? new Date(v.visit_datetime) : null;
-          const doctorFirst = v?.prescriptions?.[0]?.doctor?.firstname
-            ? String(v.prescriptions[0].doctor.firstname)
-            : '';
-          const doctorLast = v?.prescriptions?.[0]?.doctor?.lastname
-            ? String(v.prescriptions[0].doctor.lastname)
-            : '';
-          const doctorName = `Dr. ${[doctorFirst, doctorLast].filter(Boolean).join(' ')}`.trim();
-          const reason =
-            typeof v?.appointment?.reason_for_visit === 'string' && v.appointment.reason_for_visit.length > 0
-              ? v.appointment.reason_for_visit
-              : 'Clinic visit';
-          return {
-            id: String(v.transaction_id),
-            date: dt ? dt.toLocaleDateString() : '',
-            doctor: doctorName === 'Dr.' ? 'Doctor' : doctorName,
-            reason,
-          };
+          const f = v?.prescriptions?.[0]?.doctor?.firstname ? String(v.prescriptions[0].doctor.firstname) : '';
+          const l = v?.prescriptions?.[0]?.doctor?.lastname ? String(v.prescriptions[0].doctor.lastname) : '';
+          const n = `Dr. ${[f, l].filter(Boolean).join(' ')}`.trim();
+          const reason = typeof v?.appointment?.reason_for_visit === 'string' && v.appointment.reason_for_visit.length > 0 ? v.appointment.reason_for_visit : 'Clinic visit';
+          return { id: String(v.transaction_id), date: dt ? dt.toLocaleDateString() : '', doctor: n === 'Dr.' ? 'Doctor' : n, reason };
         });
 
         const notifsRaw = Array.isArray(notificationsData?.data) ? notificationsData.data : [];
         const notifsMapped: DashboardNotification[] = notifsRaw.map((n: any) => {
           const type = typeof n?.type === 'string' ? n.type : 'system';
-          const title = `${type.charAt(0).toUpperCase()}${type.slice(1)}`;
-          const body = typeof n?.message === 'string' ? n.message : '';
-          return { id: String(n.notification_id), title, body };
+          return { id: String(n.notification_id), title: `${type.charAt(0).toUpperCase()}${type.slice(1)}`, body: typeof n?.message === 'string' ? n.message : '' };
         });
 
         if (!cancelled) {
@@ -354,72 +370,45 @@ export default function PatientDashboardScreen() {
           setNotifications(notifsMapped);
           setError('');
         }
-      } catch {
-        if (!cancelled) setError('Network error. Please try again.');
-      }
+      } catch { if (!cancelled) setError('Network error. Please try again.'); }
     }
 
     const token = (globalThis as any)?.apiToken as string | undefined;
-    if (!token) {
-      setError('Please log in again.');
-      return () => {
-        cancelled = true;
-      };
-    }
+    if (!token) { setError('Please log in again.'); return () => { cancelled = true; }; }
 
     loadDashboard(token);
     loadQueue(token);
-
-    const intervalId = setInterval(() => {
-      loadQueue(token);
-    }, 15000);
-
-    return () => {
-      cancelled = true;
-      clearInterval(intervalId);
-    };
+    const intervalId = setInterval(() => { loadQueue(token); }, 15000);
+    return () => { cancelled = true; clearInterval(intervalId); };
   }, []);
+
+  const nextAppt = upcomingAppointments[0];
 
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor={T.cyan700} />
 
-      {/* ── Top Header Bar ── */}
+      {/* ── Header ── */}
       <View style={styles.header}>
-        <View style={styles.headerInner}>
+        <View style={styles.headerRow}>
           <View>
-            <View style={styles.eyebrowRow}>
-              <View style={[styles.eyebrowDot, { backgroundColor: 'rgba(255,255,255,0.7)' }]} />
-              <Text style={[styles.eyebrowText, { color: 'rgba(255,255,255,0.8)' }]}>Patient Portal</Text>
-            </View>
+            <Text style={styles.headerEyebrow}>PATIENT PORTAL</Text>
             <Text style={styles.headerTitle}>Dashboard</Text>
-            <Text style={styles.headerSub}>Good morning, Patient 👋</Text>
+            <Text style={styles.headerGreeting}>Good morning, Patient 👋</Text>
           </View>
-          <View style={styles.avatarCircle}>
-            <Text style={styles.avatarText}>P</Text>
-          </View>
-        </View>
-
-        {/* Stat pills in header */}
-        <View style={styles.headerStats}>
-          <View style={styles.headerStatPill}>
-            <Text style={styles.headerStatNum}>{upcomingAppointments.length}</Text>
-            <Text style={styles.headerStatLabel}>Upcoming</Text>
-          </View>
-          <View style={styles.headerStatDivider} />
-          <View style={styles.headerStatPill}>
-            <Text style={styles.headerStatNum}>{recentPrescriptions.length}</Text>
-            <Text style={styles.headerStatLabel}>Prescriptions</Text>
-          </View>
-          <View style={styles.headerStatDivider} />
-          <View style={styles.headerStatPill}>
-            <Text style={styles.headerStatNum}>{recentVisits.length}</Text>
-            <Text style={styles.headerStatLabel}>Visits</Text>
+          <View style={styles.notifBtnWrap}>
+            <Pressable style={styles.notifBtn} onPress={() => router.push('/screenviews/notifications' as any)}>
+              <Text style={styles.notifBtnIcon}>🔔</Text>
+              {notifications.length > 0 && (
+                <View style={styles.notifBadge}>
+                  <Text style={styles.notifBadgeText}>{notifications.length}</Text>
+                </View>
+              )}
+            </Pressable>
           </View>
         </View>
       </View>
 
-      {/* ── Scrollable Body ── */}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -427,91 +416,103 @@ export default function PatientDashboardScreen() {
       >
         {error ? <Text style={styles.inlineError}>{error}</Text> : null}
 
-        {queueStatus ? (
-          <SectionCard title="Queue Status" subtitle="Live updates while you are in the queue." badge="Queue" delay={30}>
-            <View style={styles.queueStatusRow}>
-              <View style={styles.queueStatusMain}>
-                <Text style={styles.queueStatusTitle}>
-                  Position: {queueStatus.position != null ? queueStatus.position : queueStatus.queueNumber || '—'}
-                </Text>
-                <Text style={styles.queueStatusSub}>
-                  {queueStatus.doctor}
-                  {queueStatus.estimatedWaitMinutes != null ? ` · Est. wait: ${queueStatus.estimatedWaitMinutes} min` : ''}
-                </Text>
-              </View>
-              <Pressable
-                onPress={() => router.push('/screenviews/queue' as any)}
-                style={({ pressed }) => [styles.queueBtn, pressed && { opacity: 0.7 }]}
-              >
-                <Text style={styles.queueBtnText}>Open</Text>
-              </Pressable>
-            </View>
+        {/* ── Info Cards Row ── */}
+        <View style={styles.infoRow}>
+          <InfoCard
+            icon="👥"
+            label="Your current Queue"
+            value={queueStatus ? queueStatus.queueNumber || '—' : '—'}
+            sub={queueStatus && queueStatus.position != null ? `Patient in front: ${queueStatus.position}` : 'No active queue'}
+            delay={30}
+            onPress={() => router.push('/screenviews/queue' as any)}
+          />
+          <InfoCard
+            icon="📅"
+            label="Upcoming appointments"
+            value={nextAppt ? nextAppt.date : '—'}
+            sub={nextAppt ? `${nextAppt.time} · ${nextAppt.doctor}` : `${upcomingAppointments.length} scheduled`}
+            delay={60}
+            onPress={() => router.push('/screenviews/appointments' as any)}
+          />
+          <InfoCard
+            icon="💳"
+            label="Pending payment"
+            value={pendingPayment}
+            sub="Please pay to the front desk"
+            delay={90}
+          />
+        </View>
+
+        {/* ── Quick Actions ── */}
+        <AnimatedCard delay={120} style={styles.actionSection}>
+          <Text style={styles.actionSectionTitle}>What would you like to do?</Text>
+          <View style={styles.actionGrid}>
+            <ActionTile
+              icon="📆"
+              title="Book Appointment"
+              subtitle="Schedule a new appointment with your doctor."
+              delay={140}
+              onPress={() => router.push('/screenviews/book-appointment' as any)}
+            />
+            <ActionTile
+              icon="✅"
+              title="Appointments"
+              subtitle="View and manage your upcoming appointments."
+              delay={160}
+              onPress={() => router.push('/screenviews/appointments' as any)}
+            />
+            <ActionTile
+              icon="💬"
+              title="Chat"
+              subtitle="Message your care team securely."
+              delay={180}
+              onPress={() => router.push('/screenviews/chat' as any)}
+            />
+            <ActionTile
+              icon="🗂️"
+              title="Records"
+              subtitle="View your medical records and history."
+              delay={200}
+              onPress={() => router.push('/screenviews/records' as any)}
+            />
+          </View>
+        </AnimatedCard>
+
+        {/* ── Recent Prescriptions ── */}
+        {recentPrescriptions.length > 0 && (
+          <SectionCard title="Recent Prescriptions" badge="Rx" delay={220}>
+            {recentPrescriptions.map((item) => (
+              <RowItem key={item.id} icon="💊" title={item.summary} subtitle={`${item.date} · ${item.doctor}`} />
+            ))}
           </SectionCard>
-        ) : null}
+        )}
 
-        {/* Upcoming Appointments */}
-        <SectionCard
-          title="Upcoming Appointments"
-          subtitle="Your next scheduled visits."
-          badge="Appointments"
-          delay={60}
-        >
-          {upcomingAppointments.map((item) => (
-            <RowItem
-              key={item.id}
-              title={item.doctor}
-              subtitle={`${item.date} at ${item.time} · ${item.type}`}
-              pill={item.status}
-            />
-          ))}
-        </SectionCard>
+        {/* ── Recent Visits ── */}
+        {recentVisits.length > 0 && (
+          <SectionCard title="Recent Visits" badge="History" delay={260} style={{ marginBottom: 8 }}>
+            {recentVisits.map((item) => (
+              <RowItem key={item.id} icon="🏥" title={item.reason} subtitle={`${item.date} · ${item.doctor}`} />
+            ))}
+          </SectionCard>
+        )}
 
-        {/* Recent Prescriptions */}
-        <SectionCard
-          title="Recent Prescriptions"
-          subtitle="Most recent prescriptions from your doctors."
-          badge="Prescriptions"
-          delay={120}
-        >
-          {recentPrescriptions.map((item) => (
-            <RowItem
-              key={item.id}
-              title={item.summary}
-              subtitle={`${item.date} · ${item.doctor}`}
-            />
-          ))}
-        </SectionCard>
-
-        {/* Recent Visits */}
-        <SectionCard
-          title="Recent Visits"
-          subtitle="Summary of your latest clinic visits."
-          badge="Visits"
-          delay={180}
-        >
-          {recentVisits.map((item) => (
-            <RowItem
-              key={item.id}
-              title={item.reason}
-              subtitle={`${item.date} · ${item.doctor}`}
-            />
-          ))}
-        </SectionCard>
-
-        {/* Notifications */}
-        <SectionCard
-          title="Notifications"
-          subtitle="Reminders and updates related to your care."
-          badge="Notifications"
-          delay={240}
-          style={{ marginBottom: 32 }}
-        >
-          {notifications.map((item) => (
-            <NotifRow key={item.id} title={item.title} body={item.body} />
-          ))}
-        </SectionCard>
-
+        {/* ── Notifications ── */}
+        {notifications.length > 0 && (
+          <SectionCard title="Notifications" badge="Updates" delay={300} style={{ marginBottom: 24 }}>
+            {notifications.map((item) => (
+              <NotifRow key={item.id} title={item.title} body={item.body} />
+            ))}
+          </SectionCard>
+        )}
       </ScrollView>
+
+      {/* ── Bottom Tab Bar ── */}
+      <TabBar
+        active="home"
+        onProfile={() => router.push('/screenviews/profile' as any)}
+        onHome={() => {}}
+        onSettings={() => router.push('/screenviews/settings' as any)}
+      />
     </SafeAreaView>
   );
 }
@@ -527,76 +528,66 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: T.cyan700,
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 24,
+    paddingTop: 10,
+    paddingBottom: 20,
   },
-  headerInner: {
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 20,
+  },
+  headerEyebrow: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    color: 'rgba(255,255,255,0.65)',
+    marginBottom: 2,
   },
   headerTitle: {
-    fontFamily: 'serif', // Playfair equivalent; swap for Playfair Display via expo-font
-    fontSize: 26,
-    fontWeight: '700',
+    fontSize: 30,
+    fontWeight: '800',
     color: T.white,
-    marginBottom: 2,
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
+    lineHeight: 34,
   },
-  headerSub: {
+  headerGreeting: {
     fontSize: 12,
     color: 'rgba(255,255,255,0.75)',
+    marginTop: 2,
     fontWeight: '400',
   },
-  avatarCircle: {
+  notifBtnWrap: {
+    marginTop: 4,
+  },
+  notifBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.35)',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: {
-    color: T.white,
-    fontSize: 16,
-    fontWeight: '700',
+  notifBtnIcon: {
+    fontSize: 18,
   },
-
-  // Header stat row
-  headerStats: {
-    flexDirection: 'row',
+  notifBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: '#ef4444',
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.13)',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    justifyContent: 'center',
+    paddingHorizontal: 3,
   },
-  headerStatPill: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerStatNum: {
-    fontSize: 20,
-    fontWeight: '700',
+  notifBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
     color: T.white,
-    lineHeight: 22,
-  },
-  headerStatLabel: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.7)',
-    fontWeight: '500',
-    marginTop: 2,
-    letterSpacing: 0.3,
-  },
-  headerStatDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: 'rgba(255,255,255,0.2)',
   },
 
   // ── Scroll ──
@@ -605,115 +596,235 @@ const styles = StyleSheet.create({
     backgroundColor: T.slate100,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    marginTop: -16,
-  },
-  inlineError: {
-    fontSize: 12,
-    color: '#b91c1c',
-    marginBottom: 12,
-    marginTop: 4,
+    marginTop: -10,
   },
   scrollContent: {
     paddingTop: 20,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
+    paddingBottom: 10,
+  },
+  inlineError: {
+    fontSize: 12,
+    color: T.red700,
+    marginBottom: 10,
   },
 
-  // ── Card ──
-  card: {
+  // ── Info Cards ──
+  infoRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 18,
+  },
+  infoCard: {
+    flex: 1,
+  },
+  infoCardInner: {
     backgroundColor: T.white,
-    borderRadius: 20,
-    marginBottom: 14,
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: T.slate200,
+    shadowColor: T.slate900,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+    alignItems: 'flex-start',
+  },
+  infoIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(6,182,212,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  infoIconText: {
+    fontSize: 17,
+  },
+  infoLabel: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: T.slate400,
+    letterSpacing: 0.2,
+    marginBottom: 4,
+    lineHeight: 12,
+  },
+  infoValue: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: T.cyan700,
+    lineHeight: 15,
+    marginBottom: 2,
+  },
+  infoSub: {
+    fontSize: 9,
+    color: T.slate500,
+    lineHeight: 13,
+  },
+
+  // ── Action Grid ──
+  actionSection: {
+    marginBottom: 18,
+  },
+  actionSectionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: T.slate800,
+    marginBottom: 12,
+    letterSpacing: 0.1,
+  },
+  actionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  actionTile: {
+    width: '48%',
+  },
+  actionTileInner: {
+    backgroundColor: T.white,
+    borderRadius: 18,
+    padding: 14,
     borderWidth: 1,
     borderColor: T.slate200,
     shadowColor: T.slate900,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 10,
+    shadowRadius: 8,
+    elevation: 2,
+    minHeight: 140,
+  },
+  actionTileTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  actionIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(6,182,212,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionIcon: {
+    fontSize: 22,
+  },
+  actionArrow: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: T.cyan600,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionArrowText: {
+    color: T.white,
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: -1,
+  },
+  actionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: T.slate800,
+    marginBottom: 4,
+    lineHeight: 17,
+  },
+  actionSubtitle: {
+    fontSize: 10,
+    color: T.slate500,
+    lineHeight: 14,
+  },
+
+  // ── Section Card ──
+  sectionCard: {
+    backgroundColor: T.white,
+    borderRadius: 18,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: T.slate200,
+    shadowColor: T.slate900,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
     elevation: 2,
     overflow: 'hidden',
   },
-  cardHeader: {
+  sectionHeader: {
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 14,
     paddingBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     borderBottomWidth: 1,
     borderBottomColor: T.slate100,
   },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: T.slate900,
-    letterSpacing: 0.1,
+  sectionBadge: {
+    backgroundColor: 'rgba(6,182,212,0.1)',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
-  cardSubtitle: {
-    fontSize: 11,
-    color: T.slate400,
-    marginTop: 2,
-  },
-  cardBody: {
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-  },
-
-  // Eyebrow
-  eyebrowRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    marginBottom: 4,
-  },
-  eyebrowDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: T.cyan500,
-  },
-  eyebrowText: {
+  sectionBadgeText: {
     fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.9,
+    fontWeight: '800',
+    color: T.cyan700,
+    letterSpacing: 0.5,
     textTransform: 'uppercase',
-    color: T.cyan600,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: T.slate800,
+  },
+  sectionBody: {
+    paddingBottom: 4,
   },
 
-  // ── Row item ──
-  row: {
+  // ── Row Item ──
+  rowItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 11,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: T.slate100,
+    gap: 10,
   },
-  rowDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: T.cyan400,
-    marginRight: 10,
+  rowIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: T.slate100,
+    alignItems: 'center',
+    justifyContent: 'center',
     flexShrink: 0,
-    alignSelf: 'flex-start',
-    marginTop: 5,
+  },
+  rowIcon: {
+    fontSize: 16,
   },
   rowMain: {
     flex: 1,
-    marginRight: 10,
   },
   rowTitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: T.slate800,
     marginBottom: 2,
   },
   rowSubtitle: {
-    fontSize: 11,
+    fontSize: 10,
     color: T.slate500,
-    lineHeight: 15,
-  },
-  pillWrap: {
-    marginTop: 6,
-    flexDirection: 'row',
+    lineHeight: 14,
   },
   pill: {
+    marginTop: 5,
+    alignSelf: 'flex-start',
     backgroundColor: 'rgba(6,182,212,0.1)',
     borderRadius: 999,
     paddingHorizontal: 8,
@@ -726,111 +837,100 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     textTransform: 'uppercase',
   },
-  viewBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: T.cyan600,
-    backgroundColor: 'rgba(6,182,212,0.06)',
-  },
-  viewBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: T.cyan700,
+  rowChevron: {
+    fontSize: 20,
+    color: T.slate300,
+    fontWeight: '300',
   },
 
-  queueStatusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    gap: 12,
-  },
-  queueStatusMain: {
-    flex: 1,
-  },
-  queueStatusTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: T.slate800,
-    marginBottom: 2,
-  },
-  queueStatusSub: {
-    fontSize: 11,
-    color: T.slate500,
-    lineHeight: 15,
-  },
-  queueBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: 'rgba(6,182,212,0.08)',
-    borderWidth: 1,
-    borderColor: T.cyan600,
-  },
-  queueBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: T.cyan700,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    paddingVertical: 8,
-  },
-  actionPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: T.slate200,
-    backgroundColor: T.slate50,
-  },
-  actionPillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: T.slate700,
-  },
-
-  // ── Notification row ──
+  // ── Notification Row ──
   notifRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    paddingVertical: 11,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: T.slate100,
     gap: 10,
   },
-  notifIconWrap: {
-    marginTop: 2,
-  },
-  notifIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 9,
-    backgroundColor: 'rgba(6,182,212,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  notifIconInner: {
+  notifDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: T.cyan500,
+    marginTop: 4,
+    flexShrink: 0,
   },
   notifBody: {
     flex: 1,
   },
   notifTitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: T.slate800,
-    marginBottom: 3,
+    marginBottom: 2,
   },
   notifText: {
-    fontSize: 11,
+    fontSize: 10,
     color: T.slate500,
-    lineHeight: 16,
+    lineHeight: 14,
+  },
+
+  // ── Tab Bar ──
+  tabBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    backgroundColor: T.white,
+    borderTopWidth: 1,
+    borderTopColor: T.slate200,
+    paddingVertical: 10,
+    paddingBottom: 14,
+    shadowColor: T.slate900,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 12,
+  },
+  tabItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  tabIcon: {
+    fontSize: 20,
+    opacity: 0.45,
+  },
+  tabIconActive: {
+    opacity: 1,
+  },
+  tabLabel: {
+    fontSize: 10,
+    color: T.slate400,
+    fontWeight: '500',
+  },
+  tabLabelActive: {
+    color: T.cyan700,
+    fontWeight: '700',
+  },
+  tabHomeBtn: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: T.cyan700,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+    shadowColor: T.cyan700,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  tabHomeIcon: {
+    fontSize: 24,
+    color: T.white,
+    fontWeight: '700',
   },
 });

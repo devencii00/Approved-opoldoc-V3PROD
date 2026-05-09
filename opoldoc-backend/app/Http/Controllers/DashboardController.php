@@ -237,11 +237,10 @@ class DashboardController extends Controller
                 })
                 ->count();
 
-            $completedToday = Transaction::whereDate('visit_datetime', $today)
+            $completedToday = Appointment::whereDate('appointment_datetime', $today)
+                ->where('status', 'completed')
                 ->when($doctorId, function ($q) use ($doctorId) {
-                    $q->whereHas('prescriptions', function ($sub) use ($doctorId) {
-                        $sub->where('doctor_id', $doctorId);
-                    });
+                    $q->where('doctor_id', $doctorId);
                 })
                 ->count();
 
@@ -412,8 +411,8 @@ class DashboardController extends Controller
                 ->sum('amount');
 
             $receptionQueue = Queue::with([
-                    'appointment.patient.personalInformation',
-                    'appointment.doctor.personalInformation',
+                    'appointment.patient',
+                    'appointment.doctor',
                     'appointment.services',
                 ])
                 ->whereDate('queue_datetime', $today)
@@ -426,7 +425,7 @@ class DashboardController extends Controller
             $time = $now->format('H:i:s');
 
             $todayDoctorSchedules = DoctorSchedule::query()
-                ->with(['doctor.personalInformation'])
+                ->with(['doctor'])
                 ->where('day_of_week', $dayKey)
                 ->where('is_available', true)
                 ->orderBy('start_time')
@@ -437,10 +436,6 @@ class DashboardController extends Controller
                     return $schedule->start_time <= $time && $schedule->end_time >= $time;
                 })
                 ->values();
-
-            if ($activeDoctorSchedules->isEmpty()) {
-                $activeDoctorSchedules = $todayDoctorSchedules->values();
-            }
 
             $receptionDoctorSlots = $activeDoctorSchedules
                 ->groupBy('doctor_id')

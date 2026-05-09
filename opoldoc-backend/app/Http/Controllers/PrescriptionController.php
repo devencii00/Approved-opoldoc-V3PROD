@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Queue;
 use App\Models\Prescription;
 use Illuminate\Http\Request;
 
@@ -36,6 +37,7 @@ class PrescriptionController extends Controller
         ]);
 
         $prescription = Prescription::create($data);
+        $this->markLinkedAppointmentConsulted($prescription);
 
         return response()->json($prescription->load(['doctor', 'transaction']), 201);
     }
@@ -67,6 +69,7 @@ class PrescriptionController extends Controller
         ]);
 
         $prescription->update($data);
+        $this->markLinkedAppointmentConsulted($prescription);
 
         return $prescription->refresh()->load(['doctor', 'transaction', 'items']);
     }
@@ -83,5 +86,25 @@ class PrescriptionController extends Controller
         return response()->json([
             'message' => 'Prescription deleted',
         ]);
+    }
+
+    private function markLinkedAppointmentConsulted(Prescription $prescription): void
+    {
+        $prescription->loadMissing('transaction.appointment');
+
+        $appointment = optional($prescription->transaction)->appointment;
+        if (! $appointment) {
+            return;
+        }
+
+        if ((string) $appointment->status !== 'completed' && (string) $appointment->status !== 'consulted') {
+            $appointment->status = 'consulted';
+            $appointment->save();
+        }
+
+        Queue::query()
+            ->where('appointment_id', (int) $appointment->appointment_id)
+            ->whereNotIn('status', ['done', 'cancelled', 'no_show'])
+            ->update(['status' => 'consulted']);
     }
 }

@@ -25,6 +25,7 @@
     $doctorPanelItems = $doctorSlots->map(function ($slot) use ($queueItems) {
         $doctorId = (int) ($slot->doctor_id ?? 0);
         $doctorName = optional($slot->doctor)->personalInformation->full_name ?? 'Doctor';
+        $doctorSpecialization = (string) (optional($slot->doctor)->specialization ?? '');
         $queueForDoctor = $queueItems
             ->filter(function ($row) use ($doctorId) {
                 return (int) (optional($row->appointment)->doctor_id ?? 0) === $doctorId;
@@ -48,6 +49,7 @@
         return (object) [
             'doctor_id' => $doctorId,
             'doctor_name' => $doctorName,
+            'doctor_specialization' => $doctorSpecialization,
             'slot_start' => $slot->start_time ?? null,
             'slot_end' => $slot->end_time ?? null,
             'room_number' => $slot->room_number ?? null,
@@ -66,13 +68,19 @@
         <div class="flex flex-wrap items-end gap-2">
             <div>
                 <label for="receptionCallNextDoctorId" class="block text-[0.68rem] text-slate-500 mb-1">Call next for</label>
-                <select id="receptionCallNextDoctorId" class="w-[230px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-[0.75rem] text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                <select id="receptionCallNextDoctorId" class="w-[260px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-[0.75rem] text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
                     <option value="">Auto (any active doctor)</option>
                     @foreach ($doctorPanelItems as $doctorState)
+                        @php
+                            $doctorNameRaw = trim((string) ($doctorState->doctor_name ?? ''));
+                            $doctorNameClean = preg_replace('/^\s*dr\.?\s*/i', '', $doctorNameRaw);
+                            $doctorNameDisplay = $doctorNameClean !== '' ? $doctorNameClean : 'Doctor';
+                            $doctorSpecialization = trim((string) ($doctorState->doctor_specialization ?? ''));
+                        @endphp
                         <option value="{{ $doctorState->doctor_id }}">
-                            Dr. {{ $doctorState->doctor_name }}
-                            @if ($doctorState->slot_start && $doctorState->slot_end)
-                                ({{ substr((string) $doctorState->slot_start, 0, 5) }}-{{ substr((string) $doctorState->slot_end, 0, 5) }})
+                            Dr. {{ $doctorNameDisplay }}
+                            @if ($doctorSpecialization !== '')
+                                - {{ $doctorSpecialization }}
                             @endif
                         </option>
                     @endforeach
@@ -82,7 +90,7 @@
                 <span id="receptionCallNextSpinner" class="hidden absolute w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
                 <span id="receptionCallNextContent" class="inline-flex items-center gap-2">
                     <x-lucide-megaphone class="w-[18px] h-[18px]" />
-                    Call selected
+                    Call next
                 </span>
             </button>
             <button id="receptionRefreshQueueButton" type="button" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-[0.8rem] font-semibold hover:bg-slate-200 transition-colors border border-slate-200">
@@ -305,14 +313,15 @@
                                                     No show
                                                 </button>
                                             @else
-                                                <button type="button" class="inline-flex items-center gap-1 rounded-lg border border-emerald-200 px-2 py-1 text-[0.7rem] text-emerald-700 hover:bg-emerald-50 reception-queue-status" data-queue-id="{{ $queueId }}" data-status="done">
-                                                    <x-lucide-check class="w-[16px] h-[16px]" />
-                                                    Done
-                                                </button>
                                                 <button type="button" class="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2 py-1 text-[0.7rem] text-rose-700 hover:bg-rose-50 reception-queue-status" data-queue-id="{{ $queueId }}" data-status="no_show">
                                                     <x-lucide-user-x class="w-[16px] h-[16px]" />
                                                     No show
                                                 </button>
+                                            @endif
+                                            @if (strtolower($statusName) === 'consulted')
+                                                <span class="inline-flex items-center rounded-lg border border-cyan-200 bg-cyan-50 px-2 py-1 text-[0.68rem] font-medium text-cyan-700">
+                                                    Waiting for payment
+                                                </span>
                                             @endif
 
                                             <button type="button" class="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-[0.7rem] text-slate-600 hover:bg-slate-50 reception-queue-config" data-queue-id="{{ $queueId }}" data-priority-level="{{ $priority }}">
@@ -1184,14 +1193,6 @@
                     return
                 }
                 var normalized = String(status).toLowerCase()
-                if (normalized === 'done') {
-                    confirmAction('Mark as done', 'Are you sure you want to mark this queue entry as done?')
-                        .then(function (confirmed) {
-                            if (!confirmed) return
-                            updateQueueStatus(queueId, status, 'Queue entry marked as done.')
-                        })
-                    return
-                }
                 if (normalized === 'no_show') {
                     confirmAction('Mark as no-show', 'Are you sure you want to mark this queue entry as no-show?')
                         .then(function (confirmed) {
@@ -1260,7 +1261,6 @@
                                 message = result.data.message
                             }
                             showQueueError(message)
-                            setCallNextSubmitting(false)
                             return
                         }
 
@@ -1269,6 +1269,8 @@
                     })
                     .catch(function () {
                         showQueueError('Network error while calling next.')
+                    })
+                    .finally(function () {
                         setCallNextSubmitting(false)
                     })
             })

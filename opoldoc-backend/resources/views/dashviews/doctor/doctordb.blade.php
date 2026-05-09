@@ -275,7 +275,7 @@
             <div class="bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden">
     <!-- Header with gradient accent -->
     <div class="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-white to-slate-50/50">
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between gap-3">
             <div class="flex items-center gap-2.5">
                 <div class="w-8 h-8 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-600">
                     <x-lucide-list class="w-4 h-4" />
@@ -285,11 +285,21 @@
                     <p class="text-[0.7rem] text-slate-500 mt-0.5">Today's Patients</p>
                 </div>
             </div>
-            @if (count($todayQueue))
-                <div class="px-2.5 py-1 rounded-full bg-cyan-50 border border-cyan-100">
-                    <span class="text-[0.7rem] font-semibold text-cyan-700">{{ count($todayQueue) }} {{ Str::plural('patient', count($todayQueue)) }}</span>
-                </div>
-            @endif
+            <div class="flex items-center gap-2">
+                @if (count($todayQueue))
+                 <div class="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-cyan-50 border border-cyan-100 text-cyan-700 text-[0.7rem] font-semibold">
+    {{ count($todayQueue) }} {{ Str::plural('patient', count($todayQueue)) }}
+</div>
+
+                @endif
+                <button id="doctorOverviewCallNextButton" type="button" class="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-[0.72rem] font-semibold text-white hover:bg-slate-800 disabled:opacity-60 disabled:hover:bg-slate-900 min-w-[112px] relative">
+                    <span id="doctorOverviewCallNextSpinner" class="hidden absolute w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                    <span id="doctorOverviewCallNextContent" class="inline-flex items-center gap-2">
+                        <x-lucide-megaphone class="w-3.5 h-3.5" />
+                        Call next
+                    </span>
+                </button>
+            </div>
         </div>
     </div>
     
@@ -307,8 +317,9 @@
                         // Status badge styling
                         $statusColors = [
                             'waiting' => 'bg-amber-50 text-amber-700 border-amber-100',
-                            'in_progress' => 'bg-blue-50 text-blue-700 border-blue-100',
-                            'completed' => 'bg-emerald-50 text-emerald-700 border-emerald-100',
+                            'serving' => 'bg-blue-50 text-blue-700 border-blue-100',
+                            'consulted' => 'bg-cyan-50 text-cyan-700 border-cyan-100',
+                            'done' => 'bg-emerald-50 text-emerald-700 border-emerald-100',
                             'cancelled' => 'bg-red-50 text-red-700 border-red-100',
                             'no_show' => 'bg-slate-100 text-slate-600 border-slate-200',
                         ];
@@ -354,7 +365,7 @@
                     <x-lucide-calendar-x class="w-6 h-6 text-slate-300" />
                 </div>
                 <p class="text-[0.8rem] font-medium text-slate-500">No queue entries yet</p>
-                <p class="text-[0.7rem] text-slate-400 mt-1">Today's schedule is empty</p>
+                <p class="text-[0.7rem] text-slate-400 mt-1">Today&apos;s queue is empty</p>
             </div>
         @endif
     </div>
@@ -375,6 +386,9 @@
                 var toggleBtn = document.getElementById('doctorUpcomingTodayFilter')
                 var allWrap = document.getElementById('doctorUpcomingAppointmentsAll')
                 var todayWrap = document.getElementById('doctorUpcomingAppointmentsToday')
+                var queueCallNextButton = document.getElementById('doctorOverviewCallNextButton')
+                var queueCallNextSpinner = document.getElementById('doctorOverviewCallNextSpinner')
+                var queueCallNextContent = document.getElementById('doctorOverviewCallNextContent')
                 if (!toggleBtn || !allWrap || !todayWrap) return
 
                 var todayOnly = false
@@ -396,6 +410,45 @@
                     applyFilterState()
                 })
                 applyFilterState()
+
+                function setQueueCallNextSubmitting(isSubmitting) {
+                    if (queueCallNextButton) queueCallNextButton.disabled = !!isSubmitting
+                    if (queueCallNextSpinner) queueCallNextSpinner.classList.toggle('hidden', !isSubmitting)
+                    if (queueCallNextContent) queueCallNextContent.classList.toggle('opacity-0', !!isSubmitting)
+                }
+
+                if (queueCallNextButton && typeof apiFetch === 'function') {
+                    queueCallNextButton.addEventListener('click', function () {
+                        if (queueCallNextButton.disabled) return
+                        setQueueCallNextSubmitting(true)
+
+                        apiFetch("{{ url('/api/queues/call-next') }}", {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ doctor_id: {{ (int) ($currentUser->user_id ?? 0) }} })
+                        })
+                            .then(function (response) {
+                                return response.json().then(function (data) {
+                                    return { ok: response.ok, data: data }
+                                }).catch(function () {
+                                    return { ok: response.ok, data: null }
+                                })
+                            })
+                            .then(function (result) {
+                                if (!result.ok) {
+                                    alert(result.data && result.data.message ? result.data.message : 'Failed to call next patient.')
+                                    setQueueCallNextSubmitting(false)
+                                    return
+                                }
+
+                                window.location.reload()
+                            })
+                            .catch(function () {
+                                alert('Network error while calling next patient.')
+                                setQueueCallNextSubmitting(false)
+                            })
+                    })
+                }
             })
         </script>
     @else

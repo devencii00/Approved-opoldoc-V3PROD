@@ -35,9 +35,15 @@
                             $patientName = $formatUserName($appointment->patient);
                             $labelDate = optional($appointment->appointment_datetime)->format('Y-m-d') ?? '—';
                             $labelTime = optional($appointment->appointment_datetime)->format('H:i') ?? '—';
+                            $statusName = strtolower((string) ($appointment->status ?? ''));
                         @endphp
-                        <option value="{{ $appointment->appointment_id }}" {{ (string) $appointment->appointment_id === (string) $initialAppointmentId ? 'selected' : '' }}>
-                            {{ $patientName }} — {{ $labelDate }} {{ $labelTime }}
+                        <option
+                            value="{{ $appointment->appointment_id }}"
+                            data-status="{{ $statusName }}"
+                            data-label="{{ $patientName }} — {{ $labelDate }} {{ $labelTime }}"
+                            {{ (string) $appointment->appointment_id === (string) $initialAppointmentId ? 'selected' : '' }}
+                        >
+                            {{ $statusName === 'consulted' ? '[ Consulted ] ' : '' }}{{ $patientName }} — {{ $labelDate }} {{ $labelTime }}
                         </option>
                     @endforeach
                 </select>
@@ -128,17 +134,22 @@
                     <button type="button" id="consultClear" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">
                         Clear
                     </button>
-                    <button type="button" id="consultPrintPrescription" class="hidden inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">
-                        Print receipt
-                    </button>
-                    <button type="button" id="consultSave" class="inline-flex items-center justify-center rounded-xl bg-cyan-600 px-3 py-1.5 text-[0.78rem] font-semibold text-white hover:bg-cyan-700">
-                        Save consultation
+                    <button type="button" id="consultSave" class="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-600 px-3 py-1.5 text-[0.78rem] font-semibold text-white hover:bg-cyan-700 disabled:opacity-70 disabled:hover:bg-cyan-600">
+                        <span id="consultSaveSpinner" class="hidden w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                        <span id="consultSaveLabel">Submit</span>
                     </button>
                 </div>
             </div>
 
             <div id="consultSaveError" class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[0.75rem] text-red-700"></div>
-            <div id="consultSaveSuccess" class="hidden mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[0.75rem] text-emerald-700"></div>
+            <div id="consultSaveSuccess" class="hidden mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[0.75rem] text-emerald-700">
+                <div class="flex items-center justify-between gap-3">
+                    <span id="consultSaveSuccessText"></span>
+                    <button type="button" id="consultPrintReceipt" class="hidden inline-flex items-center justify-center rounded-xl border border-emerald-300 bg-white px-3 py-1.5 text-[0.78rem] font-semibold text-emerald-700 hover:bg-emerald-100">
+                        Print receipt
+                    </button>
+                </div>
+            </div>
             <div id="consultSafetyBox" class="hidden mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[0.75rem] text-amber-800 whitespace-pre-line"></div>
 
             <div class="grid gap-3 md:grid-cols-2">
@@ -151,10 +162,10 @@
                     <textarea id="consult_treatment" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none min-h-[120px]" placeholder="Enter treatment plan, follow-up instructions, and other notes"></textarea>
                 </div>
                 <div class="md:col-span-2 flex items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-                    <label class="inline-flex items-center gap-2 text-[0.78rem] text-slate-700">
-                        <input type="checkbox" id="consultMarkCompleted" checked class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-200">
-                        Mark appointment completed
-                    </label>
+                    <div class="text-[0.78rem] text-slate-700">
+                        Saving consultation notes keeps the appointment active until payment is recorded
+                        and marks the appointment as consulted for reception.
+                    </div>
                     <label class="inline-flex items-center gap-2 text-[0.78rem] text-slate-700">
                         <input type="checkbox" id="consultAcknowledgeConflicts" class="rounded border-slate-300 text-amber-600 focus:ring-amber-200">
                         Override safety warnings
@@ -173,16 +184,24 @@
                     </button>
                 </div>
 
-                <div class="overflow-x-auto scrollbar-hidden border border-slate-100 rounded-xl">
-                    <table class="min-w-full text-left text-xs text-slate-600">
+                <div id="consultPrescriptionScroller" class="w-full max-w-full overflow-x-auto overflow-y-hidden border border-slate-100 rounded-xl pb-2" style="scrollbar-gutter: stable both-edges;">
+                    <table class="w-full min-w-[72rem] table-fixed text-left text-xs text-slate-600">
+                        <colgroup>
+                            <col style="width: 22rem;">
+                            <col style="width: 9rem;">
+                            <col style="width: 9rem;">
+                            <col style="width: 9rem;">
+                            <col style="width: 13rem;">
+                            <col style="width: 7rem;">
+                        </colgroup>
                         <thead class="bg-slate-50">
                             <tr class="border-b border-slate-100 text-[0.68rem] uppercase tracking-widest text-slate-400">
-                                <th class="py-2 px-3 font-semibold">Medicine</th>
-                                <th class="py-2 px-3 font-semibold">Dosage</th>
-                                <th class="py-2 px-3 font-semibold">Frequency</th>
-                                <th class="py-2 px-3 font-semibold">Duration</th>
-                                <th class="py-2 px-3 font-semibold">Instructions</th>
-                                <th class="py-2 px-3 font-semibold">Remove</th>
+                                <th class="py-2 px-3 font-semibold whitespace-nowrap">Medicine</th>
+                                <th class="py-2 px-3 font-semibold whitespace-nowrap">Dosage</th>
+                                <th class="py-2 px-3 font-semibold whitespace-nowrap">Frequency</th>
+                                <th class="py-2 px-3 font-semibold whitespace-nowrap">Duration</th>
+                                <th class="py-2 px-3 font-semibold whitespace-nowrap">Instructions</th>
+                                <th class="py-2 px-3 font-semibold whitespace-nowrap">Remove</th>
                             </tr>
                         </thead>
                         <tbody id="consultPrescriptionBody"></tbody>
@@ -239,6 +258,76 @@
     </div>
 </div>
 
+<div id="consultConfirmModal" class="hidden fixed inset-0 z-50 bg-slate-900/70">
+    <div class="absolute inset-0 flex items-center justify-center px-4 py-6">
+        <div class="w-full max-w-2xl rounded-3xl bg-white border border-slate-200 shadow-[0_20px_60px_rgba(15,23,42,0.35)] overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3">
+                <div>
+                    <div class="text-[0.7rem] uppercase tracking-widest text-slate-400">Confirm Submission</div>
+                    <div class="text-sm font-semibold text-slate-900">Review consultation before saving</div>
+                    <div class="text-xs text-slate-500 mt-1">This will save the consultation notes and any prescription items listed below.</div>
+                </div>
+                <button type="button" id="consultConfirmClose" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">
+                    Close
+                </button>
+            </div>
+            <div class="px-5 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
+                <div class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+                    <div class="text-[0.7rem] uppercase tracking-widest text-slate-400 mb-2">Consultation Notes</div>
+                    <div class="space-y-3">
+                        <div>
+                            <div class="text-[0.72rem] font-semibold text-slate-700">Diagnosis</div>
+                            <div id="consultConfirmDiagnosis" class="mt-1 text-[0.8rem] text-slate-700 whitespace-pre-line">—</div>
+                        </div>
+                        <div>
+                            <div class="text-[0.72rem] font-semibold text-slate-700">Treatment Notes</div>
+                            <div id="consultConfirmTreatment" class="mt-1 text-[0.8rem] text-slate-700 whitespace-pre-line">—</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+                    <div class="text-[0.7rem] uppercase tracking-widest text-slate-400 mb-2">Prescription Items</div>
+                    <div id="consultConfirmPrescription" class="space-y-2 text-[0.8rem] text-slate-700"></div>
+                </div>
+            </div>
+            <div class="px-5 py-4 border-t border-slate-100 flex items-center justify-end gap-2">
+                <button type="button" id="consultConfirmCancel" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">
+                    Cancel
+                </button>
+                <button type="button" id="consultConfirmSubmit" class="inline-flex items-center justify-center rounded-xl bg-cyan-600 px-3 py-2 text-[0.78rem] font-semibold text-white hover:bg-cyan-700">
+                    Confirm Submit
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    #consultPrescriptionScroller {
+        scrollbar-width: auto;
+        scrollbar-color: #94a3b8 #e2e8f0;
+    }
+
+    #consultPrescriptionScroller::-webkit-scrollbar {
+        height: 12px;
+    }
+
+    #consultPrescriptionScroller::-webkit-scrollbar-track {
+        background: #e2e8f0;
+        border-radius: 9999px;
+    }
+
+    #consultPrescriptionScroller::-webkit-scrollbar-thumb {
+        background: #94a3b8;
+        border-radius: 9999px;
+        border: 2px solid #e2e8f0;
+    }
+
+    #consultPrescriptionScroller::-webkit-scrollbar-thumb:hover {
+        background: #64748b;
+    }
+</style>
+
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         var appointmentSelect = document.getElementById('consult_appointment')
@@ -246,20 +335,29 @@
         var snapshotError = document.getElementById('consultSnapshotError')
         var saveError = document.getElementById('consultSaveError')
         var saveSuccess = document.getElementById('consultSaveSuccess')
+        var saveSuccessText = document.getElementById('consultSaveSuccessText')
         var safetyBox = document.getElementById('consultSafetyBox')
         var diagnosisEl = document.getElementById('consult_diagnosis')
         var treatmentEl = document.getElementById('consult_treatment')
         var clearBtn = document.getElementById('consultClear')
         var saveBtn = document.getElementById('consultSave')
-        var printBtn = document.getElementById('consultPrintPrescription')
+        var saveSpinner = document.getElementById('consultSaveSpinner')
+        var saveLabel = document.getElementById('consultSaveLabel')
+        var printBtn = document.getElementById('consultPrintReceipt')
         var addMedBtn = document.getElementById('consultAddMedicine')
         var prescriptionBody = document.getElementById('consultPrescriptionBody')
-        var markCompletedEl = document.getElementById('consultMarkCompleted')
         var acknowledgeEl = document.getElementById('consultAcknowledgeConflicts')
         var safetyModal = document.getElementById('consultSafetyModal')
         var safetyModalBody = document.getElementById('consultSafetyModalBody')
         var safetyModalClose = document.getElementById('consultSafetyModalClose')
         var safetyModalAck = document.getElementById('consultSafetyModalAcknowledge')
+        var confirmModal = document.getElementById('consultConfirmModal')
+        var confirmClose = document.getElementById('consultConfirmClose')
+        var confirmCancel = document.getElementById('consultConfirmCancel')
+        var confirmSubmit = document.getElementById('consultConfirmSubmit')
+        var confirmDiagnosis = document.getElementById('consultConfirmDiagnosis')
+        var confirmTreatment = document.getElementById('consultConfirmTreatment')
+        var confirmPrescription = document.getElementById('consultConfirmPrescription')
         var historyFilter = document.getElementById('consultHistoryFilter')
         var historyLoading = document.getElementById('consultHistoryLoading')
         var historyError = document.getElementById('consultHistoryError')
@@ -293,7 +391,9 @@
             medicines: [],
             medicinesById: {},
             history: [],
+            lastSavedTransactionId: null,
         }
+        var successHideTimer = null
 
         function setVisible(el, visible) {
             if (!el) return
@@ -311,6 +411,66 @@
             el.innerHTML = html || ''
         }
 
+        function escapeHtml(value) {
+            return String(value == null ? '' : value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;')
+        }
+
+        function clearSuccessTimer() {
+            if (!successHideTimer) return
+            clearTimeout(successHideTimer)
+            successHideTimer = null
+        }
+
+        function setPrintVisible(visible) {
+            if (!printBtn) return
+            printBtn.classList.toggle('hidden', !visible)
+        }
+
+        function showSaveSuccess(message, allowPrint) {
+            clearSuccessTimer()
+            if (saveSuccessText) saveSuccessText.textContent = message || ''
+            else if (saveSuccess) saveSuccess.textContent = message || ''
+            setPrintVisible(!!allowPrint)
+            setVisible(saveSuccess, true)
+            successHideTimer = setTimeout(function () {
+                setVisible(saveSuccess, false)
+            }, 5000)
+        }
+
+        function setSubmitLoading(isLoading) {
+            if (saveBtn) saveBtn.disabled = !!isLoading
+            if (saveSpinner) saveSpinner.classList.toggle('hidden', !isLoading)
+            if (saveLabel) saveLabel.textContent = isLoading ? 'Processing...' : 'Submit'
+            if (confirmSubmit) confirmSubmit.disabled = !!isLoading
+            if (saveBtn) saveBtn.classList.toggle('cursor-wait', !!isLoading)
+        }
+
+        function syncAppointmentOptionLabel(option) {
+            if (!option) return
+            var baseLabel = option.getAttribute('data-label') || ''
+            var status = normalizeString(option.getAttribute('data-status'))
+            if (!baseLabel) {
+                baseLabel = String(option.textContent || '')
+                    .replace(/^\s*\[\s*Consulted\s*\]\s*/i, '')
+                    .trim()
+                option.setAttribute('data-label', baseLabel)
+            }
+            option.textContent = (status === 'consulted' ? '[ Consulted ] ' : '') + baseLabel
+        }
+
+        function markSelectedAppointmentConsulted() {
+            if (!appointmentSelect) return
+            var option = appointmentSelect.options[appointmentSelect.selectedIndex]
+            if (!option) return
+            option.setAttribute('data-status', 'consulted')
+            syncAppointmentOptionLabel(option)
+        }
+
         function badge(label, variant) {
             var cls = 'inline-flex items-center rounded-full border px-2 py-0.5 text-[0.68rem] font-medium '
             if (variant === 'danger') cls += 'bg-red-50 border-red-200 text-red-700'
@@ -326,6 +486,14 @@
 
         function hideSafetyModal() {
             setVisible(safetyModal, false)
+        }
+
+        function openConfirmModal() {
+            setVisible(confirmModal, true)
+        }
+
+        function closeConfirmModal() {
+            setVisible(confirmModal, false)
         }
 
         function api(url, options) {
@@ -392,6 +560,7 @@
             state.transactionId = null
             state.prescriptionId = null
             state.existingItemIds = []
+            state.lastSavedTransactionId = null
             state.medicalBackground = []
             state.history = []
             setText(elPatientName, '—')
@@ -418,26 +587,27 @@
             setVisible(saveSuccess, false)
             setVisible(safetyBox, false)
             if (acknowledgeEl) acknowledgeEl.checked = false
-            if (printBtn) printBtn.classList.add('hidden')
+            setPrintVisible(false)
+            clearSuccessTimer()
         }
 
         function ensureRow(item) {
             if (!prescriptionBody) return
             var tr = document.createElement('tr')
-            tr.className = 'border-b border-slate-50 last:border-0'
+            tr.className = 'border-b border-slate-50 last:border-0 align-top'
             tr.innerHTML = '' +
-                '<td class="py-2 px-3 min-w-[14rem]">' +
-                    '<select class="consult-med w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none"></select>' +
+                '<td class="py-2 px-3 align-top">' +
+                    '<select class="consult-med h-9 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none"></select>' +
                     '<div class="mt-1 space-y-1">' +
                         '<div class="text-[0.68rem] text-slate-400">Indications: <span class="consult-ind text-slate-600"></span></div>' +
                         '<div class="text-[0.68rem] text-slate-400">Contra: <span class="consult-contra text-slate-600"></span></div>' +
                     '</div>' +
                 '</td>' +
-                '<td class="py-2 px-3 min-w-[7rem]"><input class="consult-dose w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="e.g. 500mg"></td>' +
-                '<td class="py-2 px-3 min-w-[7rem]"><input class="consult-freq w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="e.g. BID"></td>' +
-                '<td class="py-2 px-3 min-w-[7rem]"><input class="consult-dur w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="e.g. 7 days"></td>' +
-                '<td class="py-2 px-3 min-w-[10rem]"><input class="consult-inst w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="e.g. after meals"></td>' +
-                '<td class="py-2 px-3"><button type="button" class="consult-remove inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-2 py-1 text-[0.72rem] font-semibold text-slate-700 hover:bg-slate-50">✕</button></td>'
+                '<td class="py-2 px-3 align-top"><input class="consult-dose h-9 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="e.g. 500mg"></td>' +
+                '<td class="py-2 px-3 align-top"><input class="consult-freq h-9 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="e.g. BID"></td>' +
+                '<td class="py-2 px-3 align-top"><input class="consult-dur h-9 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="e.g. 7 days"></td>' +
+                '<td class="py-2 px-3 align-top"><input class="consult-inst h-9 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="e.g. after meals"></td>' +
+                '<td class="py-2 px-3 align-top"><button type="button" class="consult-remove mt-0.5 inline-flex h-9 w-full items-center justify-center rounded-lg border border-slate-200 bg-white px-2 py-1 text-[0.72rem] font-semibold text-slate-700 hover:bg-slate-50">Remove</button></td>'
 
             var sel = tr.querySelector('.consult-med')
             var ind = tr.querySelector('.consult-ind')
@@ -521,6 +691,37 @@
             }).filter(function (r) {
                 return r.medicine_id
             })
+        }
+
+        function renderConfirmSummary() {
+            var rows = getPrescriptionRows()
+            if (confirmDiagnosis) {
+                confirmDiagnosis.textContent = diagnosisEl && String(diagnosisEl.value || '').trim()
+                    ? String(diagnosisEl.value || '').trim()
+                    : 'No diagnosis entered.'
+            }
+            if (confirmTreatment) {
+                confirmTreatment.textContent = treatmentEl && String(treatmentEl.value || '').trim()
+                    ? String(treatmentEl.value || '').trim()
+                    : 'No treatment notes entered.'
+            }
+            if (confirmPrescription) {
+                if (!rows.length) {
+                    confirmPrescription.innerHTML = '<div class="text-slate-500">No prescription items added.</div>'
+                } else {
+                    confirmPrescription.innerHTML = rows.map(function (row, index) {
+                        var med = state.medicinesById[String(row.medicine_id)]
+                        var parts = [row.dosage, row.frequency, row.duration, row.instructions]
+                            .filter(function (part) { return String(part || '').trim() !== '' })
+                            .map(function (part) { return escapeHtml(String(part)) })
+                        return '' +
+                            '<div class="rounded-xl border border-slate-100 bg-white px-3 py-2">' +
+                                '<div class="font-semibold text-slate-900">' + escapeHtml((index + 1) + '. ' + medicineDisplayName(med)) + '</div>' +
+                                '<div class="mt-1 text-[0.75rem] text-slate-600">' + (parts.length ? parts.join(' • ') : 'No dosage details provided.') + '</div>' +
+                            '</div>'
+                    }).join('')
+                }
+            }
         }
 
         function renderBackground(backgrounds) {
@@ -752,37 +953,30 @@
                             })
                         })
                     }
-                    if (printBtn) printBtn.classList.toggle('hidden', !state.prescriptionId)
                 }
             })
-        }
-
-        function updateAppointmentStatusIfNeeded() {
-            if (!markCompletedEl || !markCompletedEl.checked) return Promise.resolve()
-            if (!state.appointmentId) return Promise.resolve()
-            return api('{{ url('/api/appointments') }}/' + state.appointmentId, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'completed' }),
-            }).catch(function () {})
         }
 
         function saveAll() {
             setVisible(saveError, false)
             setVisible(saveSuccess, false)
+            clearSuccessTimer()
 
             if (!state.appointmentId) {
                 saveError.textContent = 'Select an appointment first.'
                 setVisible(saveError, true)
-                return
+                return Promise.resolve(false)
             }
 
             var conflicts = computeConflicts()
             if (conflicts.length && (!acknowledgeEl || !acknowledgeEl.checked)) {
                 saveError.textContent = 'Safety warnings detected. Check "Override safety warnings" to proceed.'
                 setVisible(saveError, true)
-                return
+                return Promise.resolve(false)
             }
+
+            var prescriptionRows = getPrescriptionRows()
+            var shouldSavePrescription = prescriptionRows.length > 0 || !!state.prescriptionId
 
             var payload = {
                 appointment_id: state.appointmentId,
@@ -803,13 +997,19 @@
                     body: JSON.stringify(payload),
                 })
 
-            txPromise.then(function (tx) {
+            return txPromise.then(function (tx) {
                 state.transactionId = tx.transaction_id
+                state.lastSavedTransactionId = tx.transaction_id
                 var rxPayload = {
                     transaction_id: state.transactionId,
                     doctor_id: state.doctorUserId,
                     prescribed_datetime: new Date().toISOString().slice(0, 19).replace('T', ' '),
                     notes: null,
+                }
+
+                if (!shouldSavePrescription) {
+                    state.prescriptionId = null
+                    return null
                 }
 
                 var rxPromise = state.prescriptionId
@@ -834,8 +1034,7 @@
                     }, Promise.resolve())
 
                     return deletes.then(function () {
-                        var rows = getPrescriptionRows()
-                        return rows.reduce(function (p, row) {
+                        return prescriptionRows.reduce(function (p, row) {
                             return p.then(function () {
                                 return api('{{ url('/api/prescription-items') }}', {
                                     method: 'POST',
@@ -854,16 +1053,20 @@
                     })
                 })
             }).then(function () {
-                state.existingItemIds = []
-                return updateAppointmentStatusIfNeeded()
+                return loadExistingDraft()
             }).then(function () {
-                saveSuccess.textContent = 'Saved consultation and prescription successfully.'
-                setVisible(saveSuccess, true)
-                if (printBtn) printBtn.classList.toggle('hidden', !state.prescriptionId)
+                var successMessage = shouldSavePrescription
+                    ? 'Saved consultation and prescription successfully. Appointment is now consulted.'
+                    : 'Saved consultation notes successfully. Appointment is now consulted and remains active until payment is recorded.'
+                markSelectedAppointmentConsulted()
+                showSaveSuccess(successMessage, !!state.lastSavedTransactionId)
                 return loadHistory(state.patientId)
+            }).then(function () {
+                return true
             }).catch(function (err) {
                 saveError.textContent = err && err.body ? err.body : 'Unable to save consultation.'
                 setVisible(saveError, true)
+                return false
             })
         }
 
@@ -908,6 +1111,28 @@
                 hideSafetyModal()
             })
         }
+        if (confirmClose) {
+            confirmClose.addEventListener('click', closeConfirmModal)
+        }
+        if (confirmCancel) {
+            confirmCancel.addEventListener('click', closeConfirmModal)
+        }
+        if (confirmModal) {
+            confirmModal.addEventListener('click', function (e) {
+                if (e.target === confirmModal) closeConfirmModal()
+            })
+        }
+        if (confirmSubmit) {
+            confirmSubmit.addEventListener('click', function () {
+                if (confirmSubmit.disabled) return
+                closeConfirmModal()
+                setSubmitLoading(true)
+                saveAll().then(function (ok) {
+                }).finally(function () {
+                    setSubmitLoading(false)
+                })
+            })
+        }
 
         if (clearBtn) {
             clearBtn.addEventListener('click', function () {
@@ -918,7 +1143,8 @@
                 setVisible(saveSuccess, false)
                 setVisible(saveError, false)
                 renderSafety()
-                if (printBtn) printBtn.classList.add('hidden')
+                setPrintVisible(false)
+                clearSuccessTimer()
             })
         }
 
@@ -929,18 +1155,42 @@
         }
 
         if (saveBtn) {
-            saveBtn.addEventListener('click', saveAll)
+            saveBtn.addEventListener('click', function () {
+                if (saveBtn.disabled) return
+                setVisible(saveError, false)
+                setVisible(saveSuccess, false)
+                clearSuccessTimer()
+
+                if (!state.appointmentId) {
+                    saveError.textContent = 'Select an appointment first.'
+                    setVisible(saveError, true)
+                    return
+                }
+
+                var conflicts = computeConflicts()
+                if (conflicts.length && (!acknowledgeEl || !acknowledgeEl.checked)) {
+                    saveError.textContent = 'Safety warnings detected. Check "Override safety warnings" to proceed.'
+                    setVisible(saveError, true)
+                    return
+                }
+
+                renderConfirmSummary()
+                openConfirmModal()
+            })
         }
 
         if (printBtn) {
             printBtn.addEventListener('click', function () {
-                if (!state.prescriptionId) return
-                var url = "{{ url('/print/prescriptions') }}/" + encodeURIComponent(String(state.prescriptionId))
+                if (!state.lastSavedTransactionId) return
+                var url = "{{ url('/print/consultations') }}/" + encodeURIComponent(String(state.lastSavedTransactionId))
                 window.open(url, '_blank', 'noopener')
             })
         }
 
         Promise.all([loadDoctorUser(), loadMedicines()]).then(function () {
+            if (appointmentSelect) {
+                Array.prototype.slice.call(appointmentSelect.options).forEach(syncAppointmentOptionLabel)
+            }
             if (appointmentSelect && appointmentSelect.value) {
                 handleAppointmentChange()
             } else {

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ConsultationReceiptController;
 use App\Http\Controllers\PublicGuestWalkInController;
 use App\Http\Controllers\QueueDisplayController;
 use App\Http\Controllers\PrescriptionReceiptController;
@@ -51,6 +52,7 @@ Route::get('/guest-walk-in/{token}', function (string $token) {
 });
 
 Route::get('/print/prescriptions/{prescriptionId}', [PrescriptionReceiptController::class, 'show'])->name('print.prescription');
+Route::get('/print/consultations/{transactionId}', [ConsultationReceiptController::class, 'show'])->name('print.consultation');
 
 Route::get('/signatures/{user}', [UserController::class, 'signature'])->name('public.signature');
 Route::get('/profiles/{user}', [UserController::class, 'profilePicture'])->name('public.profile_picture');

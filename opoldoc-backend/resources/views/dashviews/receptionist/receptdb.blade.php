@@ -9,6 +9,29 @@
     $waitingInQueue = (int) ($metrics['waitingCount'] ?? 0);
     $currentQueueCount = (int) ($metrics['currentQueueCount'] ?? 0);
     $transactionsToday = (float) ($metrics['transactionsToday'] ?? 0);
+    $activeCallNextDoctors = collect($receptionDoctorSlots ?? [])
+        ->map(function ($slot) {
+            $doctor = optional($slot)->doctor;
+            return (object) [
+                'doctor_id' => (int) ($slot->doctor_id ?? 0),
+                'doctor_name' => (string) (
+                    optional(optional($doctor)->personalInformation)->full_name
+                    ?? $slot->doctor_name
+                    ?? 'Doctor'
+                ),
+                'doctor_specialization' => (string) (
+                    optional($doctor)->specialization
+                    ?? $slot->doctor_specialization
+                    ?? ''
+                ),
+                'slot_start' => $slot->start_time ?? null,
+                'slot_end' => $slot->end_time ?? null,
+            ];
+        })
+        ->filter(function ($slot) {
+            return $slot->doctor_id > 0;
+        })
+        ->values();
 @endphp
 
 <div class="space-y-6">
@@ -107,69 +130,79 @@
     </div>
 
     <!-- Main content container -->
-    <div class="flex-1 min-h-0 p-4 bg-slate-50/30">
-        <div class="h-full rounded-xl border border-slate-100 bg-white shadow-sm flex flex-col gap-3 overflow-hidden">
-            
-            <!-- TOP BOX: Queue Section -->
-            <div class="flex-1 min-h-0 rounded-xl border border-slate-100 bg-white p-4 flex flex-col overflow-hidden">
-                <!-- Queue Header -->
-                <div class="flex items-center justify-between gap-3 shrink-0">
-                    <div class="flex items-center gap-2">
-                        <div class="w-7 h-7 rounded-lg bg-cyan-50 border border-cyan-100 flex items-center justify-center text-cyan-600">
-                            <x-lucide-users class="w-3.5 h-3.5" />
-                        </div>
-                        <div>
-                            <div class="text-[0.72rem] font-semibold text-slate-800">Active Queue</div>
-                            <div id="receptionNextQueueMeta" class="text-[0.65rem] text-slate-400 mt-0.5">Waiting patients</div>
-                        </div>
+    <div class="flex-1 min-h-0 p-4 bg-white flex flex-col overflow-hidden">
+        <!-- Queue Section -->
+        <div class="flex-1 min-h-0 flex flex-col overflow-hidden">
+            <div class="flex items-start justify-between gap-3 shrink-0">
+                <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-lg bg-cyan-50 border border-cyan-100 flex items-center justify-center text-cyan-600">
+                        <x-lucide-users class="w-3.5 h-3.5" />
                     </div>
+                    <div>
+                        <div class="text-[0.72rem] font-semibold text-slate-800">Active Queue</div>
+                        <div id="receptionNextQueueMeta" class="text-[0.65rem] text-slate-400 mt-0.5">Waiting patients</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <select id="receptionNextQueueDoctorSelect" class="w-[250px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-[0.75rem] text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                        <option value="">Auto (any active doctor)</option>
+                        @foreach ($activeCallNextDoctors as $doctorState)
+                            @php
+                                $doctorNameRaw = trim((string) ($doctorState->doctor_name ?? ''));
+                                $doctorNameClean = preg_replace('/^\s*dr\.?\s*/i', '', $doctorNameRaw);
+                                $doctorNameDisplay = $doctorNameClean !== '' ? $doctorNameClean : 'Doctor';
+                                $doctorSpecialization = trim((string) ($doctorState->doctor_specialization ?? ''));
+                            @endphp
+                            <option value="{{ $doctorState->doctor_id }}">
+                                Dr. {{ $doctorNameDisplay }}
+                                @if ($doctorSpecialization !== '')
+                                    - {{ $doctorSpecialization }}
+                                @endif
+                            </option>
+                        @endforeach
+                    </select>
                     <button type="button" id="receptionNextQueueNextBtn" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 text-white text-[0.72rem] font-semibold hover:bg-slate-700 transition-all duration-150 shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 disabled:opacity-60 disabled:pointer-events-none">
                         <span id="receptionNextQueueNextSpinner" class="hidden w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
                         <x-lucide-megaphone class="w-3.5 h-3.5" />
                         <span id="receptionNextQueueNextLabel">Call next</span>
                     </button>
                 </div>
-                
-                <!-- Queue Message Area -->
-                <div id="receptionNextQueueInlineMessage" class="hidden mt-3 rounded-lg border px-3 py-2 text-[0.7rem]"></div>  
-                
-                <!-- Queue List -->
-                <div class="mt-3 flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-slate-50">
-                    <ul id="receptionNextQueue" class="space-y-2">
-                        <!-- Dynamic queue items will be injected here -->
-                        <li class="text-center text-[0.7rem] text-slate-400 py-4">No patients in queue</li>
-                    </ul>
+            </div>
+
+            <div id="receptionNextQueueInlineMessage" class="hidden mt-3 rounded-lg border px-3 py-2 text-[0.7rem]"></div>
+
+            <div class="mt-3 flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-slate-50">
+                <ul id="receptionNextQueue" class="space-y-2">
+                    <li class="text-center text-[0.7rem] text-slate-400 py-4">No patients in queue</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="my-3 border-t border-slate-200"></div>
+
+        <!-- Appointments Section -->
+        <div class="flex-1 min-h-0 flex flex-col overflow-hidden">
+            <div class="flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-lg bg-cyan-50 border border-cyan-100 flex items-center justify-center text-cyan-600">
+                        <x-lucide-calendar-check class="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                        <div class="text-[0.72rem] font-semibold text-slate-800">Upcoming Appointments</div>
+                        <div id="receptionNextAppointmentsMeta" class="text-[0.65rem] text-slate-400 mt-0.5">Scheduled visits</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <x-lucide-clock class="w-3 h-3 text-slate-300" />
+                    <span class="text-[0.6rem] text-slate-400">Today</span>
                 </div>
             </div>
 
-            <!-- BOTTOM BOX: Appointments Section -->
-            <div class="flex-1 min-h-0 rounded-xl border border-slate-100 bg-white p-4 flex flex-col overflow-hidden">
-                <!-- Appointments Header -->
-                <div class="flex items-center justify-between shrink-0">
-                    <div class="flex items-center gap-2">
-                        <div class="w-7 h-7 rounded-lg bg-cyan-50 border border-cyan-100 flex items-center justify-center text-cyan-600">
-                            <x-lucide-calendar-check class="w-3.5 h-3.5" />
-                        </div>
-                        <div>
-                            <div class="text-[0.72rem] font-semibold text-slate-800">Upcoming Appointments</div>
-                            <div id="receptionNextAppointmentsMeta" class="text-[0.65rem] text-slate-400 mt-0.5">Scheduled visits</div>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-1.5">
-                        <x-lucide-clock class="w-3 h-3 text-slate-300" />
-                        <span class="text-[0.6rem] text-slate-400">Today</span>
-                    </div>
-                </div>
-                
-                <!-- Appointments List -->
-                <div class="mt-3 flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-slate-50">
-                    <ul id="receptionNextAppointments" class="space-y-2">
-                        <!-- Dynamic appointment items will be injected here -->
-                        <li class="text-center text-[0.7rem] text-slate-400 py-4">No appointments scheduled</li>
-                    </ul>
-                </div>
+            <div class="mt-3 flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-slate-50">
+                <ul id="receptionNextAppointments" class="space-y-2">
+                    <li class="text-center text-[0.7rem] text-slate-400 py-4">No appointments scheduled</li>
+                </ul>
             </div>
-
         </div>
     </div>
 </div>
@@ -184,6 +217,7 @@
                 var nextQueueSpinner = document.getElementById('receptionNextQueueNextSpinner')
                 var nextQueueLabel = document.getElementById('receptionNextQueueNextLabel')
                 var nextQueueInlineMessage = document.getElementById('receptionNextQueueInlineMessage')
+                var nextQueueDoctorSelect = document.getElementById('receptionNextQueueDoctorSelect')
                 if (typeof apiFetch !== 'function') return
 
                 function escapeHtml(input) {
@@ -408,8 +442,14 @@ if (!next.length) {
                     })
                 }
 
-                function callNextOnce() {
-                    return apiFetch("{{ url('/api/queues/call-next') }}", { method: 'POST' })
+                function callNextOnce(doctorId) {
+                    var payload = {}
+                    if (doctorId) payload.doctor_id = doctorId
+                    return apiFetch("{{ url('/api/queues/call-next') }}", {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    })
                         .then(readApiResult)
                         .then(function (result) {
                             if (!result.ok) {
@@ -428,9 +468,10 @@ if (!next.length) {
                         var canCall = String(nextQueueBtn.getAttribute('data-can-call') || '') === '1'
                         if (!canCall) return
 
+                        var selectedDoctorId = nextQueueDoctorSelect ? parseInt(String(nextQueueDoctorSelect.value || '').trim(), 10) : 0
                         setNextQueueSubmitting(true)
 
-                        callNextOnce()
+                        callNextOnce(selectedDoctorId)
                             .then(function (state) {
                                 var message = state && state.message ? state.message : 'Call next finished.'
                                 var tone = state && state.tone ? String(state.tone) : (state && state.called ? 'success' : 'info')
@@ -438,7 +479,8 @@ if (!next.length) {
                                 load()
                             })
                             .catch(function (err) {
-                                showNextQueueMessage((err && err.message) ? err.message : 'Network error while calling next.', 'error')
+                                var message = (err && err.message) ? err.message : 'Network error while calling next.'
+                                showNextQueueMessage(message, 'error')
                             })
                             .finally(function () {
                                 setNextQueueSubmitting(false)
