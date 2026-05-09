@@ -73,8 +73,9 @@
                 <div class="flex items-center justify-between pt-1">
                     <p class="text-[0.68rem] text-slate-400"></p>
                     <button type="button" id="doctor_prof_path_save" class="inline-flex items-center gap-1 rounded-xl border border-cyan-500/40 bg-cyan-50 px-3 py-1.5 text-[0.72rem] font-semibold text-cyan-700 hover:bg-cyan-100">
-                        <x-lucide-save class="w-[16px] h-[16px]" />
-                        Save picture
+                        <span id="doctorProfPathSaveSpinner" class="hidden w-3.5 h-3.5 border-2 border-cyan-700/30 border-t-cyan-700 rounded-full animate-spin"></span>
+                        <x-lucide-save id="doctorProfPathSaveIcon" class="w-[16px] h-[16px]" />
+                        <span id="doctorProfPathSaveLabel">Save picture</span>
                     </button>
                 </div>
             </form>
@@ -103,8 +104,9 @@
                 <div class="flex items-center justify-between pt-1">
                     <p class="text-[0.68rem] text-slate-400">Signature is saved to your account for prescriptions and receipts.</p>
                     <button type="button" id="doctor_signature_save" class="inline-flex items-center gap-1 rounded-xl border border-cyan-500/40 bg-cyan-50 px-3 py-1.5 text-[0.72rem] font-semibold text-cyan-700 hover:bg-cyan-100">
-                        <x-lucide-save class="w-[16px] h-[16px]" />
-                        Save signature
+                        <span id="doctorSignatureSaveSpinner" class="hidden w-3.5 h-3.5 border-2 border-cyan-700/30 border-t-cyan-700 rounded-full animate-spin"></span>
+                        <x-lucide-save id="doctorSignatureSaveIcon" class="w-[16px] h-[16px]" />
+                        <span id="doctorSignatureSaveLabel">Save signature</span>
                     </button>
                 </div>
             </form>
@@ -308,10 +310,16 @@
         var profPathFile = document.getElementById('doctor_prof_path_file')
         var profPathPreview = document.getElementById('doctor_prof_path_preview')
         var profPathSave = document.getElementById('doctor_prof_path_save')
+        var profPathSaveSpinner = document.getElementById('doctorProfPathSaveSpinner')
+        var profPathSaveIcon = document.getElementById('doctorProfPathSaveIcon')
+        var profPathSaveLabel = document.getElementById('doctorProfPathSaveLabel')
 
         var signatureFile = document.getElementById('doctor_signature_file')
         var signaturePreview = document.getElementById('doctor_signature_preview')
         var signatureSave = document.getElementById('doctor_signature_save')
+        var signatureSaveSpinner = document.getElementById('doctorSignatureSaveSpinner')
+        var signatureSaveIcon = document.getElementById('doctorSignatureSaveIcon')
+        var signatureSaveLabel = document.getElementById('doctorSignatureSaveLabel')
 
         var currentPassword = document.getElementById('doctor_current_password')
         var newPassword = document.getElementById('doctor_new_password')
@@ -404,10 +412,7 @@
                     if (profileContact) profileContact.value = result.data.contact_number || ''
 
                     var profUrl = result.data.prof_path_url ? String(result.data.prof_path_url) : ''
-                    if (profPathPreview && profUrl) {
-                        profPathPreview.innerHTML = '<img alt="Profile Picture" src="' + profUrl + '" class="max-h-20 max-w-full object-contain rounded-lg">'
-                        profPathPreview.classList.remove('text-slate-400')
-                    }
+                    renderImagePreview(profPathPreview, profUrl, 'Profile Picture', 'No picture uploaded yet.', true)
                 })
                 .catch(function () {})
         }
@@ -457,13 +462,36 @@
                     if (!result.ok || !result.data) return
                     currentDoctorId = result.data.user_id ? String(result.data.user_id) : currentDoctorId
                     var url = result.data.signature_url ? String(result.data.signature_url) : ''
-                    if (!signaturePreview) return
-                    if (url) {
-                        signaturePreview.innerHTML = '<img alt="Signature" src="' + url + '" class="max-h-20 max-w-full object-contain">'
-                        signaturePreview.classList.remove('text-slate-400')
-                    }
+                    renderImagePreview(signaturePreview, url, 'Signature', 'No signature uploaded yet.', false)
                 })
                 .catch(function () {})
+        }
+
+        function cacheBustedUrl(url) {
+            var raw = String(url || '').trim()
+            if (!raw) return ''
+            return raw + (raw.indexOf('?') === -1 ? '?v=' : '&v=') + String(Date.now())
+        }
+
+        function renderImagePreview(container, imageUrl, altText, emptyText, rounded) {
+            if (!container) return
+            var normalized = String(imageUrl || '').trim()
+            if (!normalized) {
+                container.textContent = emptyText || 'No image uploaded yet.'
+                container.classList.add('text-slate-400')
+                return
+            }
+            var src = cacheBustedUrl(normalized)
+            container.innerHTML = '<img alt="' + String(altText || 'Image') + '" src="' + src + '" class="max-h-20 max-w-full object-contain' + (rounded ? ' rounded-lg' : '') + '">'
+            container.classList.remove('text-slate-400')
+            container.classList.add('text-slate-700')
+        }
+
+        function setUploadButtonState(button, spinner, icon, labelNode, busy, busyLabel, idleLabel) {
+            if (button) button.disabled = !!busy
+            if (spinner) spinner.classList.toggle('hidden', !busy)
+            if (icon) icon.classList.toggle('hidden', !!busy)
+            if (labelNode) labelNode.textContent = busy ? busyLabel : idleLabel
         }
 
         function readResponse(response) {
@@ -711,6 +739,13 @@
         }
 
         if (profPathSave) {
+            if (profPathFile) {
+                profPathFile.addEventListener('change', function () {
+                    if (!profPathFile.files || !profPathFile.files.length) return
+                    var localUrl = URL.createObjectURL(profPathFile.files[0])
+                    renderImagePreview(profPathPreview, localUrl, 'Profile Picture', 'No picture uploaded yet.', true)
+                })
+            }
             profPathSave.addEventListener('click', function () {
                 if (!profPathFile || !profPathFile.files || profPathFile.files.length === 0) {
                     window.alert('Please choose a profile picture first.')
@@ -725,7 +760,7 @@
                 var formData = new FormData()
                 formData.append('prof_path', file)
 
-                profPathSave.disabled = true
+                setUploadButtonState(profPathSave, profPathSaveSpinner, profPathSaveIcon, profPathSaveLabel, true, 'Saving...', 'Save picture')
 
                 apiFetch(apiUrl('/api/users/me/profile-picture'), {
                     method: 'POST',
@@ -742,31 +777,32 @@
                         if (!result.ok) {
                             var msg = (result.data && result.data.message) ? String(result.data.message) : 'Unable to upload profile picture.'
                             window.alert(msg)
+                            loadDoctorSettings()
                             return
                         }
                         var url = result.data && result.data.prof_path_url ? String(result.data.prof_path_url) : ''
-                        if (profPathPreview) {
-                            if (url) {
-                                profPathPreview.innerHTML = '<img alt="Profile Picture" src="' + url + '" class="max-h-20 max-w-full object-contain rounded-lg">'
-                                profPathPreview.classList.remove('text-slate-400')
-                            } else {
-                                profPathPreview.textContent = 'Picture uploaded'
-                                profPathPreview.classList.remove('text-slate-400')
-                                profPathPreview.classList.add('text-slate-700')
-                            }
-                        }
+                        renderImagePreview(profPathPreview, url, 'Profile Picture', 'No picture uploaded yet.', true)
+                        loadDoctorSettings()
                         if (profPathFile) profPathFile.value = ''
                     })
                     .catch(function () {
                         window.alert('Network error while uploading picture.')
+                        loadDoctorSettings()
                     })
                     .finally(function () {
-                        profPathSave.disabled = false
+                        setUploadButtonState(profPathSave, profPathSaveSpinner, profPathSaveIcon, profPathSaveLabel, false, 'Saving...', 'Save picture')
                     })
             })
         }
 
         if (signatureSave) {
+            if (signatureFile) {
+                signatureFile.addEventListener('change', function () {
+                    if (!signatureFile.files || !signatureFile.files.length) return
+                    var localUrl = URL.createObjectURL(signatureFile.files[0])
+                    renderImagePreview(signaturePreview, localUrl, 'Signature', 'No signature uploaded yet.', false)
+                })
+            }
             signatureSave.addEventListener('click', function () {
                 if (!signatureFile || !signatureFile.files || signatureFile.files.length === 0) {
                     window.alert('Please choose a signature image first.')
@@ -781,7 +817,7 @@
                 var formData = new FormData()
                 formData.append('signature', file)
 
-                signatureSave.disabled = true
+                setUploadButtonState(signatureSave, signatureSaveSpinner, signatureSaveIcon, signatureSaveLabel, true, 'Saving...', 'Save signature')
 
                 apiFetch(apiUrl('/api/users/me/signature'), {
                     method: 'POST',
@@ -798,26 +834,20 @@
                         if (!result.ok) {
                             var msg = (result.data && result.data.message) ? String(result.data.message) : 'Unable to upload signature.'
                             window.alert(msg)
+                            loadServerSignature()
                             return
                         }
                         var url = result.data && result.data.signature_url ? String(result.data.signature_url) : ''
-                        if (signaturePreview) {
-                            if (url) {
-                                signaturePreview.innerHTML = '<img alt="Signature" src="' + url + '" class="max-h-20 max-w-full object-contain">'
-                                signaturePreview.classList.remove('text-slate-400')
-                            } else {
-                                signaturePreview.textContent = 'Signature uploaded'
-                                signaturePreview.classList.remove('text-slate-400')
-                                signaturePreview.classList.add('text-slate-700')
-                            }
-                        }
+                        renderImagePreview(signaturePreview, url, 'Signature', 'No signature uploaded yet.', false)
+                        loadServerSignature()
                         if (signatureFile) signatureFile.value = ''
                     })
                     .catch(function () {
                         window.alert('Network error while uploading signature.')
+                        loadServerSignature()
                     })
                     .finally(function () {
-                        signatureSave.disabled = false
+                        setUploadButtonState(signatureSave, signatureSaveSpinner, signatureSaveIcon, signatureSaveLabel, false, 'Saving...', 'Save signature')
                     })
             })
         }

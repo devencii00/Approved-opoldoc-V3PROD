@@ -247,7 +247,7 @@ export default function HomeLanding() {
           </View>
         </Animated.View>
 
-        {/* Logo section */}
+
         <Animated.View
           style={[
             styles.logoWrapper,
@@ -259,7 +259,7 @@ export default function HomeLanding() {
         >
           <Animated.View style={[styles.logoPulseRing, { transform: [{ scale: pulseAnim }] }]}>
             <View style={styles.logoRing}>
-              {/* Replace with actual <Image> when asset is available */}
+           
               <View style={styles.logoPlaceholder}>
               
               </View>
@@ -271,6 +271,7 @@ export default function HomeLanding() {
               /> }
             </View>
           </Animated.View>
+          
         </Animated.View>
 
         {/* Clinic name */}

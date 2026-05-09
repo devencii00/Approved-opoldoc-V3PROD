@@ -1542,7 +1542,7 @@ function setAppointmentTab(tab) {
                 .then(function (result) {
                     var raw = result.data && Array.isArray(result.data.data) ? result.data.data : (Array.isArray(result.data) ? result.data : [])
                     var allowedServiceNames = [
-                        'obsterician - gynecologist',
+                        
                         'obstetrician - gynecologist',
                         'general surgeon'
                     ]

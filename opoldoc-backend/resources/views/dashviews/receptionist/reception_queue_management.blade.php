@@ -1,5 +1,15 @@
 @php
     $queueItems = collect($receptionQueue ?? []);
+    $tableQueueItems = $queueItems
+        ->filter(function ($row) {
+            return strtolower((string) ($row->status ?? '')) !== 'no_show';
+        })
+        ->values();
+    $doctorSlots = collect($receptionDoctorSlots ?? [])
+        ->filter(function ($slot) {
+            return $slot && $slot->doctor;
+        })
+        ->values();
     $servingItems = $queueItems->where('status', 'serving')->values()->take(4)->values();
     $waitingItems = $queueItems
         ->filter(function ($row) {
@@ -12,6 +22,39 @@
         })
         ->values();
     $nextItems = $waitingItems->take(5);
+    $doctorPanelItems = $doctorSlots->map(function ($slot) use ($queueItems) {
+        $doctorId = (int) ($slot->doctor_id ?? 0);
+        $doctorName = optional($slot->doctor)->personalInformation->full_name ?? 'Doctor';
+        $queueForDoctor = $queueItems
+            ->filter(function ($row) use ($doctorId) {
+                return (int) (optional($row->appointment)->doctor_id ?? 0) === $doctorId;
+            })
+            ->values();
+        $serving = $queueForDoctor
+            ->first(function ($row) {
+                return (string) ($row->status ?? '') === 'serving';
+            });
+        $nextWaiting = $queueForDoctor
+            ->filter(function ($row) {
+                return (string) ($row->status ?? '') === 'waiting';
+            })
+            ->sortBy(function ($row) {
+                $priority = (int) ($row->priority_level ?? 5);
+                $number = (int) ($row->queue_number ?? 999999);
+                return str_pad((string) $priority, 6, '0', STR_PAD_LEFT) . '-' . str_pad((string) $number, 6, '0', STR_PAD_LEFT);
+            })
+            ->first();
+
+        return (object) [
+            'doctor_id' => $doctorId,
+            'doctor_name' => $doctorName,
+            'slot_start' => $slot->start_time ?? null,
+            'slot_end' => $slot->end_time ?? null,
+            'room_number' => $slot->room_number ?? null,
+            'serving' => $serving,
+            'next_waiting' => $nextWaiting,
+        ];
+    })->values();
 @endphp
 
 <div class="space-y-4">
@@ -20,12 +63,26 @@
             <h2 class="text-sm font-semibold text-slate-900">Queue management</h2>
             <p class="text-xs text-slate-500">Add patients to the queue and monitor today&apos;s flow.</p>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-end gap-2">
+            <div>
+                <label for="receptionCallNextDoctorId" class="block text-[0.68rem] text-slate-500 mb-1">Call next for</label>
+                <select id="receptionCallNextDoctorId" class="w-[230px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-[0.75rem] text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                    <option value="">Auto (any active doctor)</option>
+                    @foreach ($doctorPanelItems as $doctorState)
+                        <option value="{{ $doctorState->doctor_id }}">
+                            Dr. {{ $doctorState->doctor_name }}
+                            @if ($doctorState->slot_start && $doctorState->slot_end)
+                                ({{ substr((string) $doctorState->slot_start, 0, 5) }}-{{ substr((string) $doctorState->slot_end, 0, 5) }})
+                            @endif
+                        </option>
+                    @endforeach
+                </select>
+            </div>
             <button id="receptionCallNextButton" type="button" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-[0.8rem] font-semibold hover:bg-slate-800 transition-colors disabled:opacity-70 disabled:hover:bg-slate-900 min-w-[122px] relative">
                 <span id="receptionCallNextSpinner" class="hidden absolute w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
                 <span id="receptionCallNextContent" class="inline-flex items-center gap-2">
                     <x-lucide-megaphone class="w-[18px] h-[18px]" />
-                    Call next
+                    Call selected
                 </span>
             </button>
             <button id="receptionRefreshQueueButton" type="button" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-[0.8rem] font-semibold hover:bg-slate-200 transition-colors border border-slate-200">
@@ -66,6 +123,73 @@
         <div id="receptionQueueError" class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[0.75rem] text-red-700"></div>
         <div id="receptionQueueSuccess" class="hidden mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[0.75rem] text-emerald-700"></div>
 
+        <div class="mb-4 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+            <div class="flex items-center justify-between mb-2">
+                <h4 class="text-[0.72rem] font-semibold uppercase tracking-wider text-slate-600">Doctor serving monitor</h4>
+                <span class="text-[0.68rem] text-slate-400">Based on today&apos;s active schedule</span>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                @forelse ($doctorPanelItems as $doctorState)
+                    @php
+                        $servingQueue = $doctorState->serving;
+                        $nextQueue = $doctorState->next_waiting;
+                        $servingPatient = optional(optional($servingQueue)->appointment?->patient)->personalInformation->full_name ?? null;
+                        $nextPatient = optional(optional($nextQueue)->appointment?->patient)->personalInformation->full_name ?? null;
+                        $servingServices = collect(optional(optional($servingQueue)->appointment)->services ?? [])->pluck('service_name')->filter()->values();
+                        $nextServices = collect(optional(optional($nextQueue)->appointment)->services ?? [])->pluck('service_name')->filter()->values();
+                    @endphp
+                    <div class="rounded-lg border border-slate-200 bg-white px-3 py-2.5">
+                        <div class="flex items-start justify-between gap-2">
+                            <div>
+                                <div class="text-[0.75rem] font-semibold text-slate-800">Doctor: {{ $doctorState->doctor_name }}</div>
+                                <div class="text-[0.68rem] text-slate-400">
+                                    @if ($doctorState->slot_start && $doctorState->slot_end)
+                                        {{ substr((string) $doctorState->slot_start, 0, 5) }}-{{ substr((string) $doctorState->slot_end, 0, 5) }}
+                                    @else
+                                        Schedule today
+                                    @endif
+                                    @if ($doctorState->room_number)
+                                        - Room {{ (int) $doctorState->room_number }}
+                                    @endif
+                                </div>
+                            </div>
+                            @if ($servingQueue)
+                                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[0.65rem] font-semibold border border-emerald-200 bg-emerald-50 text-emerald-700">Serving</span>
+                            @else
+                                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[0.65rem] font-semibold border border-amber-200 bg-amber-50 text-amber-700">No serving patient</span>
+                            @endif
+                        </div>
+                        <div class="mt-2 text-[0.72rem] text-slate-600">
+                            @if ($servingQueue)
+                                <span class="font-medium text-slate-700">Serving:</span>
+                                {{ $servingPatient ?: 'Patient' }}
+                                @if ($servingServices->count())
+                                    - {{ $servingServices->join(', ') }}
+                                @endif
+                            @else
+                                <span class="text-slate-500">Serving: none</span>
+                            @endif
+                        </div>
+                        <div class="mt-1 text-[0.72rem] text-slate-500">
+                            @if ($nextQueue)
+                                <span class="font-medium text-slate-700">Next:</span>
+                                {{ $nextPatient ?: 'Patient' }}
+                                @if ($nextServices->count())
+                                    - {{ $nextServices->join(', ') }}
+                                @endif
+                            @else
+                                <span>No waiting patient for this doctor.</span>
+                            @endif
+                        </div>
+                    </div>
+                @empty
+                    <div class="col-span-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-[0.75rem] text-slate-500">
+                        No active doctor schedule found for this time.
+                    </div>
+                @endforelse
+            </div>
+        </div>
+
         <div class="mb-3 flex flex-col gap-2 md:flex-row md:items-end">
             <div class="flex-1">
                 <label for="reception_queue_search" class="block text-[0.7rem] text-slate-600 mb-1">Search queue</label>
@@ -88,6 +212,7 @@
                         <th class="py-2 pr-4 font-semibold">Queue #</th>
                         <th class="py-2 pr-4 font-semibold">Patient</th>
                         <th class="py-2 pr-4 font-semibold">Doctor</th>
+                        <th class="py-2 pr-4 font-semibold">Services</th>
                         <th class="py-2 pr-4 font-semibold">Priority</th>
                         <th class="py-2 pr-4 font-semibold">Date</th>
                         <th class="py-2 pr-4 font-semibold">Status</th>
@@ -95,7 +220,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse ($queueItems as $queue)
+                    @forelse ($tableQueueItems as $queue)
                         @php
                             $patientName = optional(optional($queue->appointment)->patient)->personalInformation->full_name ?? '';
                             $doctorName = optional(optional($queue->appointment)->doctor)->personalInformation->full_name ?? '';
@@ -103,7 +228,9 @@
                             $dateKey = $queue->queue_datetime ? $queue->queue_datetime->format('Y-m-d H:i') : '';
                             $queueId = $queue->queue_id ?? null;
                             $priority = (int) ($queue->priority_level ?? 5);
-                            $waitMinutes = $queue->queue_datetime ? $queue->queue_datetime->diffInMinutes(now()) : 0;
+                            $serviceNames = collect(optional(optional($queue)->appointment)->services ?? [])->pluck('service_name')->filter()->values();
+                            $serviceCount = $serviceNames->count();
+                            $servicePrimary = $serviceCount ? $serviceNames->first() : null;
                         @endphp
                         <tr class="border-b border-slate-50 last:border-0 reception-queue-row"
                             data-queue-number="{{ $queue->queue_number }}"
@@ -131,6 +258,24 @@
                                     <span class="text-[0.7rem] text-slate-400">Doctor</span>
                                 @endif
                             </td>
+                            <td class="py-2 pr-4 text-[0.78rem] text-slate-500">
+                                @if ($serviceCount > 0)
+                                    <div class="inline-flex items-center gap-1">
+                                        <span>{{ $servicePrimary }}</span>
+                                        @if ($serviceCount > 1)
+                                            <button type="button"
+                                                class="inline-flex items-center rounded-lg border border-slate-200 px-2 py-0.5 text-[0.65rem] text-slate-600 hover:bg-slate-50 reception-service-overlay-trigger"
+                                                data-services='@json($serviceNames->values()->all())'
+                                                data-patient="{{ $patientName ?: 'Patient' }}"
+                                                data-queue-label="{{ $queue->queue_code ?? $queue->queue_number }}">
+                                                +{{ $serviceCount - 1 }} more
+                                            </button>
+                                        @endif
+                                    </div>
+                                @else
+                                    <span class="text-[0.7rem] text-slate-400">No service</span>
+                                @endif
+                            </td>
                             <td class="py-2 pr-4 text-[0.78rem] text-slate-500">{{ $priority }}</td>
                             <td class="py-2 pr-4 text-[0.78rem] text-slate-500">
                                 {{ $dateKey }}
@@ -155,12 +300,10 @@
                                                     <x-lucide-play class="w-[16px] h-[16px]" />
                                                     Serving
                                                 </button>
-                                                @if (strtolower($statusName) === 'waiting' && $waitMinutes >= 5)
-                                                    <button type="button" class="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2 py-1 text-[0.7rem] text-rose-700 hover:bg-rose-50 reception-queue-status" data-queue-id="{{ $queueId }}" data-status="no_show">
-                                                        <x-lucide-user-x class="w-[16px] h-[16px]" />
-                                                        No show
-                                                    </button>
-                                                @endif
+                                                <button type="button" class="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2 py-1 text-[0.7rem] text-rose-700 hover:bg-rose-50 reception-queue-status" data-queue-id="{{ $queueId }}" data-status="no_show">
+                                                    <x-lucide-user-x class="w-[16px] h-[16px]" />
+                                                    No show
+                                                </button>
                                             @else
                                                 <button type="button" class="inline-flex items-center gap-1 rounded-lg border border-emerald-200 px-2 py-1 text-[0.7rem] text-emerald-700 hover:bg-emerald-50 reception-queue-status" data-queue-id="{{ $queueId }}" data-status="done">
                                                     <x-lucide-check class="w-[16px] h-[16px]" />
@@ -190,7 +333,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="py-4 text-center text-[0.78rem] text-slate-400">
+                            <td colspan="8" class="py-4 text-center text-[0.78rem] text-slate-400">
                                 No queue entries for today.
                             </td>
                         </tr>
@@ -349,6 +492,16 @@
     </div>
 </div>
 
+<div id="receptionServiceOverlayBackdrop" class="hidden fixed inset-0 z-[65] bg-slate-900/20">
+    <div id="receptionServiceOverlayPanel" class="absolute hidden w-[320px] max-w-[calc(100vw-1.5rem)] rounded-xl border border-slate-200 bg-white shadow-[0_16px_40px_rgba(15,23,42,0.18)]">
+        <div class="px-3 py-2.5 border-b border-slate-100">
+            <div id="receptionServiceOverlayTitle" class="text-[0.75rem] font-semibold text-slate-800">Services</div>
+            <div id="receptionServiceOverlayMeta" class="text-[0.68rem] text-slate-500 mt-0.5"></div>
+        </div>
+        <div id="receptionServiceOverlayBody" class="px-3 py-2.5 max-h-56 overflow-y-auto text-[0.75rem] text-slate-700"></div>
+    </div>
+</div>
+
 <div id="receptionConfirmOverlay" class="hidden fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-[0_20px_80px_rgba(15,23,42,0.35)]">
         <div class="px-5 py-4 border-b border-slate-100">
@@ -398,6 +551,13 @@
         var configMoveDown = document.getElementById('receptionQueueConfigMoveDown')
         var configSave = document.getElementById('receptionQueueConfigSave')
         var configQueueId = null
+        var callNextDoctorSelect = document.getElementById('receptionCallNextDoctorId')
+
+        var serviceOverlayBackdrop = document.getElementById('receptionServiceOverlayBackdrop')
+        var serviceOverlayPanel = document.getElementById('receptionServiceOverlayPanel')
+        var serviceOverlayTitle = document.getElementById('receptionServiceOverlayTitle')
+        var serviceOverlayMeta = document.getElementById('receptionServiceOverlayMeta')
+        var serviceOverlayBody = document.getElementById('receptionServiceOverlayBody')
 
         function confirmAction(title, message) {
             return new Promise(function (resolve) {
@@ -506,6 +666,37 @@
 
         function normalizeText(value) {
             return String(value == null ? '' : value).toLowerCase().replace(/\s+/g, ' ').trim()
+        }
+
+        function closeServiceOverlay() {
+            if (serviceOverlayBackdrop) serviceOverlayBackdrop.classList.add('hidden')
+            if (serviceOverlayPanel) serviceOverlayPanel.classList.add('hidden')
+        }
+
+        function openServiceOverlay(trigger, title, meta, services) {
+            if (!serviceOverlayBackdrop || !serviceOverlayPanel || !serviceOverlayBody) return
+            var list = Array.isArray(services) ? services : []
+            serviceOverlayTitle.textContent = title || 'Services'
+            serviceOverlayMeta.textContent = meta || ''
+            serviceOverlayBody.innerHTML = list.length
+                ? ('<ul class="space-y-1.5">' + list.map(function (item) {
+                    return '<li class="rounded-lg bg-slate-50 border border-slate-100 px-2.5 py-1.5">' + escapeHtml(item) + '</li>'
+                }).join('') + '</ul>')
+                : '<div class="text-slate-500">No services listed.</div>'
+
+            serviceOverlayBackdrop.classList.remove('hidden')
+            serviceOverlayPanel.classList.remove('hidden')
+
+            var rect = trigger && trigger.getBoundingClientRect ? trigger.getBoundingClientRect() : null
+            var panelWidth = 320
+            var left = 16
+            var top = 16
+            if (rect) {
+                left = Math.max(12, Math.min((window.innerWidth || 0) - panelWidth - 12, rect.left))
+                top = rect.bottom + 8
+            }
+            serviceOverlayPanel.style.left = String(Math.max(12, left)) + 'px'
+            serviceOverlayPanel.style.top = String(Math.max(12, top)) + 'px'
         }
 
         function localDateIso() {
@@ -664,6 +855,31 @@
             }
         })
 
+        if (serviceOverlayBackdrop) {
+            serviceOverlayBackdrop.addEventListener('click', function (e) {
+                if (e.target === serviceOverlayBackdrop) closeServiceOverlay()
+            })
+        }
+        document.querySelectorAll('.reception-service-overlay-trigger').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var raw = button.getAttribute('data-services') || '[]'
+                var services = []
+                try {
+                    services = JSON.parse(raw)
+                } catch (_) {
+                    services = []
+                }
+                var patient = button.getAttribute('data-patient') || 'Patient'
+                var queueLabel = button.getAttribute('data-queue-label') || ''
+                openServiceOverlay(
+                    button,
+                    'Service inquiries',
+                    queueLabel ? (patient + ' - Queue #' + queueLabel) : patient,
+                    services
+                )
+            })
+        })
+
         function applyReceptionQueueFilters() {
             var query = searchInput ? normalizeText(searchInput.value) : ''
 
@@ -715,9 +931,9 @@
                 function statusRank(s) {
                     if (s === 'serving') return 0
                     if (s === 'waiting') return 1
-                    if (s === 'no_show') return 2
-                    if (s === 'done') return 3
-                    if (s === 'cancelled') return 4
+                    if (s === 'done') return 2
+                    if (s === 'cancelled') return 3
+                    if (s === 'no_show') return 4
                     return 5
                 }
                 var ra = statusRank(sa)
@@ -892,7 +1108,10 @@
         }
 
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') closeQueueConfig()
+            if (e.key === 'Escape') {
+                closeQueueConfig()
+                closeServiceOverlay()
+            }
         })
 
         document.querySelectorAll('.reception-queue-remove').forEach(function (button) {
@@ -1013,8 +1232,20 @@
                     return
                 }
 
+                var selectedDoctorId = callNextDoctorSelect ? String(callNextDoctorSelect.value || '').trim() : ''
+                var payload = {}
+                if (selectedDoctorId) {
+                    payload.doctor_id = parseInt(selectedDoctorId, 10)
+                }
+
                 setCallNextSubmitting(true)
-                apiFetch("{{ url('/api/queues/call-next') }}", { method: 'POST' })
+                apiFetch("{{ url('/api/queues/call-next') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                })
                     .then(function (response) {
                         return response.json().then(function (data) {
                             return { ok: response.ok, status: response.status, data: data }
@@ -1033,7 +1264,7 @@
                             return
                         }
 
-                        showQueueSuccess('Next patient is now serving.')
+                        showQueueSuccess(selectedDoctorId ? 'Next patient for selected doctor is now serving.' : 'Next patient is now serving.')
                         window.location.reload()
                     })
                     .catch(function () {

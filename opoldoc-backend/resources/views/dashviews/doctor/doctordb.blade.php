@@ -104,7 +104,7 @@
                 <div class="mt-5 border border-slate-100 rounded-xl bg-slate-50 overflow-hidden">
                     <div class="h-[12rem] overflow-y-auto overflow-x-hidden scrollbar-hidden">
                     <table class="min-w-full text-left text-xs text-slate-600">
-                        <thead>
+                        <thead class="sticky top-0 z-10 bg-slate-50">
                             <tr class="border-b border-slate-100 text-[0.68rem] uppercase tracking-widest text-slate-400">
                                 <th class="py-2 px-3 font-semibold">Time</th>
                                 <th class="py-2 px-3 font-semibold">Patient</th>
@@ -277,7 +277,7 @@
     <div class="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-white to-slate-50/50">
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-2.5">
-                <div class="w-8 h-8 rounded-xl bg-cyan-50 border border-cyan-100 flex items-center justify-center text-cyan-600">
+                <div class="w-8 h-8 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-600">
                     <x-lucide-list class="w-4 h-4" />
                 </div>
                 <div>

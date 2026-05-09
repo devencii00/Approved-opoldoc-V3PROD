@@ -26,7 +26,6 @@ export default function FirstLoginScreen() {
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -47,20 +46,11 @@ export default function FirstLoginScreen() {
       }),
     ]).start();
 
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.08,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
+    const user = (globalThis as any)?.currentUser as any | undefined;
+    const role = String(user?.role ?? '').toLowerCase().trim();
+    if (role && role !== 'patient') {
+      router.replace('/screenviews/aut-landing/staff-account-only');
+    }
   }, []);
 
   async function handleSetPassword() {
@@ -163,23 +153,6 @@ export default function FirstLoginScreen() {
           <Text style={styles.subtitle}>Change your temporary password to continue</Text>
         </Animated.View>
 
-        <Animated.View
-          style={[
-            styles.logoWrapper,
-            { opacity: fadeAnim, transform: [{ scale: pulseAnim }] },
-          ]}
-        >
-          <View style={styles.logoPulseRing}>
-            <View style={styles.logoRing}>
-              <Image
-                source={require('../../../assets/images/docfiles/opoldoc.png')}
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
-            </View>
-          </View>
-        </Animated.View>
-
         <Animated.View style={[styles.form, { opacity: fadeAnim }]}>
           <TextInput
             placeholder="New password"
@@ -231,6 +204,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 28,
     alignItems: 'center',
+    justifyContent: 'center', // This centers content vertically
   },
   circleTopRight: {
     position: 'absolute',
@@ -284,34 +258,10 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
   },
-  logoWrapper: {
-    marginVertical: 28,
-  },
-  logoPulseRing: {
-    width: 168,
-    height: 168,
-    borderRadius: 84,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoRing: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoImage: {
-    width: 100,
-    height: 100,
-  },
   form: {
     width: '100%',
     gap: 14,
+    marginTop: 32, // Added some spacing after removing the logo
   },
   input: {
     borderRadius: 14,

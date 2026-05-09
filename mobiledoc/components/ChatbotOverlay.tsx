@@ -29,7 +29,10 @@ type ChatMessage = {
 export default function ChatbotOverlay() {
   const insets = useSafeAreaInsets();
   const segments = useSegments();
-  const isTabsRoute = segments.includes('(tabs)');
+  const isTabsRoute = (segments as string[]).includes('(tabs)');
+  const isFirstLoginRoute = (segments as string[]).includes('aut-landing') && (segments as string[]).includes('first-login');
+
+
 
   const [chatOpen, setChatOpen] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
@@ -107,9 +110,11 @@ export default function ChatbotOverlay() {
     const responseText = String(option.response_text ?? '').trim();
     setMessages((prev) => [
       ...prev,
-      { id: `user-${option.option_id}-${Date.now()}`, from: 'user', text: optionText || 'Selected option' },
-      ...(responseText ? [{ id: `bot-r-${option.option_id}-${Date.now()}`, from: 'bot', text: responseText }] : []),
+      { id: `user-${option.option_id}-${Date.now()}`, from: 'user' as const, text: optionText || 'Selected option' },
+      ...(responseText ? [{ id: `bot-r-${option.option_id}-${Date.now()}`, from: 'bot' as const, text: responseText }] : []),
     ]);
+
+
 
     const nextId = option.next_question_id != null ? Number(option.next_question_id) : null;
     if (nextId != null && questionsById.has(nextId)) {
@@ -153,9 +158,12 @@ export default function ChatbotOverlay() {
   }, [messages, chatOpen]);
 
   const fabBottom = insets.bottom + (isTabsRoute ? 72 : 18);
+  const hideOverlay = isFirstLoginRoute;
 
   return (
     <>
+      {hideOverlay ? null : (
+      <>
       <Pressable
         onPress={() => setChatOpen(true)}
         style={({ pressed }) => [styles.fab, { bottom: fabBottom }, pressed && { opacity: 0.85 }]}
@@ -247,6 +255,8 @@ export default function ChatbotOverlay() {
           )}
         </View>
       </Modal>
+      </>
+      )}
     </>
   );
 }

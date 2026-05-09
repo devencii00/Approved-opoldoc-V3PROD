@@ -281,6 +281,27 @@ class QueueController extends Controller
             abort(403);
         }
 
+        $data = $request->validate([
+            'doctor_id' => ['nullable', 'integer', 'exists:users,user_id'],
+        ]);
+
+        $selectedDoctorId = array_key_exists('doctor_id', $data) && $data['doctor_id'] !== null
+            ? (int) $data['doctor_id']
+            : null;
+
+        if ($selectedDoctorId) {
+            $isDoctor = User::query()
+                ->where('user_id', $selectedDoctorId)
+                ->where('role', 'doctor')
+                ->exists();
+            if (! $isDoctor) {
+                return response()->json([
+                    'message' => 'Selected doctor is invalid.',
+                    'code' => 'INVALID_DOCTOR',
+                ], 422);
+            }
+        }
+
         $now = now();
         $date = $now->toDateString();
         $dayKey = strtolower($now->format('D'));
@@ -316,6 +337,16 @@ class QueueController extends Controller
             ], 422);
         }
 
+        if ($selectedDoctorId) {
+            $selectedDoctorIsActive = in_array($selectedDoctorId, $activeDoctorIds, true);
+            if (! $selectedDoctorIsActive) {
+                return response()->json([
+                    'message' => 'Selected doctor is not in an active schedule right now.',
+                    'code' => 'DOCTOR_NOT_ACTIVE',
+                ], 422);
+            }
+        }
+
         $servingDoctorIds = Queue::query()
             ->with('appointment')
             ->whereDate('queue_datetime', $date)
@@ -345,11 +376,21 @@ class QueueController extends Controller
         }
 
         $availableDoctorIds = array_values(array_diff($activeDoctorIds, $servingDoctorIds));
-        if (! count($availableDoctorIds)) {
+        if (! $selectedDoctorId && ! count($availableDoctorIds)) {
             return response()->json([
                 'message' => 'No serving slots are currently available.',
                 'code' => 'NO_AVAILABLE_SLOTS',
             ], 422);
+        }
+
+        if ($selectedDoctorId) {
+            if (in_array($selectedDoctorId, $servingDoctorIds, true)) {
+                return response()->json([
+                    'message' => 'Selected doctor is still serving a patient.',
+                    'code' => 'DOCTOR_SLOT_OCCUPIED',
+                ], 422);
+            }
+            $availableDoctorIds = [$selectedDoctorId];
         }
 
         $weight = Queue::waitScoreWeight();
@@ -392,15 +433,31 @@ class QueueController extends Controller
                     $q->whereIn('doctor_id', $activeDoctorIds);
                 })
                 ->count();
+            $waitingForSelectedDoctor = null;
+            if ($selectedDoctorId) {
+                $waitingForSelectedDoctor = Queue::query()
+                    ->whereDate('queue_datetime', $date)
+                    ->where('status', 'waiting')
+                    ->whereHas('appointment', function ($q) use ($selectedDoctorId) {
+                        $q->where('doctor_id', $selectedDoctorId);
+                    })
+                    ->count();
+            }
             return response()->json([
-                'message' => $waitingForActiveDoctors > 0
-                    ? 'Waiting patients exist, but all active serving slots are currently occupied.'
-                    : 'No waiting patients are eligible to be called right now.',
-                'code' => 'NO_ELIGIBLE_WAITING',
+                'message' => $selectedDoctorId
+                    ? (($waitingForSelectedDoctor ?? 0) > 0
+                        ? 'Selected doctor has waiting patients but is not available for call-next yet.'
+                        : 'No waiting patients are queued for the selected doctor right now.')
+                    : ($waitingForActiveDoctors > 0
+                        ? 'Waiting patients exist, but all active serving slots are currently occupied.'
+                        : 'No waiting patients are eligible to be called right now.'),
+                'code' => $selectedDoctorId ? 'NO_WAITING_FOR_SELECTED_DOCTOR' : 'NO_ELIGIBLE_WAITING',
                 'meta' => [
                     'capacity' => $capacity,
                     'occupied' => $occupied,
                     'waiting_for_active_doctors' => $waitingForActiveDoctors,
+                    'waiting_for_selected_doctor' => $waitingForSelectedDoctor,
+                    'selected_doctor_id' => $selectedDoctorId,
                 ],
             ], 422);
         }
@@ -409,6 +466,7 @@ class QueueController extends Controller
             'queue' => $next,
             'meta' => [
                 'capacity' => $capacity,
+                'selected_doctor_id' => $selectedDoctorId,
             ],
         ]);
     }

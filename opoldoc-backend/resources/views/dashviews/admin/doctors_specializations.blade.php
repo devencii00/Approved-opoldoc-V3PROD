@@ -257,7 +257,10 @@
                         <datalist id="adminDoctorSpecializationList">
                             <option value="Pediatrics"></option>
                             <option value="General Medicine"></option>
-                            <option value="Surgeon"></option>
+                            <option value="General Surgeon"></option>
+                            <option value="obstetrician - gynecologist"></option>
+                        
+
                         </datalist>
                     </div>
                     <div>

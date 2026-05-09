@@ -73,8 +73,9 @@
                 <div class="flex items-center justify-between pt-1">
                     <p class="text-[0.68rem] text-slate-400"></p>
                     <button type="button" id="reception_prof_path_save" class="inline-flex items-center gap-1 rounded-xl border border-cyan-500/40 bg-cyan-50 px-3 py-1.5 text-[0.72rem] font-semibold text-cyan-700 hover:bg-cyan-100">
-                        <x-lucide-save class="w-[16px] h-[16px]" />
-                        Save picture
+                        <span id="receptionProfPathSaveSpinner" class="hidden w-3.5 h-3.5 border-2 border-cyan-700/30 border-t-cyan-700 rounded-full animate-spin"></span>
+                        <x-lucide-save id="receptionProfPathSaveIcon" class="w-[16px] h-[16px]" />
+                        <span id="receptionProfPathSaveLabel">Save picture</span>
                     </button>
                 </div>
             </form>
@@ -155,6 +156,9 @@
         var profPathFile = document.getElementById('reception_prof_path_file')
         var profPathPreview = document.getElementById('reception_prof_path_preview')
         var profPathSave = document.getElementById('reception_prof_path_save')
+        var profPathSaveSpinner = document.getElementById('receptionProfPathSaveSpinner')
+        var profPathSaveIcon = document.getElementById('receptionProfPathSaveIcon')
+        var profPathSaveLabel = document.getElementById('receptionProfPathSaveLabel')
 
         var currentPassword = document.getElementById('reception_current_password')
         var newPassword = document.getElementById('reception_new_password')
@@ -231,12 +235,36 @@
                     if (profileContact) profileContact.value = result.data.contact_number || ''
 
                     var profUrl = result.data.prof_path_url ? String(result.data.prof_path_url) : ''
-                    if (profPathPreview && profUrl) {
-                        profPathPreview.innerHTML = '<img alt="Profile Picture" src="' + profUrl + '" class="max-h-20 max-w-full object-contain rounded-lg">'
-                        profPathPreview.classList.remove('text-slate-400')
-                    }
+                    renderImagePreview(profPathPreview, profUrl, 'Profile Picture', 'No picture uploaded yet.', true)
                 })
                 .catch(function () {})
+        }
+
+        function cacheBustedUrl(url) {
+            var raw = String(url || '').trim()
+            if (!raw) return ''
+            return raw + (raw.indexOf('?') === -1 ? '?v=' : '&v=') + String(Date.now())
+        }
+
+        function renderImagePreview(container, imageUrl, altText, emptyText, rounded) {
+            if (!container) return
+            var normalized = String(imageUrl || '').trim()
+            if (!normalized) {
+                container.textContent = emptyText || 'No image uploaded yet.'
+                container.classList.add('text-slate-400')
+                return
+            }
+            var src = cacheBustedUrl(normalized)
+            container.innerHTML = '<img alt="' + String(altText || 'Image') + '" src="' + src + '" class="max-h-20 max-w-full object-contain' + (rounded ? ' rounded-lg' : '') + '">'
+            container.classList.remove('text-slate-400')
+            container.classList.add('text-slate-700')
+        }
+
+        function setUploadButtonState(button, spinner, icon, labelNode, busy, busyLabel, idleLabel) {
+            if (button) button.disabled = !!busy
+            if (spinner) spinner.classList.toggle('hidden', !busy)
+            if (icon) icon.classList.toggle('hidden', !!busy)
+            if (labelNode) labelNode.textContent = busy ? busyLabel : idleLabel
         }
 
         function saveProfile() {
@@ -377,6 +405,13 @@
         }
 
         if (profPathSave) {
+            if (profPathFile) {
+                profPathFile.addEventListener('change', function () {
+                    if (!profPathFile.files || !profPathFile.files.length) return
+                    var localUrl = URL.createObjectURL(profPathFile.files[0])
+                    renderImagePreview(profPathPreview, localUrl, 'Profile Picture', 'No picture uploaded yet.', true)
+                })
+            }
             profPathSave.addEventListener('click', function () {
                 if (!profPathFile || !profPathFile.files || profPathFile.files.length === 0) {
                     window.alert('Please choose a profile picture first.')
@@ -391,7 +426,7 @@
                 var formData = new FormData()
                 formData.append('prof_path', file)
 
-                profPathSave.disabled = true
+                setUploadButtonState(profPathSave, profPathSaveSpinner, profPathSaveIcon, profPathSaveLabel, true, 'Saving...', 'Save picture')
 
                 apiFetch(apiUrl('/api/users/me/profile-picture'), {
                     method: 'POST',
@@ -408,26 +443,20 @@
                         if (!result.ok) {
                             var msg = (result.data && result.data.message) ? String(result.data.message) : 'Unable to upload profile picture.'
                             window.alert(msg)
+                            loadReceptionSettings()
                             return
                         }
                         var url = result.data && result.data.prof_path_url ? String(result.data.prof_path_url) : ''
-                        if (profPathPreview) {
-                            if (url) {
-                                profPathPreview.innerHTML = '<img alt="Profile Picture" src="' + url + '" class="max-h-20 max-w-full object-contain rounded-lg">'
-                                profPathPreview.classList.remove('text-slate-400')
-                            } else {
-                                profPathPreview.textContent = 'Picture uploaded'
-                                profPathPreview.classList.remove('text-slate-400')
-                                profPathPreview.classList.add('text-slate-700')
-                            }
-                        }
+                        renderImagePreview(profPathPreview, url, 'Profile Picture', 'No picture uploaded yet.', true)
+                        loadReceptionSettings()
                         if (profPathFile) profPathFile.value = ''
                     })
                     .catch(function () {
                         window.alert('Network error while uploading picture.')
+                        loadReceptionSettings()
                     })
                     .finally(function () {
-                        profPathSave.disabled = false
+                        setUploadButtonState(profPathSave, profPathSaveSpinner, profPathSaveIcon, profPathSaveLabel, false, 'Saving...', 'Save picture')
                     })
             })
         }

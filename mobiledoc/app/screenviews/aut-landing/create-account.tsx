@@ -67,8 +67,16 @@ export default function CreateAccountScreen() {
   }, []);
 
   async function handleRegister() {
-    if (!email || !password || !confirmPassword) {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!normalizedEmail || !password || !confirmPassword) {
       setError('Please fill in all fields.');
+      return;
+    }
+
+    if (!emailPattern.test(normalizedEmail)) {
+      setError('Please enter a valid email address.');
       return;
     }
 
@@ -94,7 +102,7 @@ export default function CreateAccountScreen() {
           Accept: 'application/json',
         },
         body: JSON.stringify({
-          email,
+          email: normalizedEmail,
           password,
           password_confirmation: confirmPassword,
         }),
@@ -119,7 +127,7 @@ export default function CreateAccountScreen() {
           Accept: 'application/json',
         },
         body: JSON.stringify({
-          email,
+          email: normalizedEmail,
           password,
           device_name: 'mobiledoc',
         }),
@@ -132,8 +140,19 @@ export default function CreateAccountScreen() {
         loginData = {};
       }
 
-    (globalThis as any).apiToken = loginData.token;
-     (globalThis as any).currentUser = loginData.user;
+      if (!loginResponse.ok) {
+        setError(loginData?.message || 'Account created but auto-login failed. Please login manually.');
+        return;
+      }
+
+      (globalThis as any).apiToken = loginData.token;
+      (globalThis as any).currentUser = loginData.user;
+
+      const role = String(loginData?.user?.role ?? '').toLowerCase().trim();
+      if (role && role !== 'patient') {
+        router.replace('/screenviews/aut-landing/staff-account-only');
+        return;
+      }
 
       setSuccess('Account created successfully.');
       await new Promise((resolve) => setTimeout(resolve, 900));

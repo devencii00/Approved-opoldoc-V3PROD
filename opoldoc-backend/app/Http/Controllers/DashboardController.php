@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
+use App\Models\DoctorSchedule;
 use App\Models\LogEntry;
 use App\Models\Notification;
 use App\Models\PatientVerification;
@@ -392,11 +393,44 @@ class DashboardController extends Controller
                 ->where('payment_status', 'paid')
                 ->sum('amount');
 
-            $receptionQueue = Queue::with(['appointment.patient', 'appointment.doctor'])
+            $receptionQueue = Queue::with([
+                    'appointment.patient.personalInformation',
+                    'appointment.doctor.personalInformation',
+                    'appointment.services',
+                ])
                 ->whereDate('queue_datetime', $today)
                 ->orderBy('priority_level')
                 ->orderBy('queue_number')
                 ->get();
+
+            $now = now();
+            $dayKey = strtolower($now->format('D'));
+            $time = $now->format('H:i:s');
+
+            $todayDoctorSchedules = DoctorSchedule::query()
+                ->with(['doctor.personalInformation'])
+                ->where('day_of_week', $dayKey)
+                ->where('is_available', true)
+                ->orderBy('start_time')
+                ->get();
+
+            $activeDoctorSchedules = $todayDoctorSchedules
+                ->filter(function (DoctorSchedule $schedule) use ($time) {
+                    return $schedule->start_time <= $time && $schedule->end_time >= $time;
+                })
+                ->values();
+
+            if ($activeDoctorSchedules->isEmpty()) {
+                $activeDoctorSchedules = $todayDoctorSchedules->values();
+            }
+
+            $receptionDoctorSlots = $activeDoctorSchedules
+                ->groupBy('doctor_id')
+                ->map(function ($group) {
+                    return $group->sortBy('start_time')->first();
+                })
+                ->filter()
+                ->values();
 
             $receptionAppointments = Appointment::with(['patient', 'doctor'])
                 ->whereDate('appointment_datetime', $today)
@@ -415,6 +449,7 @@ class DashboardController extends Controller
 
             $data['receptionQueue'] = $receptionQueue;
             $data['receptionAppointments'] = $receptionAppointments;
+            $data['receptionDoctorSlots'] = $receptionDoctorSlots;
         } elseif ($role === 'patient') {
             $data['patientDashboard'] = true;
         }

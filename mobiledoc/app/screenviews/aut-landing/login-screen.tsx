@@ -100,8 +100,14 @@ export default function LoginScreen() {
         return;
       }
 
-     (globalThis as any).apiToken = data.token;
-(globalThis as any).currentUser = data.user;
+      (globalThis as any).apiToken = data.token;
+      (globalThis as any).currentUser = data.user;
+
+      const role = String(data?.user?.role ?? '').toLowerCase().trim();
+      if (role && role !== 'patient') {
+        router.replace('/screenviews/aut-landing/staff-account-only');
+        return;
+      }
 
 
       if (data?.user?.is_first_login) {

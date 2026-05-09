@@ -236,6 +236,13 @@ class PublicGuestWalkInController extends Controller
         $time = $now->format('H:i:s');
         $dayKey = strtolower($now->format('D'));
 
+        if ($dayKey === 'sun') {
+            return [
+                'is_open' => false,
+                'message' => 'Clinic is closed during sunday, come back tommorrow',
+            ];
+        }
+
         $isClinicHours = $time >= '08:00:00' && $time < '17:00:00';
         if (! $isClinicHours) {
             return [
