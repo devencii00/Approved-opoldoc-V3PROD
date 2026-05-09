@@ -104,8 +104,8 @@ export default function TabsLayout() {
     const responseText = String(option.response_text ?? '').trim();
     setMessages((prev) => [
       ...prev,
-      { id: `user-${option.option_id}-${Date.now()}`, from: 'user', text: optionText || 'Selected option' },
-      ...(responseText ? [{ id: `bot-r-${option.option_id}-${Date.now()}`, from: 'bot', text: responseText }] : []),
+      { id: `user-${option.option_id}-${Date.now()}`, from: 'user' as const, text: optionText || 'Selected option' },
+      ...(responseText ? [{ id: `bot-r-${option.option_id}-${Date.now()}`, from: 'bot' as const, text: responseText }] : []),
     ]);
 
     const nextId = option.next_question_id != null ? Number(option.next_question_id) : null;

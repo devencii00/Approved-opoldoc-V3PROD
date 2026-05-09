@@ -12,6 +12,12 @@
             <label for="doctor_visit_search" class="block text-[0.7rem] text-slate-600 mb-1">Search visits</label>
             <input id="doctor_visit_search" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Patient name, ID or diagnosis">
         </div>
+        <div class="w-full md:w-auto">
+            <label class="block text-[0.7rem] text-slate-600 mb-1">Quick filter</label>
+            <button id="doctor_visit_today_toggle" type="button" class="w-full md:w-auto inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+                Today
+            </button>
+        </div>
         <div class="w-full md:w-40">
             <label for="doctor_visit_sort" class="block text-[0.7rem] text-slate-600 mb-1">Sort</label>
             <select id="doctor_visit_sort" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
@@ -90,15 +96,39 @@
     document.addEventListener('DOMContentLoaded', function () {
         var searchInput = document.getElementById('doctor_visit_search')
         var sortSelect = document.getElementById('doctor_visit_sort')
+        var todayToggle = document.getElementById('doctor_visit_today_toggle')
         var rows = Array.prototype.slice.call(document.querySelectorAll('.doctor-visit-row'))
+        var todayOnly = false
+
+        function localDateIso() {
+            var now = new Date()
+            var y = now.getFullYear()
+            var m = String(now.getMonth() + 1).padStart(2, '0')
+            var d = String(now.getDate()).padStart(2, '0')
+            return y + '-' + m + '-' + d
+        }
+
+        function applyTodayToggleUi() {
+            if (!todayToggle) return
+            todayToggle.classList.toggle('bg-cyan-600', todayOnly)
+            todayToggle.classList.toggle('text-white', todayOnly)
+            todayToggle.classList.toggle('border-cyan-600', todayOnly)
+            todayToggle.classList.toggle('hover:bg-cyan-700', todayOnly)
+            todayToggle.classList.toggle('bg-white', !todayOnly)
+            todayToggle.classList.toggle('text-slate-700', !todayOnly)
+            todayToggle.classList.toggle('border-slate-200', !todayOnly)
+            todayToggle.classList.toggle('hover:bg-slate-50', !todayOnly)
+        }
 
         function applyDoctorVisitFilters() {
             var query = searchInput ? searchInput.value.toLowerCase().trim() : ''
+            var todayKey = localDateIso()
 
             rows.forEach(function (row) {
                 var id = row.getAttribute('data-visit-id') || ''
                 var patient = row.getAttribute('data-patient') || ''
                 var diagnosis = row.getAttribute('data-diagnosis') || ''
+                var date = row.getAttribute('data-date') || ''
 
                 var matches = true
                 if (query) {
@@ -106,6 +136,10 @@
                         ('#' + id).indexOf(query) !== -1 ||
                         patient.indexOf(query) !== -1 ||
                         diagnosis.indexOf(query) !== -1
+                }
+
+                if (matches && todayOnly) {
+                    matches = date === todayKey
                 }
 
                 row.style.display = matches ? '' : 'none'
@@ -156,7 +190,15 @@
         if (sortSelect) {
             sortSelect.addEventListener('change', applyDoctorVisitSort)
         }
+        if (todayToggle) {
+            todayToggle.addEventListener('click', function () {
+                todayOnly = !todayOnly
+                applyTodayToggleUi()
+                applyDoctorVisitFilters()
+            })
+        }
 
+        applyTodayToggleUi()
         applyDoctorVisitFilters()
     })
 </script>

@@ -20,6 +20,7 @@ const T = {
   slate200: '#e2e8f0',
   slate400: '#94a3b8',
   slate500: '#64748b',
+  slate600: '#556370',
   slate700: '#334155',
   slate800: '#1e293b',
   slate900: '#0f172a',
@@ -92,7 +93,7 @@ export default function PatientMedicalBackgroundScreen() {
           name: r?.name != null ? String(r.name) : '',
           notes: r?.notes != null ? String(r.notes) : null,
         }))
-        .filter((x) => x.medical_background_id > 0);
+        .filter((x: MedicalBackgroundItem) => x.medical_background_id > 0);
       setItems(mapped);
     } catch {
       setError('Network error. Please try again.');

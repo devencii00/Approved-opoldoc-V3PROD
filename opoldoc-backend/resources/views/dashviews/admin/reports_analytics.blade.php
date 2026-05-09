@@ -310,6 +310,34 @@
                         </div>
                         <x-lucide-chart-column class="w-[22px] h-[22px] text-emerald-600" />
                     </div>
+                    <div class="rounded-2xl bg-white border border-slate-100 px-4 py-3">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-[0.7rem] text-slate-500 mb-0.5">Monthly billing records</p>
+                                <p class="font-serif font-bold text-lg text-slate-900">
+                                    {{ number_format((int) ($reports['monthlyBillingRecords'] ?? 0)) }}
+                                </p>
+                            </div>
+                            <x-lucide-receipt class="w-[22px] h-[22px] text-cyan-600" />
+                        </div>
+                        <p class="mt-1.5 text-[0.72rem] text-slate-500">
+                            Amount: ₱{{ number_format((float) ($reports['monthlyBillingAmount'] ?? 0), 2) }}
+                        </p>
+                    </div>
+                    <div class="rounded-2xl bg-white border border-slate-100 px-4 py-3">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-[0.7rem] text-slate-500 mb-0.5">Yearly billing records</p>
+                                <p class="font-serif font-bold text-lg text-slate-900">
+                                    {{ number_format((int) ($reports['yearlyBillingRecords'] ?? 0)) }}
+                                </p>
+                            </div>
+                            <x-lucide-calendar-range class="w-[22px] h-[22px] text-violet-600" />
+                        </div>
+                        <p class="mt-1.5 text-[0.72rem] text-slate-500">
+                            Amount: ₱{{ number_format((float) ($reports['yearlyBillingAmount'] ?? 0), 2) }}
+                        </p>
+                    </div>
                 </div>
             </div>
 

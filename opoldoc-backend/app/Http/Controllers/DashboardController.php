@@ -70,6 +70,20 @@ class DashboardController extends Controller
                 ->where('payment_status', 'paid')
                 ->sum('amount');
 
+            $startOfYear = now()->startOfYear()->toDateString();
+            $monthlyBillingRecords = Transaction::whereBetween('transaction_datetime', [$startOfMonth, now()])
+                ->where('payment_status', 'paid')
+                ->count();
+            $yearlyBillingRecords = Transaction::whereBetween('transaction_datetime', [$startOfYear, now()])
+                ->where('payment_status', 'paid')
+                ->count();
+            $monthlyBillingAmount = Transaction::whereBetween('transaction_datetime', [$startOfMonth, now()])
+                ->where('payment_status', 'paid')
+                ->sum('amount');
+            $yearlyBillingAmount = Transaction::whereBetween('transaction_datetime', [$startOfYear, now()])
+                ->where('payment_status', 'paid')
+                ->sum('amount');
+
             $userRoleCounts = User::selectRaw('role, COUNT(*) as users_count')
                 ->groupBy('role')
                 ->get()
@@ -201,6 +215,10 @@ class DashboardController extends Controller
             $data['adminReports'] = [
                 'appointmentsByStatusToday' => $appointmentsByStatusToday,
                 'noShowToday' => $noShowCount,
+                'monthlyBillingRecords' => $monthlyBillingRecords,
+                'yearlyBillingRecords' => $yearlyBillingRecords,
+                'monthlyBillingAmount' => $monthlyBillingAmount,
+                'yearlyBillingAmount' => $yearlyBillingAmount,
             ];
         } elseif ($role === 'doctor') {
             $today = now()->toDateString();
