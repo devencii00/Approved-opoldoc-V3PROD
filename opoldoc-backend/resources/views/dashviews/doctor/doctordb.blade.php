@@ -102,7 +102,7 @@
                 </div>
 
                 <div class="mt-5 border border-slate-100 rounded-xl bg-slate-50 overflow-hidden">
-                    <div class="max-h-[11.5rem] overflow-auto scrollbar-hidden">
+                    <div class="h-[12rem] overflow-y-auto overflow-x-hidden scrollbar-hidden">
                     <table class="min-w-full text-left text-xs text-slate-600">
                         <thead>
                             <tr class="border-b border-slate-100 text-[0.68rem] uppercase tracking-widest text-slate-400">
@@ -282,7 +282,7 @@
                 </div>
                 <div>
                     <h2 class="text-sm font-semibold text-slate-800 tracking-tight">Queue List</h2>
-                    <p class="text-[0.7rem] text-slate-500 mt-0.5">Today's scheduled appointments</p>
+                    <p class="text-[0.7rem] text-slate-500 mt-0.5">Today's Patients</p>
                 </div>
             </div>
             @if (count($todayQueue))

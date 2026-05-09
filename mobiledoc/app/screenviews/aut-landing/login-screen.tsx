@@ -219,6 +219,10 @@ export default function LoginScreen() {
           <Pressable onPress={() => router.push('/screenviews/aut-landing/create-account')}>
             <Text style={styles.createText}>Create Account</Text>
           </Pressable>
+
+           {/* <Pressable onPress={() => router.push('/screenviews/aut-landing/landing-portal')}>
+            <Text style={styles.createText}>Back</Text>
+          </Pressable> */}
         </View>
       </View>
     </SafeAreaView>

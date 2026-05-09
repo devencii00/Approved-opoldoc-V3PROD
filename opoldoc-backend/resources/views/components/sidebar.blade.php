@@ -409,7 +409,7 @@
 
             <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'settings-doctor']) }}" class="{{ $navBase }} {{ $isDoctorSettings ? $navActive : $navInactive }}">
                 <x-lucide-settings class="w-[18px] h-[18px] {{ $isDoctorSettings ? 'text-cyan-600' : '' }}" />
-                Doctor Settings
+                Settings
                 @if ($isDoctorSettings)
                     <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
                 @endif
@@ -442,12 +442,29 @@
                 <div id="sidebarUserEmail" class="text-slate-400 text-[0.7rem]"></div>
             </div>
         </div>
-        <button type="button" onclick="if(confirm('Are you sure you want to log out?')) { try { if (window.localStorage) { window.localStorage.removeItem('api_token'); window.localStorage.removeItem('current_user_id'); window.localStorage.removeItem('current_user_uuid'); } } catch (_) {} window.location.href='{{ route('webadmin.login') }}'; }" class="w-full flex items-center justify-center gap-2.5 p-2 rounded-xl border border-red-400/25 bg-red-50 text-red-600 text-[0.83rem] font-semibold hover:bg-red-100 hover:border-red-400/40">
+        <button id="sidebarLogoutButton" type="button" class="w-full flex items-center justify-center gap-2.5 p-2 rounded-xl border border-red-400/25 bg-red-50 text-red-600 text-[0.83rem] font-semibold hover:bg-red-100 hover:border-red-400/40">
             <x-lucide-log-out class="w-[16px] h-[16px]" />
             Sign Out
         </button>
     </div>
 </aside>
+
+<div id="sidebarLogoutModal" class="hidden fixed inset-0 z-[80] bg-slate-900/60 backdrop-blur-sm p-4 items-center justify-center">
+    <div class="w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-[0_20px_80px_rgba(15,23,42,0.35)]">
+        <div class="px-5 py-4 border-b border-slate-100">
+            <div class="text-sm font-semibold text-slate-900">Confirm Sign Out</div>
+            <div class="mt-1 text-[0.8rem] text-slate-600">Are you sure you want to log out?</div>
+        </div>
+        <div class="px-5 py-4 flex items-center justify-end gap-2">
+            <button id="sidebarLogoutCancel" type="button" class="inline-flex items-center justify-center px-3 py-2 rounded-xl bg-slate-100 text-slate-800 text-[0.78rem] font-semibold hover:bg-slate-200 border border-slate-200">
+                Cancel
+            </button>
+            <button id="sidebarLogoutConfirm" type="button" class="inline-flex items-center justify-center px-3 py-2 rounded-xl bg-rose-600 text-white text-[0.78rem] font-semibold hover:bg-rose-700">
+                Sign out
+            </button>
+        </div>
+    </div>
+</div>
 
 <script>
     (function () {
@@ -484,6 +501,52 @@
         }
 
         document.addEventListener('DOMContentLoaded', function () {
+            var logoutButton = document.getElementById('sidebarLogoutButton')
+            var logoutModal = document.getElementById('sidebarLogoutModal')
+            var logoutCancel = document.getElementById('sidebarLogoutCancel')
+            var logoutConfirm = document.getElementById('sidebarLogoutConfirm')
+
+            function closeLogoutModal() {
+                if (!logoutModal) return
+                logoutModal.classList.add('hidden')
+                logoutModal.classList.remove('flex')
+            }
+
+            function openLogoutModal() {
+                if (!logoutModal) return
+                logoutModal.classList.remove('hidden')
+                logoutModal.classList.add('flex')
+            }
+
+            function doLogout() {
+                try {
+                    if (window.localStorage) {
+                        window.localStorage.removeItem('api_token')
+                        window.localStorage.removeItem('current_user_id')
+                        window.localStorage.removeItem('current_user_uuid')
+                    }
+                } catch (_) {}
+                window.location.href = "{{ route('webadmin.login') }}"
+            }
+
+            if (logoutButton) {
+                logoutButton.addEventListener('click', openLogoutModal)
+            }
+            if (logoutCancel) {
+                logoutCancel.addEventListener('click', closeLogoutModal)
+            }
+            if (logoutConfirm) {
+                logoutConfirm.addEventListener('click', doLogout)
+            }
+            if (logoutModal) {
+                logoutModal.addEventListener('click', function (e) {
+                    if (e.target === logoutModal) closeLogoutModal()
+                })
+            }
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') closeLogoutModal()
+            })
+
             var toggles = document.querySelectorAll('.sidebar-group-toggle')
             toggles.forEach(function (btn) {
                 var group = btn.getAttribute('data-group')

@@ -1,26 +1,22 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
   TextInput,
   StyleSheet,
   Pressable,
-  ScrollView,
+  Animated,
   StatusBar,
   SafeAreaView,
+  Platform,
+  Dimensions,
+  Image,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
-const T = {
-  cyan700: '#0e7490',
-  slate100: '#f1f5f9',
-  slate200: '#e2e8f0',
-  slate400: '#94a3b8',
-  slate500: '#64748b',
-  slate800: '#1e293b',
-  white: '#ffffff',
-};
+const { height } = Dimensions.get('window');
 
 const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000/api').replace(/\/+$/, '');
 
@@ -28,10 +24,44 @@ export default function FirstLoginScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 700,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 700,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.08,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
 
   async function handleSetPassword() {
     if (!password || !confirmPassword) {
@@ -100,180 +130,227 @@ export default function FirstLoginScreen() {
   }
 
   return (
-    <SafeAreaView
-      style={[
-        styles.safe,
-        { paddingTop: insets.top, paddingBottom: insets.bottom > 0 ? insets.bottom : 12 },
-      ]}
-    >
-      <StatusBar barStyle="light-content" backgroundColor={T.cyan700} />
+    <SafeAreaView style={styles.safe}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      <View style={styles.header}>
-        <View style={styles.headerInner}>
-          <View>
-            <View style={styles.eyebrowRow}>
-              <View style={styles.eyebrowDot} />
-              <Text style={styles.eyebrowText}>Patient Portal</Text>
+      <LinearGradient
+        colors={['#0891b2', '#0e7490', '#155e75']}
+        style={StyleSheet.absoluteFill}
+      />
+
+      <View style={styles.circleTopRight} />
+      <View style={styles.circleBottomLeft} />
+      <View style={styles.circleMidLeft} />
+
+      <View
+        style={[
+          styles.container,
+          { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 30 },
+        ]}
+      >
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+            alignItems: 'center',
+          }}
+        >
+          <Text style={styles.tagline}>PATIENT PORTAL</Text>
+          <Text style={styles.title}>
+            First login{'\n'}security setup
+          </Text>
+          <View style={styles.divider} />
+          <Text style={styles.subtitle}>Change your temporary password to continue</Text>
+        </Animated.View>
+
+        <Animated.View
+          style={[
+            styles.logoWrapper,
+            { opacity: fadeAnim, transform: [{ scale: pulseAnim }] },
+          ]}
+        >
+          <View style={styles.logoPulseRing}>
+            <View style={styles.logoRing}>
+              <Image
+                source={require('../../../assets/images/docfiles/opoldoc.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </View>
-            <Text style={styles.headerTitle}>Set new password</Text>
-            <Text style={styles.headerSub}>For security, please change your temporary password.</Text>
           </View>
-        </View>
-      </View>
+        </Animated.View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <View style={styles.card}>
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>New password</Text>
-            <TextInput
-              placeholder="Enter a strong password"
-              placeholderTextColor="#9ca3af"
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-              style={styles.input}
-            />
-          </View>
+        <Animated.View style={[styles.form, { opacity: fadeAnim }]}>
+          <TextInput
+            placeholder="New password"
+            placeholderTextColor="rgba(255,255,255,0.5)"
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+            style={styles.input}
+          />
 
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Confirm new password</Text>
-            <TextInput
-              placeholder="Re-enter your password"
-              placeholderTextColor="#9ca3af"
-              secureTextEntry
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              style={styles.input}
-            />
-          </View>
+          <TextInput
+            placeholder="Confirm new password"
+            placeholderTextColor="rgba(255,255,255,0.5)"
+            secureTextEntry
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            style={styles.input}
+          />
 
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+        </Animated.View>
 
+        <View style={styles.buttons}>
           <Pressable
             onPress={handleSetPassword}
             disabled={submitting}
-            style={({ pressed }) => [styles.primaryButton, (pressed || submitting) && { opacity: 0.85 }]}
+            style={({ pressed }) => [styles.primaryButton, pressed && { opacity: 0.85 }]}
           >
-            <Text style={styles.primaryButtonText}>{submitting ? 'Saving...' : 'Save Password'}</Text>
+            <LinearGradient
+              colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.10)']}
+              style={styles.primaryButtonGradient}
+            >
+              <Text style={styles.primaryButtonText}>{submitting ? 'Saving...' : 'Save Password'}</Text>
+            </LinearGradient>
           </Pressable>
-        </View>
 
-        <Text style={styles.footerNote}>
-          If you did not receive a temporary password, contact the clinic front desk.
-        </Text>
-      </ScrollView>
+          <Text style={styles.footerNote}>
+            If you did not receive a temporary password, contact the clinic front desk.
+          </Text>
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
+  safe: { flex: 1 },
+  container: {
     flex: 1,
-    backgroundColor: T.cyan700,
-  },
-  header: {
-    backgroundColor: T.cyan700,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 20,
-  },
-  headerInner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-  headerTitle: {
-    fontFamily: 'serif',
-    fontSize: 24,
-    fontWeight: '700',
-    color: T.white,
-    marginBottom: 2,
-    letterSpacing: 0.3,
-  },
-  headerSub: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.78)',
-  },
-  eyebrowRow: {
-    flexDirection: 'row',
+    paddingHorizontal: 28,
     alignItems: 'center',
-    gap: 5,
-    marginBottom: 4,
   },
-  eyebrowDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.85)',
+  circleTopRight: {
+    position: 'absolute',
+    top: -80,
+    right: -80,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
-  eyebrowText: {
-    fontSize: 9,
+  circleBottomLeft: {
+    position: 'absolute',
+    bottom: -60,
+    left: -60,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+  },
+  circleMidLeft: {
+    position: 'absolute',
+    top: height * 0.4,
+    left: -100,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  tagline: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 10,
+    letterSpacing: 2,
+  },
+  title: {
+    color: '#fff',
+    fontSize: 28,
     fontWeight: '700',
-    letterSpacing: 0.9,
-    textTransform: 'uppercase',
-    color: 'rgba(255,255,255,0.85)',
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 24,
-    backgroundColor: T.slate100,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    marginTop: -10,
-  },
-  card: {
-    borderRadius: 18,
-    padding: 16,
-    backgroundColor: T.white,
-    borderWidth: 1,
-    borderColor: T.slate200,
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.04,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  fieldGroup: {
-    marginBottom: 12,
-  },
-  label: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: T.slate500,
-    marginBottom: 4,
-  },
-  input: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: T.slate200,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 13,
-    color: T.slate800,
-    backgroundColor: T.white,
-  },
-  primaryButton: {
+    textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
     marginTop: 8,
-    borderRadius: 999,
-    backgroundColor: '#0f766e',
-    paddingVertical: 11,
+  },
+  divider: {
+    width: 40,
+    height: 2,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+    marginVertical: 12,
+  },
+  subtitle: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 13,
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
+  logoWrapper: {
+    marginVertical: 28,
+  },
+  logoPulseRing: {
+    width: 168,
+    height: 168,
+    borderRadius: 84,
+    backgroundColor: 'rgba(255,255,255,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  primaryButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: T.white,
+  logoRing: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  errorText: {
-    marginTop: 8,
-    fontSize: 11,
-    color: '#b91c1c',
+  logoImage: {
+    width: 100,
+    height: 100,
+  },
+  form: {
+    width: '100%',
+    gap: 14,
+  },
+  input: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+    padding: 14,
+    fontSize: 13,
+    color: '#fff',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  error: {
+    color: '#fecaca',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  buttons: {
+    width: '100%',
+    marginTop: 24,
+    gap: 12,
+  },
+  primaryButton: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  primaryButtonGradient: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  primaryButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#fff',
   },
   footerNote: {
-    marginTop: 16,
     fontSize: 11,
-    color: T.slate400,
+    color: 'rgba(255,255,255,0.7)',
+    textAlign: 'center',
+    lineHeight: 16,
   },
 });

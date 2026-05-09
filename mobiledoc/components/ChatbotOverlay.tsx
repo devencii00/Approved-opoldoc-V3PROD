@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSegments } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000/api').replace(/\/+$/, '');
 
@@ -25,9 +26,11 @@ type ChatMessage = {
   text: string;
 };
 
-const USE_GLOBAL_CHATBOT_OVERLAY = true;
+export default function ChatbotOverlay() {
+  const insets = useSafeAreaInsets();
+  const segments = useSegments();
+  const isTabsRoute = segments.includes('(tabs)');
 
-export default function TabsLayout() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState('');
@@ -79,7 +82,7 @@ export default function TabsLayout() {
       const res = await fetch(`${API_BASE_URL}/chatbot/questions`, {
         headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
       });
-      const data = await res.json().catch(() => ([]));
+      const data = await res.json().catch(() => []);
       if (!res.ok) {
         const msg = typeof (data as any)?.message === 'string' ? (data as any).message : 'Unable to load chatbot.';
         setChatError(msg);
@@ -149,172 +152,109 @@ export default function TabsLayout() {
     });
   }, [messages, chatOpen]);
 
+  const fabBottom = insets.bottom + (isTabsRoute ? 72 : 18);
+
   return (
-    <View style={styles.root}>
-      <Tabs
-        screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: '#0f766e',
-          tabBarInactiveTintColor: '#94a3b8',
-          tabBarStyle: {
-            backgroundColor: '#ffffff',
-            borderTopColor: '#e2e8f0',
-          },
-          tabBarLabelStyle: {
-            fontSize: 11,
-            fontWeight: '500',
-          },
-        }}
+    <>
+      <Pressable
+        onPress={() => setChatOpen(true)}
+        style={({ pressed }) => [styles.fab, { bottom: fabBottom }, pressed && { opacity: 0.85 }]}
       >
-        <Tabs.Screen
-          name="index"
-          options={{
-            title: 'Dashboard',
-            tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" size={size} color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="appointments"
-          options={{
-            title: 'Appointments',
-            tabBarIcon: ({ color, size }) => <Ionicons name="calendar-outline" size={size} color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="queue"
-          options={{
-            title: 'Queue',
-            tabBarIcon: ({ color, size }) => <Ionicons name="people-outline" size={size} color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="visits"
-          options={{
-            title: 'Visits',
-            tabBarIcon: ({ color, size }) => <Ionicons name="clipboard-outline" size={size} color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="prescriptions"
-          options={{
-            title: 'Prescriptions',
-            tabBarIcon: ({ color, size }) => <Ionicons name="medkit-outline" size={size} color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="settings"
-          options={{
-            title: 'Settings',
-            tabBarIcon: ({ color, size }) => <Ionicons name="settings-outline" size={size} color={color} />,
-          }}
-        />
-      </Tabs>
+        <Ionicons name="chatbubbles-outline" size={22} color="#ffffff" />
+      </Pressable>
 
-      {!USE_GLOBAL_CHATBOT_OVERLAY ? (
-        <>
-          <Pressable
-            onPress={() => setChatOpen(true)}
-            style={({ pressed }) => [styles.fab, pressed && { opacity: 0.85 }]}
-          >
-            <Ionicons name="chatbubbles-outline" size={22} color="#ffffff" />
-          </Pressable>
+      <Modal visible={chatOpen} transparent animationType="fade" onRequestClose={() => setChatOpen(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setChatOpen(false)}>
+          <View />
+        </Pressable>
+        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+          <View style={styles.sheetHeader}>
+            <View style={styles.sheetTitleRow}>
+              <Ionicons name="sparkles-outline" size={18} color="#0e7490" />
+              <Text style={styles.sheetTitle}>Clinic Assistant</Text>
+            </View>
+            <View style={styles.sheetHeaderActions}>
+              <Pressable
+                onPress={() => resetChat()}
+                style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.75 }]}
+              >
+                <Text style={styles.headerBtnText}>Restart</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setChatOpen(false)}
+                style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.75 }]}
+              >
+                <Text style={styles.headerBtnText}>Close</Text>
+              </Pressable>
+            </View>
+          </View>
 
-          <Modal visible={chatOpen} transparent animationType="fade" onRequestClose={() => setChatOpen(false)}>
-            <Pressable style={styles.modalBackdrop} onPress={() => setChatOpen(false)}>
-              <View />
-            </Pressable>
-            <View style={styles.sheet}>
-              <View style={styles.sheetHeader}>
-                <View style={styles.sheetTitleRow}>
-                  <Ionicons name="sparkles-outline" size={18} color="#0e7490" />
-                  <Text style={styles.sheetTitle}>Clinic Assistant</Text>
-                </View>
-                <View style={styles.sheetHeaderActions}>
+          {chatLoading ? (
+            <View style={styles.center}>
+              <Text style={styles.mutedText}>Loading…</Text>
+            </View>
+          ) : (
+            <>
+              <ScrollView ref={scrollRef as any} style={styles.chatScroll} contentContainerStyle={styles.chatContent}>
+                {messages.map((m) => (
+                  <View key={m.id} style={[styles.bubbleRow, m.from === 'user' ? styles.bubbleRowUser : styles.bubbleRowBot]}>
+                    <View style={[styles.bubble, m.from === 'user' ? styles.bubbleUser : styles.bubbleBot]}>
+                      <Text style={[styles.bubbleText, m.from === 'user' ? styles.bubbleTextUser : styles.bubbleTextBot]}>
+                        {m.text}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+                {chatError ? <Text style={styles.errorText}>{chatError}</Text> : null}
+              </ScrollView>
+
+              <View style={styles.optionsWrap}>
+                {currentQuestion && Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0 ? (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionRow}>
+                    {currentQuestion.options.map((o) => (
+                      <Pressable
+                        key={o.option_id}
+                        onPress={() => pickOption(o)}
+                        style={({ pressed }) => [styles.optionChip, pressed && { opacity: 0.85 }]}
+                      >
+                        <Text style={styles.optionChipText}>{String(o.option_text ?? '')}</Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                ) : (
+                  <View style={styles.optionRow}>
+                    <Text style={styles.mutedText}>No more options.</Text>
+                  </View>
+                )}
+
+                <View style={styles.freeTextRow}>
+                  <TextInput
+                    value={freeText}
+                    onChangeText={setFreeText}
+                    placeholder="Type a question (optional)"
+                    placeholderTextColor="#94a3b8"
+                    style={styles.freeTextInput}
+                  />
                   <Pressable
-                    onPress={() => resetChat()}
-                    style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.75 }]}
+                    onPress={sendFreeText}
+                    style={({ pressed }) => [styles.sendBtn, pressed && { opacity: 0.85 }]}
                   >
-                    <Text style={styles.headerBtnText}>Restart</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => setChatOpen(false)}
-                    style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.75 }]}
-                  >
-                    <Text style={styles.headerBtnText}>Close</Text>
+                    <Ionicons name="send" size={16} color="#ffffff" />
                   </Pressable>
                 </View>
               </View>
-
-              {chatLoading ? (
-                <View style={styles.center}>
-                  <Text style={styles.mutedText}>Loading…</Text>
-                </View>
-              ) : (
-                <>
-                  <ScrollView ref={scrollRef as any} style={styles.chatScroll} contentContainerStyle={styles.chatContent}>
-                    {messages.map((m) => (
-                      <View key={m.id} style={[styles.bubbleRow, m.from === 'user' ? styles.bubbleRowUser : styles.bubbleRowBot]}>
-                        <View style={[styles.bubble, m.from === 'user' ? styles.bubbleUser : styles.bubbleBot]}>
-                          <Text style={[styles.bubbleText, m.from === 'user' ? styles.bubbleTextUser : styles.bubbleTextBot]}>
-                            {m.text}
-                          </Text>
-                        </View>
-                      </View>
-                    ))}
-                    {chatError ? <Text style={styles.errorText}>{chatError}</Text> : null}
-                  </ScrollView>
-
-                  <View style={styles.optionsWrap}>
-                    {currentQuestion && Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0 ? (
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionRow}>
-                        {currentQuestion.options.map((o) => (
-                          <Pressable
-                            key={o.option_id}
-                            onPress={() => pickOption(o)}
-                            style={({ pressed }) => [styles.optionChip, pressed && { opacity: 0.85 }]}
-                          >
-                            <Text style={styles.optionChipText}>{String(o.option_text ?? '')}</Text>
-                          </Pressable>
-                        ))}
-                      </ScrollView>
-                    ) : (
-                      <View style={styles.optionRow}>
-                        <Text style={styles.mutedText}>No more options.</Text>
-                      </View>
-                    )}
-
-                    <View style={styles.freeTextRow}>
-                      <TextInput
-                        value={freeText}
-                        onChangeText={setFreeText}
-                        placeholder="Type a question (optional)"
-                        placeholderTextColor="#94a3b8"
-                        style={styles.freeTextInput}
-                      />
-                      <Pressable
-                        onPress={sendFreeText}
-                        style={({ pressed }) => [styles.sendBtn, pressed && { opacity: 0.85 }]}
-                      >
-                        <Ionicons name="send" size={16} color="#ffffff" />
-                      </Pressable>
-                    </View>
-                  </View>
-                </>
-              )}
-            </View>
-          </Modal>
-        </>
-      ) : null}
-    </View>
+            </>
+          )}
+        </View>
+      </Modal>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
   fab: {
     position: 'absolute',
     right: 18,
-    bottom: 88,
     width: 54,
     height: 54,
     borderRadius: 27,
@@ -328,6 +268,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     shadowRadius: 10,
     elevation: 6,
+    zIndex: 60,
   },
   modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(15,23,42,0.45)' },
   sheet: {

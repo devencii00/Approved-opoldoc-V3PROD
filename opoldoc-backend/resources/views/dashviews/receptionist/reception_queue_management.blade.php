@@ -21,9 +21,12 @@
             <p class="text-xs text-slate-500">Add patients to the queue and monitor today&apos;s flow.</p>
         </div>
         <div class="flex items-center gap-2">
-            <button id="receptionCallNextButton" type="button" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-[0.8rem] font-semibold hover:bg-slate-800 transition-colors">
-                <x-lucide-megaphone class="w-[18px] h-[18px]" />
-                Call next
+            <button id="receptionCallNextButton" type="button" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-[0.8rem] font-semibold hover:bg-slate-800 transition-colors disabled:opacity-70 disabled:hover:bg-slate-900 min-w-[122px] relative">
+                <span id="receptionCallNextSpinner" class="hidden absolute w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                <span id="receptionCallNextContent" class="inline-flex items-center gap-2">
+                    <x-lucide-megaphone class="w-[18px] h-[18px]" />
+                    Call next
+                </span>
             </button>
             <button id="receptionRefreshQueueButton" type="button" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-[0.8rem] font-semibold hover:bg-slate-200 transition-colors border border-slate-200">
                 <x-lucide-refresh-cw class="w-[18px] h-[18px]" />
@@ -991,8 +994,17 @@
         }
 
         var callNextButton = document.getElementById('receptionCallNextButton')
+        var callNextSpinner = document.getElementById('receptionCallNextSpinner')
+        var callNextContent = document.getElementById('receptionCallNextContent')
+        function setCallNextSubmitting(state) {
+            var disabled = !!state
+            if (callNextButton) callNextButton.disabled = disabled
+            if (callNextSpinner) callNextSpinner.classList.toggle('hidden', !disabled)
+            if (callNextContent) callNextContent.classList.toggle('opacity-0', disabled)
+        }
         if (callNextButton) {
             callNextButton.addEventListener('click', function () {
+                if (callNextButton.disabled) return
                 showQueueError('')
                 showQueueSuccess('')
 
@@ -1001,6 +1013,7 @@
                     return
                 }
 
+                setCallNextSubmitting(true)
                 apiFetch("{{ url('/api/queues/call-next') }}", { method: 'POST' })
                     .then(function (response) {
                         return response.json().then(function (data) {
@@ -1016,6 +1029,7 @@
                                 message = result.data.message
                             }
                             showQueueError(message)
+                            setCallNextSubmitting(false)
                             return
                         }
 
@@ -1024,6 +1038,7 @@
                     })
                     .catch(function () {
                         showQueueError('Network error while calling next.')
+                        setCallNextSubmitting(false)
                     })
             })
         }

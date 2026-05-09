@@ -240,7 +240,7 @@ export default function CreateAccountScreen() {
             ]}
           >
             <LinearGradient
-              colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.10)']}
+              colors={['rgba(255, 255, 255, 0.22)', 'rgba(255,255,255,0.10)']}
               style={styles.btnGradient}
             >
               <Text style={styles.btnText}>
@@ -252,6 +252,11 @@ export default function CreateAccountScreen() {
           <Pressable onPress={() => router.replace('/screenviews/aut-landing/login-screen')}>
             <Text style={styles.link}>Already have an account? Log in</Text>
           </Pressable>
+
+ {/* <Pressable onPress={() => router.push('/screenviews/aut-landing/landing-portal')}>
+            <Text style={styles.link}>Back</Text>
+          </Pressable> */}
+         
         </View>
 
       </View>
