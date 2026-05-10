@@ -157,7 +157,7 @@ export default function ChatbotOverlay() {
     });
   }, [messages, chatOpen]);
 
-  const fabBottom = insets.bottom + (isTabsRoute ? 72 : 18);
+  const fabBottom = insets.bottom + (isTabsRoute ? 92 : 24);
   const hideOverlay = isFirstLoginRoute;
 
   return (
@@ -279,6 +279,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 6,
     zIndex: 60,
+    opacity: 0.95,
   },
   modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(15,23,42,0.45)' },
   sheet: {

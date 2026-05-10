@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 // ─── Design Tokens ───────────────────────────────────────────────────────────
 const T = {
@@ -85,6 +86,8 @@ type AnimatedCardProps = {
   style?: StyleProp<ViewStyle>;
 };
 
+type IconName = React.ComponentProps<typeof Ionicons>['name'];
+
 // ─── Animated Card ────────────────────────────────────────────────────────────
 function AnimatedCard({ children, delay = 0, style }: AnimatedCardProps) {
   const anim = useRef(new Animated.Value(0)).current;
@@ -113,7 +116,7 @@ function AnimatedCard({ children, delay = 0, style }: AnimatedCardProps) {
 
 // ─── Info Stat Card ───────────────────────────────────────────────────────────
 type InfoCardProps = {
-  icon: string;
+  icon: IconName;
   label: string;
   value: string;
   sub?: string;
@@ -125,12 +128,16 @@ function InfoCard({ icon, label, value, sub, delay = 0, onPress }: InfoCardProps
   return (
     <AnimatedCard delay={delay} style={styles.infoCard}>
       <Pressable style={({ pressed }) => [styles.infoCardInner, pressed && { opacity: 0.85 }]} onPress={onPress}>
-        <View style={styles.infoIconCircle}>
-          <Text style={styles.infoIconText}>{icon}</Text>
+        <View style={styles.infoCardTop}>
+          <View style={styles.infoIconCircle}>
+            <Ionicons name={icon} size={18} color={T.cyan700} />
+          </View>
+          <Text style={styles.infoLabel}>{label}</Text>
         </View>
-        <Text style={styles.infoLabel}>{label}</Text>
-        <Text style={styles.infoValue}>{value}</Text>
-        {sub ? <Text style={styles.infoSub}>{sub}</Text> : null}
+        <View style={styles.infoCardBottom}>
+          <Text style={styles.infoValue}>{value}</Text>
+          <Text style={styles.infoSub}>{sub || '—'}</Text>
+        </View>
       </Pressable>
     </AnimatedCard>
   );
@@ -138,7 +145,7 @@ function InfoCard({ icon, label, value, sub, delay = 0, onPress }: InfoCardProps
 
 // ─── Quick Action Tile ────────────────────────────────────────────────────────
 type ActionTileProps = {
-  icon: string;
+  icon: IconName;
   title: string;
   subtitle: string;
   delay?: number;
@@ -151,10 +158,10 @@ function ActionTile({ icon, title, subtitle, delay = 0, onPress }: ActionTilePro
       <Pressable style={({ pressed }) => [styles.actionTileInner, pressed && { opacity: 0.85 }]} onPress={onPress}>
         <View style={styles.actionTileTop}>
           <View style={styles.actionIconCircle}>
-            <Text style={styles.actionIcon}>{icon}</Text>
+            <Ionicons name={icon} size={28} color={T.cyan700} />
           </View>
           <View style={styles.actionArrow}>
-            <Text style={styles.actionArrowText}>→</Text>
+            <Ionicons name="arrow-forward" size={14} color={T.white} />
           </View>
         </View>
         <Text style={styles.actionTitle}>{title}</Text>
@@ -191,7 +198,7 @@ function SectionCard({ title, badge, children, delay, style }: SectionCardProps)
 
 // ─── Row Item ─────────────────────────────────────────────────────────────────
 type RowItemProps = {
-  icon?: string;
+  icon?: IconName;
   title: string;
   subtitle: string;
   pill?: string;
@@ -205,7 +212,7 @@ function RowItem({ icon, title, subtitle, pill, onPress }: RowItemProps) {
       onPress={onPress}
     >
       <View style={styles.rowIconWrap}>
-        <Text style={styles.rowIcon}>{icon ?? '📋'}</Text>
+        <Ionicons name={icon ?? 'document-text-outline'} size={18} color={T.cyan700} />
       </View>
       <View style={styles.rowMain}>
         <Text style={styles.rowTitle}>{title}</Text>
@@ -216,7 +223,7 @@ function RowItem({ icon, title, subtitle, pill, onPress }: RowItemProps) {
           </View>
         )}
       </View>
-      <Text style={styles.rowChevron}>›</Text>
+      <Ionicons name="chevron-forward" size={18} color={T.slate300} />
     </Pressable>
   );
 }
@@ -230,35 +237,6 @@ function NotifRow({ title, body }: { title: string; body: string }) {
         <Text style={styles.notifTitle}>{title}</Text>
         <Text style={styles.notifText}>{body}</Text>
       </View>
-    </View>
-  );
-}
-
-// ─── Bottom Tab Bar ───────────────────────────────────────────────────────────
-type TabBarProps = {
-  active?: 'profile' | 'home' | 'settings';
-  onProfile?: () => void;
-  onHome?: () => void;
-  onSettings?: () => void;
-};
-
-function TabBar({ active = 'home', onProfile, onHome, onSettings }: TabBarProps) {
-  return (
-    <View style={styles.tabBar}>
-      <Pressable style={styles.tabItem} onPress={onProfile}>
-        <Text style={[styles.tabIcon, active === 'profile' && styles.tabIconActive]}>👤</Text>
-        <Text style={[styles.tabLabel, active === 'profile' && styles.tabLabelActive]}>Profile</Text>
-      </Pressable>
-
-      {/* Center home button */}
-      <Pressable style={styles.tabHomeBtn} onPress={onHome}>
-        <Text style={styles.tabHomeIcon}>⌂</Text>
-      </Pressable>
-
-      <Pressable style={styles.tabItem} onPress={onSettings}>
-        <Text style={[styles.tabIcon, active === 'settings' && styles.tabIconActive]}>⚙️</Text>
-        <Text style={[styles.tabLabel, active === 'settings' && styles.tabLabelActive]}>Settings</Text>
-      </Pressable>
     </View>
   );
 }
@@ -387,132 +365,125 @@ export default function PatientDashboardScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor={T.cyan700} />
-
-      {/* ── Header ── */}
-      <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.headerEyebrow}>PATIENT PORTAL</Text>
-            <Text style={styles.headerTitle}>Dashboard</Text>
-            <Text style={styles.headerGreeting}>Good morning, Patient 👋</Text>
-          </View>
-          <View style={styles.notifBtnWrap}>
-            <Pressable style={styles.notifBtn} onPress={() => router.push('/screenviews/notifications' as any)}>
-              <Text style={styles.notifBtnIcon}>🔔</Text>
-              {notifications.length > 0 && (
-                <View style={styles.notifBadge}>
-                  <Text style={styles.notifBadgeText}>{notifications.length}</Text>
-                </View>
-              )}
-            </Pressable>
-          </View>
-        </View>
-      </View>
-
       <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        style={styles.pageScroll}
+        contentContainerStyle={styles.pageScrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {error ? <Text style={styles.inlineError}>{error}</Text> : null}
-
-        {/* ── Info Cards Row ── */}
-        <View style={styles.infoRow}>
-          <InfoCard
-            icon="👥"
-            label="Your current Queue"
-            value={queueStatus ? queueStatus.queueNumber || '—' : '—'}
-            sub={queueStatus && queueStatus.position != null ? `Patient in front: ${queueStatus.position}` : 'No active queue'}
-            delay={30}
-            onPress={() => router.push('/screenviews/queue' as any)}
-          />
-          <InfoCard
-            icon="📅"
-            label="Upcoming appointments"
-            value={nextAppt ? nextAppt.date : '—'}
-            sub={nextAppt ? `${nextAppt.time} · ${nextAppt.doctor}` : `${upcomingAppointments.length} scheduled`}
-            delay={60}
-            onPress={() => router.push('/screenviews/appointments' as any)}
-          />
-          <InfoCard
-            icon="💳"
-            label="Pending payment"
-            value={pendingPayment}
-            sub="Please pay to the front desk"
-            delay={90}
-          />
+        <View style={styles.header}>
+          <View style={styles.headerRow}>
+            <View>
+              <Text style={styles.headerEyebrow}>PATIENT PORTAL</Text>
+              <Text style={styles.headerTitle}>Dashboard</Text>
+              <Text style={styles.headerGreeting}>Good morning, Patient 👋</Text>
+            </View>
+            <View style={styles.notifBtnWrap}>
+              <Pressable style={styles.notifBtn} onPress={() => router.push('/screenviews/notifications' as any)}>
+                <Ionicons name="notifications-outline" size={19} color={T.white} />
+                {notifications.length > 0 && (
+                  <View style={styles.notifBadge}>
+                    <Text style={styles.notifBadgeText}>{notifications.length}</Text>
+                  </View>
+                )}
+              </Pressable>
+            </View>
+          </View>
         </View>
 
-        {/* ── Quick Actions ── */}
-        <AnimatedCard delay={120} style={styles.actionSection}>
-          <Text style={styles.actionSectionTitle}>What would you like to do?</Text>
-          <View style={styles.actionGrid}>
-            <ActionTile
-              icon="📆"
-              title="Book Appointment"
-              subtitle="Schedule a new appointment with your doctor."
-              delay={140}
-              onPress={() => router.push('/screenviews/book-appointment' as any)}
+        <View style={styles.contentSurface}>
+          {error ? <Text style={styles.inlineError}>{error}</Text> : null}
+
+          {/* ── Info Cards Row ── */}
+          <View style={styles.infoRow}>
+            <InfoCard
+              icon="people-outline"
+              label="Your current Queue"
+              value={queueStatus ? queueStatus.queueNumber || '—' : '—'}
+              sub={queueStatus && queueStatus.position != null ? `Patient in front: ${queueStatus.position}` : 'No active queue'}
+              delay={30}
+              onPress={() => router.push('/screenviews/queue' as any)}
             />
-            <ActionTile
-              icon="✅"
-              title="Appointments"
-              subtitle="View and manage your upcoming appointments."
-              delay={160}
+            <InfoCard
+              icon="calendar-clear-outline"
+              label="Upcoming appointments"
+              value={nextAppt ? nextAppt.date : '—'}
+              sub={nextAppt ? `${nextAppt.time} · ${nextAppt.doctor}` : `${upcomingAppointments.length} scheduled`}
+              delay={60}
               onPress={() => router.push('/screenviews/appointments' as any)}
             />
-            <ActionTile
-              icon="💬"
-              title="Chat"
-              subtitle="Message your care team securely."
-              delay={180}
-              onPress={() => router.push('/screenviews/chat' as any)}
-            />
-            <ActionTile
-              icon="🗂️"
-              title="Records"
-              subtitle="View your medical records and history."
-              delay={200}
-              onPress={() => router.push('/screenviews/records' as any)}
+            <InfoCard
+              icon="card-outline"
+              label="Pending payment"
+              value={pendingPayment}
+              sub="Please pay to the front desk"
+              delay={90}
             />
           </View>
-        </AnimatedCard>
 
-        {/* ── Recent Prescriptions ── */}
-        {recentPrescriptions.length > 0 && (
-          <SectionCard title="Recent Prescriptions" badge="Rx" delay={220}>
-            {recentPrescriptions.map((item) => (
-              <RowItem key={item.id} icon="💊" title={item.summary} subtitle={`${item.date} · ${item.doctor}`} />
-            ))}
-          </SectionCard>
-        )}
+          {/* ── Quick Actions ── */}
+          <AnimatedCard delay={120} style={styles.actionSection}>
+            <Text style={styles.actionSectionTitle}>What would you like to do?</Text>
+            <View style={styles.actionGrid}>
+              <ActionTile
+                icon="calendar-outline"
+                title="Book Appointment"
+                subtitle="Schedule a new appointment with your doctor."
+                delay={140}
+                onPress={() => router.push('/screenviews/book-appointment' as any)}
+              />
+              <ActionTile
+                icon="calendar-number-outline"
+                title="Appointments"
+                subtitle="View and manage your upcoming appointments."
+                delay={160}
+                onPress={() => router.push('/screenviews/appointments' as any)}
+              />
+              <ActionTile
+                icon="chatbubble-ellipses-outline"
+                title="Chat"
+                subtitle="Message your care team securely."
+                delay={180}
+                onPress={() => router.push('/screenviews/chat' as any)}
+              />
+              <ActionTile
+                icon="folder-open-outline"
+                title="Records"
+                subtitle="View your medical records and history."
+                delay={200}
+                onPress={() => router.push('/screenviews/records' as any)}
+              />
+            </View>
+          </AnimatedCard>
 
-        {/* ── Recent Visits ── */}
-        {recentVisits.length > 0 && (
-          <SectionCard title="Recent Visits" badge="History" delay={260} style={{ marginBottom: 8 }}>
-            {recentVisits.map((item) => (
-              <RowItem key={item.id} icon="🏥" title={item.reason} subtitle={`${item.date} · ${item.doctor}`} />
-            ))}
-          </SectionCard>
-        )}
+          {/* ── Recent Prescriptions ── */}
+          {recentPrescriptions.length > 0 && (
+            <SectionCard title="Recent Prescriptions" badge="Rx" delay={220}>
+              {recentPrescriptions.map((item) => (
+                <RowItem key={item.id} icon="medkit-outline" title={item.summary} subtitle={`${item.date} · ${item.doctor}`} />
+              ))}
+            </SectionCard>
+          )}
 
-        {/* ── Notifications ── */}
-        {notifications.length > 0 && (
-          <SectionCard title="Notifications" badge="Updates" delay={300} style={{ marginBottom: 24 }}>
-            {notifications.map((item) => (
-              <NotifRow key={item.id} title={item.title} body={item.body} />
-            ))}
-          </SectionCard>
-        )}
+          {/* ── Recent Visits ── */}
+          {recentVisits.length > 0 && (
+            <SectionCard title="Recent Visits" badge="History" delay={260} style={{ marginBottom: 8 }}>
+              {recentVisits.map((item) => (
+                <RowItem key={item.id} icon="business-outline" title={item.reason} subtitle={`${item.date} · ${item.doctor}`} />
+              ))}
+            </SectionCard>
+          )}
+
+          {/* ── Notifications ── */}
+          {notifications.length > 0 && (
+            <SectionCard title="Notifications" badge="Updates" delay={300} style={{ marginBottom: 24 }}>
+              {notifications.map((item) => (
+                <NotifRow key={item.id} title={item.title} body={item.body} />
+              ))}
+            </SectionCard>
+          )}
+        </View>
       </ScrollView>
 
-      {/* ── Bottom Tab Bar ── */}
-      <TabBar
-        active="home"
-        onProfile={() => router.push('/screenviews/profile' as any)}
-        onHome={() => {}}
-        onSettings={() => router.push('/screenviews/settings' as any)}
-      />
     </SafeAreaView>
   );
 }
@@ -569,9 +540,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  notifBtnIcon: {
-    fontSize: 18,
-  },
   notifBadge: {
     position: 'absolute',
     top: -2,
@@ -590,18 +558,22 @@ const styles = StyleSheet.create({
     color: T.white,
   },
 
-  // ── Scroll ──
-  scroll: {
+  // ── Page Scroll ──
+  pageScroll: {
+    flex: 1,
+    backgroundColor: T.cyan700,
+  },
+  pageScrollContent: {
+    paddingBottom: 0,
+  },
+  contentSurface: {
     flex: 1,
     backgroundColor: T.slate100,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    marginTop: -10,
-  },
-  scrollContent: {
     paddingTop: 20,
     paddingHorizontal: 14,
-    paddingBottom: 10,
+    paddingBottom: 84,
   },
   inlineError: {
     fontSize: 12,
@@ -614,11 +586,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginBottom: 18,
+    alignItems: 'stretch',
   },
   infoCard: {
     flex: 1,
   },
   infoCardInner: {
+    flex: 1,
     backgroundColor: T.white,
     borderRadius: 16,
     padding: 12,
@@ -630,6 +604,14 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
     alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    minHeight: 142,
+  },
+  infoCardTop: {
+    width: '100%',
+  },
+  infoCardBottom: {
+    width: '100%',
   },
   infoIconCircle: {
     width: 36,
@@ -639,9 +621,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
-  },
-  infoIconText: {
-    fontSize: 17,
   },
   infoLabel: {
     fontSize: 9,
@@ -710,9 +689,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionIcon: {
-    fontSize: 22,
-  },
   actionArrow: {
     width: 26,
     height: 26,
@@ -720,12 +696,6 @@ const styles = StyleSheet.create({
     backgroundColor: T.cyan600,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  actionArrowText: {
-    color: T.white,
-    fontSize: 14,
-    fontWeight: '700',
-    marginTop: -1,
   },
   actionTitle: {
     fontSize: 13,
@@ -805,9 +775,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
-  rowIcon: {
-    fontSize: 16,
-  },
   rowMain: {
     flex: 1,
   },
@@ -837,12 +804,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     textTransform: 'uppercase',
   },
-  rowChevron: {
-    fontSize: 20,
-    color: T.slate300,
-    fontWeight: '300',
-  },
-
   // ── Notification Row ──
   notifRow: {
     flexDirection: 'row',
@@ -876,61 +837,4 @@ const styles = StyleSheet.create({
     lineHeight: 14,
   },
 
-  // ── Tab Bar ──
-  tabBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    backgroundColor: T.white,
-    borderTopWidth: 1,
-    borderTopColor: T.slate200,
-    paddingVertical: 10,
-    paddingBottom: 14,
-    shadowColor: T.slate900,
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 12,
-  },
-  tabItem: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-  },
-  tabIcon: {
-    fontSize: 20,
-    opacity: 0.45,
-  },
-  tabIconActive: {
-    opacity: 1,
-  },
-  tabLabel: {
-    fontSize: 10,
-    color: T.slate400,
-    fontWeight: '500',
-  },
-  tabLabelActive: {
-    color: T.cyan700,
-    fontWeight: '700',
-  },
-  tabHomeBtn: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: T.cyan700,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-    shadowColor: T.cyan700,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  tabHomeIcon: {
-    fontSize: 24,
-    color: T.white,
-    fontWeight: '700',
-  },
 });

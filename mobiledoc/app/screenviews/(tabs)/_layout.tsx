@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+} from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -27,6 +29,41 @@ type ChatMessage = {
 
 const USE_GLOBAL_CHATBOT_OVERLAY = true;
 
+// ─── Reusable tab icon with active pill indicator ─────────────────────────────
+type TabIconProps = {
+  name: keyof typeof Ionicons.glyphMap;
+  outlineName: keyof typeof Ionicons.glyphMap;
+  label: string;
+  focused: boolean;
+  color: string;
+};
+
+function TabIcon({ name, outlineName, label, focused, color }: TabIconProps) {
+  return (
+    <View style={tabStyles.wrap}>
+      <Ionicons name={focused ? name : outlineName} size={22} color={color} />
+      <Text style={[tabStyles.label, { color }]}>{label}</Text>
+    </View>
+  );
+}
+
+const tabStyles = StyleSheet.create({
+  wrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+    paddingTop: 4,
+    position: 'relative',
+    minWidth: 56,
+  },
+
+  label: {
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+});
+
 export default function TabsLayout() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
@@ -39,9 +76,7 @@ export default function TabsLayout() {
 
   const questionsById = useMemo(() => {
     const map = new Map<number, ChatbotQuestion>();
-    for (const q of questions) {
-      map.set(Number(q.question_id), q);
-    }
+    for (const q of questions) map.set(Number(q.question_id), q);
     return map;
   }, [questions]);
 
@@ -67,12 +102,10 @@ export default function TabsLayout() {
     const token = (globalThis as any)?.apiToken as string | undefined;
     if (!token) {
       setChatError('Please log in again.');
-      setQuestions([]);
       setMessages([{ id: 'bot-auth', from: 'bot', text: 'Please log in to use the chatbot.' }]);
       setCurrentQuestionId(null);
       return;
     }
-
     setChatLoading(true);
     setChatError('');
     try {
@@ -87,7 +120,9 @@ export default function TabsLayout() {
         setCurrentQuestionId(null);
         return;
       }
-      const list: ChatbotQuestion[] = Array.isArray(data) ? data : Array.isArray((data as any)?.data) ? (data as any).data : [];
+      const list: ChatbotQuestion[] = Array.isArray(data)
+        ? data
+        : Array.isArray((data as any)?.data) ? (data as any).data : [];
       setQuestions(list);
       resetChat(list);
     } catch {
@@ -107,7 +142,6 @@ export default function TabsLayout() {
       { id: `user-${option.option_id}-${Date.now()}`, from: 'user' as const, text: optionText || 'Selected option' },
       ...(responseText ? [{ id: `bot-r-${option.option_id}-${Date.now()}`, from: 'bot' as const, text: responseText }] : []),
     ]);
-
     const nextId = option.next_question_id != null ? Number(option.next_question_id) : null;
     if (nextId != null && questionsById.has(nextId)) {
       const nextQ = questionsById.get(nextId)!;
@@ -118,7 +152,6 @@ export default function TabsLayout() {
       setCurrentQuestionId(nextId);
       return;
     }
-
     setCurrentQuestionId(null);
   }
 
@@ -129,11 +162,7 @@ export default function TabsLayout() {
     setMessages((prev) => [
       ...prev,
       { id: `user-free-${Date.now()}`, from: 'user', text: trimmed },
-      {
-        id: `bot-free-${Date.now()}`,
-        from: 'bot',
-        text: 'Please select one of the suggested options so I can respond accurately.',
-      },
+      { id: `bot-free-${Date.now()}`, from: 'bot', text: 'Please select one of the suggested options so I can respond accurately.' },
     ]);
   }
 
@@ -144,9 +173,7 @@ export default function TabsLayout() {
 
   useEffect(() => {
     if (!chatOpen) return;
-    requestAnimationFrame(() => {
-      scrollRef.current?.scrollToEnd({ animated: true });
-    });
+    requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
   }, [messages, chatOpen]);
 
   return (
@@ -154,60 +181,69 @@ export default function TabsLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: '#0f766e',
+          tabBarActiveTintColor: '#0891b2',
           tabBarInactiveTintColor: '#94a3b8',
+          tabBarShowLabel: false, // Labels are rendered inside TabIcon
           tabBarStyle: {
             backgroundColor: '#ffffff',
-            borderTopColor: '#e2e8f0',
+            borderTopWidth: 0,
+            height: 64,
           },
-          tabBarLabelStyle: {
-            fontSize: 11,
-            fontWeight: '500',
+          tabBarItemStyle: {
+            height: 64,
+            paddingVertical: 0,
+            overflow: 'visible',
           },
         }}
       >
+        {/* ── Dependents ── */}
+        <Tabs.Screen
+          name="dependents"
+          options={{
+            tabBarIcon: ({ color, focused }) => (
+              <TabIcon
+                name="people"
+                outlineName="people-outline"
+                label="Dependents"
+                focused={focused}
+                color={color}
+              />
+            ),
+          }}
+        />
+
         <Tabs.Screen
           name="index"
           options={{
-            title: 'Dashboard',
-            tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" size={size} color={color} />,
+            tabBarIcon: ({ color, focused }) => (
+              <TabIcon name="home" outlineName="home-outline" label="Home" focused={focused} color={color} />
+            ),
           }}
         />
+
+        {/* ── Profile ── */}
         <Tabs.Screen
-          name="appointments"
+          name="profile"
           options={{
-            title: 'Appointments',
-            tabBarIcon: ({ color, size }) => <Ionicons name="calendar-outline" size={size} color={color} />,
+            tabBarIcon: ({ color, focused }) => (
+              <TabIcon
+                name="person"
+                outlineName="person-outline"
+                label="Profile"
+                focused={focused}
+                color={color}
+              />
+            ),
           }}
         />
-        <Tabs.Screen
-          name="queue"
-          options={{
-            title: 'Queue',
-            tabBarIcon: ({ color, size }) => <Ionicons name="people-outline" size={size} color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="visits"
-          options={{
-            title: 'Visits',
-            tabBarIcon: ({ color, size }) => <Ionicons name="clipboard-outline" size={size} color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="prescriptions"
-          options={{
-            title: 'Prescriptions',
-            tabBarIcon: ({ color, size }) => <Ionicons name="medkit-outline" size={size} color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="settings"
-          options={{
-            title: 'Settings',
-            tabBarIcon: ({ color, size }) => <Ionicons name="settings-outline" size={size} color={color} />,
-          }}
-        />
+
+        {/* Hidden screens */}
+        <Tabs.Screen name="appointments" options={{ href: null }} />
+        <Tabs.Screen name="queue"        options={{ href: null }} />
+        <Tabs.Screen name="visits"       options={{ href: null }} />
+        <Tabs.Screen name="prescriptions" options={{ href: null }} />
+        <Tabs.Screen name="settings"     options={{ href: null }} />
+        <Tabs.Screen name="medical-bg"   options={{ href: null }} />
       </Tabs>
 
       {!USE_GLOBAL_CHATBOT_OVERLAY ? (
@@ -230,16 +266,10 @@ export default function TabsLayout() {
                   <Text style={styles.sheetTitle}>Clinic Assistant</Text>
                 </View>
                 <View style={styles.sheetHeaderActions}>
-                  <Pressable
-                    onPress={() => resetChat()}
-                    style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.75 }]}
-                  >
+                  <Pressable onPress={() => resetChat()} style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.75 }]}>
                     <Text style={styles.headerBtnText}>Restart</Text>
                   </Pressable>
-                  <Pressable
-                    onPress={() => setChatOpen(false)}
-                    style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.75 }]}
-                  >
+                  <Pressable onPress={() => setChatOpen(false)} style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.75 }]}>
                     <Text style={styles.headerBtnText}>Close</Text>
                   </Pressable>
                 </View>
@@ -282,7 +312,6 @@ export default function TabsLayout() {
                         <Text style={styles.mutedText}>No more options.</Text>
                       </View>
                     )}
-
                     <View style={styles.freeTextRow}>
                       <TextInput
                         value={freeText}
@@ -291,10 +320,7 @@ export default function TabsLayout() {
                         placeholderTextColor="#94a3b8"
                         style={styles.freeTextInput}
                       />
-                      <Pressable
-                        onPress={sendFreeText}
-                        style={({ pressed }) => [styles.sendBtn, pressed && { opacity: 0.85 }]}
-                      >
+                      <Pressable onPress={sendFreeText} style={({ pressed }) => [styles.sendBtn, pressed && { opacity: 0.85 }]}>
                         <Ionicons name="send" size={16} color="#ffffff" />
                       </Pressable>
                     </View>
@@ -311,6 +337,9 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+
+
+  // ── Chatbot FAB + Modal ───────────────────────────────────────────────────
   fab: {
     position: 'absolute',
     right: 18,
@@ -370,13 +399,7 @@ const styles = StyleSheet.create({
   bubbleRow: { flexDirection: 'row' },
   bubbleRowBot: { justifyContent: 'flex-start' },
   bubbleRowUser: { justifyContent: 'flex-end' },
-  bubble: {
-    maxWidth: '86%',
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1,
-  },
+  bubble: { maxWidth: '86%', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1 },
   bubbleBot: { backgroundColor: '#f8fafc', borderColor: '#e2e8f0' },
   bubbleUser: { backgroundColor: '#0e7490', borderColor: '#0e7490' },
   bubbleText: { fontSize: 13, lineHeight: 18 },
@@ -405,6 +428,7 @@ const styles = StyleSheet.create({
     color: '#0f172a',
     backgroundColor: '#ffffff',
   },
+
   sendBtn: {
     width: 40,
     height: 40,
