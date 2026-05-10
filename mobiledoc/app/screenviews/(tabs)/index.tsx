@@ -430,7 +430,7 @@ export default function PatientDashboardScreen() {
                 title="Book Appointment"
                 subtitle="Schedule a new appointment with your doctor."
                 delay={140}
-                onPress={() => router.push('/screenviews/book-appointment' as any)}
+                onPress={() => router.push('/screenviews/booking' as any)}
               />
               <ActionTile
                 icon="calendar-number-outline"

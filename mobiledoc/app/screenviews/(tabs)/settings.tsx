@@ -417,7 +417,7 @@ export default function PatientSettingsScreen() {
           </View>
           <View style={styles.cardBody}>
             <Pressable
-              onPress={() => router.push('/screenviews/patient/patient-medical-background' as any)}
+              onPress={() => router.push('/screenviews/medical-bg' as any)}
               style={({ pressed }) => [styles.primaryButton, pressed && { opacity: 0.85 }]}
             >
               <Text style={styles.primaryButtonText}>Manage medical background</Text>

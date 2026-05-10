@@ -180,23 +180,39 @@ class AppointmentController extends Controller
     public function activeExists(Request $request)
     {
         $currentUser = $request->user();
-        if (! $currentUser || ! in_array((string) $currentUser->role, ['admin', 'receptionist'], true)) {
+        if (! $currentUser) {
             abort(403);
         }
 
-        $request->validate([
-            'patient_id' => ['required', 'integer', 'exists:users,user_id'],
-        ]);
+        $patientIds = [];
+        if ($currentUser->role === 'patient') {
+            if ($request->filled('patient_id')) {
+                $patientId = (int) $request->query('patient_id');
+                if (! $currentUser->canAccessPatientId($patientId)) {
+                    abort(403);
+                }
+                $patientIds = [$patientId];
+            } else {
+                $patientIds = [(int) $currentUser->user_id];
+            }
+        } elseif (in_array((string) $currentUser->role, ['admin', 'receptionist'], true)) {
+            $request->validate([
+                'patient_id' => ['required', 'integer', 'exists:users,user_id'],
+            ]);
 
-        $patientId = (int) $request->query('patient_id');
+            $patientIds = [(int) $request->query('patient_id')];
+        } else {
+            abort(403);
+        }
 
         $query = Appointment::query()
-            ->where('patient_id', $patientId)
+            ->whereIn('patient_id', $patientIds)
             ->whereIn('status', ['pending', 'confirmed']);
 
         return response()->json([
             'exists' => $query->exists(),
             'count' => $query->count(),
+            'patient_ids' => $patientIds,
         ]);
     }
 
@@ -248,6 +264,23 @@ class AppointmentController extends Controller
 
             $data['patient_id'] = $targetPatientId;
             $data['appointment_type'] = 'scheduled';
+        }
+
+        if ($isPatient && $data['appointment_type'] === 'scheduled') {
+            $patientId = (int) ($data['patient_id'] ?? 0);
+            $hasActiveAppointment = $patientId > 0
+                ? Appointment::query()
+                    ->where('patient_id', $patientId)
+                    ->whereIn('status', ['pending', 'confirmed'])
+                    ->exists()
+                : false;
+
+            if ($hasActiveAppointment) {
+                return response()->json([
+                    'message' => 'You already have an active appointment.',
+                    'code' => 'ACTIVE_APPOINTMENT_EXISTS',
+                ], 422);
+            }
         }
 
         if ($isReceptionist && $data['appointment_type'] === 'walk_in') {

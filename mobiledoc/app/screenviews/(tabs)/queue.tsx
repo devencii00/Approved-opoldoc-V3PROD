@@ -315,7 +315,7 @@ export default function PatientQueueScreen() {
         {success ? <Text style={styles.inlineSuccess}>{success}</Text> : null}
         {needsMedicalBackground ? (
           <Pressable
-            onPress={() => router.push('/screenviews/patient/patient-medical-background' as any)}
+            onPress={() => router.push('/screenviews/medical-bg' as any)}
             style={({ pressed }) => [styles.warningButton, pressed && { opacity: 0.85 }]}
           >
             <Text style={styles.warningButtonText}>Add medical background now</Text>
@@ -445,7 +445,7 @@ export default function PatientQueueScreen() {
             </Pressable>
 
             <Pressable
-              onPress={() => router.push('/screenviews/patient/patient-book-appointment' as any)}
+              onPress={() => router.push('/screenviews/booking' as any)}
               style={({ pressed }) => [styles.secondaryButton, pressed && { opacity: 0.85 }]}
             >
               <Text style={styles.secondaryButtonText}>Book appointment instead</Text>

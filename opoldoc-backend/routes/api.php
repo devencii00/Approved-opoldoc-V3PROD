@@ -53,8 +53,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('patients', PatientController::class);
     Route::apiResource('doctors', DoctorController::class);
     Route::patch('/doctors/{doctor}/availability', [DoctorController::class, 'setAvailability']);
-    Route::apiResource('appointments', AppointmentController::class);
     Route::get('/appointments/active-exists', [AppointmentController::class, 'activeExists']);
+    Route::apiResource('appointments', AppointmentController::class);
     Route::apiResource('visits', VisitController::class);
     Route::apiResource('prescriptions', PrescriptionController::class);
     Route::apiResource('medicines', MedicineController::class);

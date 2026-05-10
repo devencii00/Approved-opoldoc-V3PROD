@@ -314,7 +314,7 @@ export default function PatientAppointmentsScreen() {
         <SectionCard title="Actions" subtitle="Book an appointment or request queue entry." badge="Actions" delay={30}>
           <View style={styles.actionRow}>
             <Pressable
-              onPress={() => router.push('/screenviews/patient/patient-book-appointment' as any)}
+              onPress={() => router.push('/screenviews/booking' as any)}
               style={({ pressed }) => [styles.actionPill, pressed && { opacity: 0.7 }]}
             >
               <Text style={styles.actionPillText}>Book appointment</Text>
