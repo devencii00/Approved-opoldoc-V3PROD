@@ -248,7 +248,7 @@ export default function TabsLayout() {
         />
 
         {/* Hidden screens */}
-        <Tabs.Screen name="appointments" options={{ href: null }} />
+        <Tabs.Screen name="appointments" options={{ href: null, tabBarStyle: { display: 'none' } }} />
         <Tabs.Screen name="queue"        options={{ href: null }} />
         <Tabs.Screen name="visits"       options={{ href: null }} />
         <Tabs.Screen name="prescriptions" options={{ href: null }} />

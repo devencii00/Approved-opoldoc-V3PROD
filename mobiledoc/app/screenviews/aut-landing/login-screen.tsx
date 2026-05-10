@@ -15,6 +15,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { persistAuthSession } from '@/lib/auth-storage';
 
 const { height } = Dimensions.get('window');
 
@@ -100,8 +101,7 @@ export default function LoginScreen() {
         return;
       }
 
-      (globalThis as any).apiToken = data.token;
-      (globalThis as any).currentUser = data.user;
+      await persistAuthSession(String(data?.token ?? ''), data?.user ?? null);
 
       const role = String(data?.user?.role ?? '').toLowerCase().trim();
       if (role && role !== 'patient') {

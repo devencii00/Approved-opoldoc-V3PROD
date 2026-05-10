@@ -372,6 +372,9 @@ export default function PatientDashboardScreen() {
       >
         <View style={{ backgroundColor: T.cyan700, position: 'absolute', top: -1000, left: 0, right: 0, height: 1000 }} />
         <View style={styles.header}>
+          <View style={styles.circleTopRight} />
+          <View style={styles.circleBottomLeft} />
+          <View style={styles.circleMidLeft} />
           <View style={styles.headerRow}>
             <View>
               <Text style={styles.headerEyebrow}>PATIENT PORTAL</Text>
@@ -502,11 +505,42 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 20,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  circleTopRight: {
+    position: 'absolute',
+    top: -80,
+    right: -80,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  circleBottomLeft: {
+    position: 'absolute',
+    bottom: -80,
+    left: -60,
+    width: 190,
+    height: 190,
+    borderRadius: 95,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+  },
+  circleMidLeft: {
+    position: 'absolute',
+    top: 30,
+    left: -90,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(255,255,255,0.05)',
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
+    position: 'relative',
+    zIndex: 1,
   },
   headerEyebrow: {
     fontSize: 9,
@@ -516,12 +550,15 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   headerTitle: {
-    fontSize: 30,
+    fontSize:35,
     fontWeight: '800',
+    fontFamily: 'serif',
     color: T.white,
     letterSpacing: 0.2,
     lineHeight: 34,
   },
+
+  
   headerGreeting: {
     fontSize: 12,
     color: 'rgba(255,255,255,0.75)',
@@ -562,8 +599,18 @@ const styles = StyleSheet.create({
   // ── Page Scroll ──
   pageScroll: {
     flex: 1,
-    backgroundColor: T.slate100,
+    backgroundColor: T.cyan700, 
   },
+
+
+ scroll: {
+    flex: 1,
+    backgroundColor: T.slate100,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    marginTop: -10,
+  },
+  
   pageScrollContent: {
     flexGrow: 1,
   },

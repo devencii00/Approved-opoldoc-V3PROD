@@ -857,13 +857,19 @@ export default function BookingScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
+          <View style={styles.circleTopRight} />
+          <View style={styles.circleBottomLeft} />
+          <View style={styles.circleMidLeft} />
           <View style={styles.headerRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.headerEyebrow}>PATIENT PORTAL</Text>
               <Text style={styles.headerTitle}>Book Appointment</Text>
               <Text style={styles.headerGreeting}>Schedule a visit with the right specialist.</Text>
             </View>
-            <Pressable style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.85 }]} onPress={() => router.back()}>
+            <Pressable
+              style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.85 }]}
+              onPress={() => router.replace('/screenviews/(tabs)' as any)}
+            >
               <Text style={styles.headerBtnText}>Back</Text>
             </Pressable>
           </View>
@@ -1184,12 +1190,43 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 20,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  circleTopRight: {
+    position: 'absolute',
+    top: -80,
+    right: -80,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  circleBottomLeft: {
+    position: 'absolute',
+    bottom: -80,
+    left: -60,
+    width: 190,
+    height: 190,
+    borderRadius: 95,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+  },
+  circleMidLeft: {
+    position: 'absolute',
+    top: 30,
+    left: -90,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(255,255,255,0.05)',
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: 12,
+    position: 'relative',
+    zIndex: 1,
   },
   headerEyebrow: {
     fontSize: 9,

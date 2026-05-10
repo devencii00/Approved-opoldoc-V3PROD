@@ -1,6 +1,7 @@
 import { Redirect } from 'expo-router';
 
 export default function Index() {
- 
-  return <Redirect href='/screenviews/aut-landing/landing-portal' />;
+  const token = (globalThis as any)?.apiToken as string | undefined;
+
+  return <Redirect href={token ? '/screenviews/(tabs)' : '/screenviews/aut-landing/landing-portal'} />;
 }

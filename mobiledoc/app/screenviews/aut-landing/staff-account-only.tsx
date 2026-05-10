@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { clearPersistedAuthSession } from '@/lib/auth-storage';
 
 const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000/api').replace(/\/+$/, '');
 const { height } = Dimensions.get('window');
@@ -35,8 +36,7 @@ export default function StaffAccountOnlyScreen() {
         }).catch(() => undefined);
       }
     } finally {
-      (globalThis as any).apiToken = undefined;
-      (globalThis as any).currentUser = undefined;
+      await clearPersistedAuthSession();
       router.replace('/screenviews/aut-landing/landing-portal');
       setLoggingOut(false);
     }

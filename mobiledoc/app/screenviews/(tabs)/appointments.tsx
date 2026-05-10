@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   View,
@@ -11,6 +11,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 const T = {
@@ -29,9 +30,14 @@ const T = {
   slate800: '#1e293b',
   slate900: '#0f172a',
   white: '#ffffff',
+  green700: '#15803d',
+  red700: '#b91c1c',
+  amber700: '#b45309',
 };
 
 const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000/api').replace(/\/+$/, '');
+
+type AppointmentStatusTone = 'info' | 'success' | 'danger' | 'warning';
 
 type AppointmentListItem = {
   id: string;
@@ -39,13 +45,11 @@ type AppointmentListItem = {
   time: string;
   doctor: string;
   type: string;
-  status: RowItemProps['status'];
-};
-
-type QueueRequestItem = {
-  id: string;
-  doctor: string;
+  status: string;
+  statusTone: AppointmentStatusTone;
   reason: string;
+  services: string[];
+  queueNumber: string | null;
 };
 
 type AnimatedCardProps = {
@@ -88,86 +92,133 @@ function AnimatedCard({ children, delay = 0, style }: AnimatedCardProps) {
   );
 }
 
+type InfoCardProps = {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  label: string;
+  value: string;
+  sub?: string;
+  delay?: number;
+};
+
+function InfoCard({ icon, label, value, sub, delay = 0 }: InfoCardProps) {
+  return (
+    <AnimatedCard delay={delay} style={styles.infoCard}>
+      <View style={styles.infoCardInner}>
+        <View style={styles.infoCardTop}>
+          <View style={styles.infoIconCircle}>
+            <Ionicons name={icon} size={18} color={T.cyan700} />
+          </View>
+          <Text style={styles.infoLabel}>{label}</Text>
+        </View>
+        <View style={styles.infoCardBottom}>
+          <Text style={styles.infoValue}>{value}</Text>
+          <Text style={styles.infoSub}>{sub || '—'}</Text>
+        </View>
+      </View>
+    </AnimatedCard>
+  );
+}
+
 type SectionCardProps = {
   title: string;
-  subtitle?: string;
   badge?: string;
   children: ReactNode;
   delay?: number;
   style?: StyleProp<ViewStyle>;
 };
 
-function SectionCard({ title, subtitle, badge, children, delay, style }: SectionCardProps) {
+function SectionCard({ title, badge, children, delay, style }: SectionCardProps) {
   return (
-    <AnimatedCard delay={delay} style={[styles.card, style]}>
-      <View style={styles.cardHeader}>
-        <View style={{ flex: 1 }}>
-          {badge ? (
-            <View style={styles.eyebrowRow}>
-              <View style={styles.eyebrowDot} />
-              <Text style={styles.eyebrowText}>{badge}</Text>
-            </View>
-          ) : null}
-          <Text style={styles.cardTitle}>{title}</Text>
-          {subtitle ? <Text style={styles.cardSubtitle}>{subtitle}</Text> : null}
-        </View>
+    <AnimatedCard delay={delay} style={[styles.sectionCard, style]}>
+      <View style={styles.sectionHeader}>
+        {badge ? (
+          <View style={styles.sectionBadge}>
+            <Text style={styles.sectionBadgeText}>{badge}</Text>
+          </View>
+        ) : null}
+        <Text style={styles.sectionTitle}>{title}</Text>
       </View>
-      <View style={styles.cardBody}>{children}</View>
+      <View style={styles.sectionBody}>{children}</View>
     </AnimatedCard>
   );
 }
 
-type RowItemProps = {
-  doctor: string;
-  date: string;
-  time: string;
-  type: string;
-  status: 'Pending' | 'Scheduled' | 'Completed' | 'Cancelled';
-};
+function statusColors(tone: AppointmentStatusTone) {
+  if (tone === 'success') {
+    return { backgroundColor: 'rgba(34,197,94,0.10)', textColor: T.green700 };
+  }
+  if (tone === 'danger') {
+    return { backgroundColor: 'rgba(239,68,68,0.10)', textColor: T.red700 };
+  }
+  if (tone === 'warning') {
+    return { backgroundColor: 'rgba(245,158,11,0.10)', textColor: T.amber700 };
+  }
+  return { backgroundColor: 'rgba(6,182,212,0.10)', textColor: T.cyan700 };
+}
 
-function AppointmentRow({ doctor, date, time, type, status }: RowItemProps) {
+function AppointmentDetailsCard({ item }: { item: AppointmentListItem }) {
+  const colors = statusColors(item.statusTone);
+
   return (
-    <View style={styles.row}>
-      <View style={styles.rowDot} />
-      <View style={styles.rowMain}>
-        <Text style={styles.rowTitle}>{doctor}</Text>
-        <Text style={styles.rowSubtitle}>
-          {date} at {time} · {type}
-        </Text>
-        <View style={styles.pillWrap}>
-          <View
-            style={[
-              styles.pill,
-              status === 'Completed' && { backgroundColor: 'rgba(16,185,129,0.08)' },
-              status === 'Cancelled' && { backgroundColor: 'rgba(248,113,113,0.08)' },
-            ]}
-          >
-            <Text
-              style={[
-                styles.pillText,
-                status === 'Completed' && { color: '#16a34a' },
-                status === 'Cancelled' && { color: '#b91c1c' },
-              ]}
-            >
-              {status}
-            </Text>
-          </View>
+    <View style={styles.appointmentCard}>
+      <View style={styles.appointmentTopRow}>
+        <View style={styles.rowIconWrap}>
+          <Ionicons name="calendar-clear-outline" size={18} color={T.cyan700} />
+        </View>
+        <View style={styles.rowMain}>
+          <Text style={styles.rowTitle}>{item.doctor}</Text>
+          <Text style={styles.rowSubtitle}>{`${item.date} · ${item.time}`}</Text>
+        </View>
+        <View style={[styles.pill, { backgroundColor: colors.backgroundColor }]}>
+          <Text style={[styles.pillText, { color: colors.textColor }]}>{item.status}</Text>
         </View>
       </View>
-      <View style={styles.actionsColumn}>
-        <Pressable style={({ pressed }) => [styles.primaryAction, pressed && { opacity: 0.7 }]}>
-          <Text style={styles.primaryActionText}>View</Text>
-        </Pressable>
+
+      <View style={styles.metaWrap}>
+        <View style={styles.metaChip}>
+          <Ionicons name="medkit-outline" size={14} color={T.cyan700} />
+          <Text style={styles.metaChipText}>{item.type}</Text>
+        </View>
+        {item.queueNumber ? (
+          <View style={styles.metaChip}>
+            <Ionicons name="people-outline" size={14} color={T.cyan700} />
+            <Text style={styles.metaChipText}>{`Queue #${item.queueNumber}`}</Text>
+          </View>
+        ) : null}
+      </View>
+
+      <View style={styles.detailList}>
+        <View style={styles.detailRow}>
+          <Ionicons name="document-text-outline" size={15} color={T.slate500} />
+          <Text style={styles.detailText}>{item.reason}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Ionicons name="layers-outline" size={15} color={T.slate500} />
+          <Text style={styles.detailText}>
+            {item.services.length > 0 ? item.services.join(', ') : 'Service details not specified yet.'}
+          </Text>
+        </View>
       </View>
     </View>
   );
 }
 
+function EmptyState() {
+  return (
+    <View style={styles.emptyState}>
+      <View style={styles.emptyIconWrap}>
+        <Ionicons name="calendar-outline" size={22} color={T.cyan700} />
+      </View>
+      <Text style={styles.emptyTitle}>No upcoming appointments</Text>
+      <Text style={styles.emptyText}>Your next booked visit will appear here once the clinic confirms it.</Text>
+    </View>
+  );
+}
+
 export default function PatientAppointmentsScreen() {
-  const [items, setItems] = useState<AppointmentListItem[]>([]);
-  const [queueRequests, setQueueRequests] = useState<QueueRequestItem[]>([]);
-  const [error, setError] = useState('');
   const router = useRouter();
+  const [items, setItems] = useState<AppointmentListItem[]>([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -180,74 +231,76 @@ export default function PatientAppointmentsScreen() {
           return;
         }
 
-        const response = await fetch(`${API_BASE_URL}/appointments?per_page=50`, {
+        const response = await fetch(`${API_BASE_URL}/appointments?upcoming_only=1&per_page=50&order=oldest`, {
           headers: {
             Accept: 'application/json',
             Authorization: `Bearer ${token}`,
           },
         });
 
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
         if (!response.ok) {
           const message =
             typeof data?.message === 'string' && data.message.length > 0
               ? data.message
               : 'Unable to load appointments.';
-          setError(message);
+          if (!cancelled) setError(message);
           return;
         }
 
         const raw = Array.isArray(data?.data) ? data.data : [];
         const mapped: AppointmentListItem[] = raw
-          .filter((a: any) => a?.appointment_datetime)
-          .map((a: any) => {
-            const dt = new Date(a.appointment_datetime);
-            const doctorFirst = a?.doctor?.firstname ? String(a.doctor.firstname) : '';
-            const doctorLast = a?.doctor?.lastname ? String(a.doctor.lastname) : '';
+          .filter((appointment: any) => appointment?.appointment_datetime)
+          .map((appointment: any) => {
+            const dt = new Date(appointment.appointment_datetime);
+            const doctorFirst = appointment?.doctor?.firstname ? String(appointment.doctor.firstname) : '';
+            const doctorLast = appointment?.doctor?.lastname ? String(appointment.doctor.lastname) : '';
             const doctorName = `Dr. ${[doctorFirst, doctorLast].filter(Boolean).join(' ')}`.trim();
+            const statusRaw = typeof appointment?.status === 'string' ? appointment.status.toLowerCase() : '';
 
-            const statusRaw = typeof a?.status === 'string' ? a.status : '';
-            const status: RowItemProps['status'] =
-              statusRaw === 'pending'
-                ? 'Pending'
-                : statusRaw === 'confirmed'
-                  ? 'Scheduled'
-                  : statusRaw === 'completed'
-                    ? 'Completed'
-                    : statusRaw === 'cancelled'
-                      ? 'Cancelled'
-                      : 'Pending';
+            let status = 'Pending';
+            let statusTone: AppointmentStatusTone = 'warning';
+            if (statusRaw === 'confirmed') {
+              status = 'Scheduled';
+              statusTone = 'info';
+            } else if (statusRaw === 'completed' || statusRaw === 'consulted') {
+              status = statusRaw === 'consulted' ? 'Consulted' : 'Completed';
+              statusTone = 'success';
+            } else if (statusRaw === 'cancelled' || statusRaw === 'no_show') {
+              status = statusRaw === 'no_show' ? 'No Show' : 'Cancelled';
+              statusTone = 'danger';
+            }
+
+            const services = Array.isArray(appointment?.services)
+              ? appointment.services
+                  .map((service: any) =>
+                    typeof service?.service_name === 'string' && service.service_name.trim().length > 0
+                      ? service.service_name.trim()
+                      : null
+                  )
+                  .filter(Boolean)
+              : [];
 
             return {
-              id: String(a.appointment_id),
+              id: String(appointment.appointment_id),
               date: dt.toLocaleDateString(),
               time: dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               doctor: doctorName === 'Dr.' ? 'Doctor' : doctorName,
-              type: a?.appointment_type === 'scheduled' ? 'Scheduled' : 'Walk-in',
+              type: appointment?.appointment_type === 'scheduled' ? 'Scheduled' : 'Walk-in',
               status,
-            };
-          });
-
-        const queueReqs: QueueRequestItem[] = raw
-          .filter((a: any) => a?.appointment_type === 'scheduled' && !a?.appointment_datetime)
-          .map((a: any) => {
-            const doctorFirst = a?.doctor?.firstname ? String(a.doctor.firstname) : '';
-            const doctorLast = a?.doctor?.lastname ? String(a.doctor.lastname) : '';
-            const doctorName = `Dr. ${[doctorFirst, doctorLast].filter(Boolean).join(' ')}`.trim();
-            const reason =
-              typeof a?.reason_for_visit === 'string' && a.reason_for_visit.length > 0
-                ? a.reason_for_visit
-                : 'Queue request';
-            return {
-              id: String(a.appointment_id),
-              doctor: doctorName === 'Dr.' ? 'Doctor' : doctorName,
-              reason,
+              statusTone,
+              reason:
+                typeof appointment?.reason_for_visit === 'string' && appointment.reason_for_visit.trim().length > 0
+                  ? appointment.reason_for_visit.trim()
+                  : 'Reason for visit not provided.',
+              services: services as string[],
+              queueNumber:
+                appointment?.queue?.queue_number != null ? String(appointment.queue.queue_number) : null,
             };
           });
 
         if (!cancelled) {
           setItems(mapped);
-          setQueueRequests(queueReqs);
           setError('');
         }
       } catch {
@@ -261,115 +314,85 @@ export default function PatientAppointmentsScreen() {
     };
   }, []);
 
+  const nextAppointment = items[0] ?? null;
+  const stats = useMemo(() => {
+    const scheduled = items.filter((item) => item.status === 'Scheduled' || item.status === 'Pending').length;
+    const queueLinked = items.filter((item) => item.queueNumber != null).length;
+    return {
+      total: String(items.length),
+      scheduled: `${scheduled} active`,
+      nextDate: nextAppointment ? nextAppointment.date : '—',
+      nextSub: nextAppointment ? `${nextAppointment.time} · ${nextAppointment.doctor}` : 'No visit scheduled',
+      queueValue: queueLinked > 0 ? String(queueLinked) : '—',
+      queueSub: queueLinked > 0 ? 'Appointments with queue record' : 'No queue number assigned',
+    };
+  }, [items, nextAppointment]);
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor={T.cyan700} />
-
-      <View style={styles.header}>
-        <View style={styles.headerInner}>
-          <View>
-            <View style={styles.eyebrowRow}>
-              <View style={[styles.eyebrowDot, { backgroundColor: 'rgba(255,255,255,0.7)' }]} />
-              <Text style={[styles.eyebrowText, { color: 'rgba(255,255,255,0.8)' }]}>
-                Patient Portal
-              </Text>
-            </View>
-            <Text style={styles.headerTitle}>Appointments</Text>
-            <Text style={styles.headerSub}>Review your upcoming and past visits.</Text>
-          </View>
-          <View style={styles.avatarCircle}>
-            <Text style={styles.avatarText}>P</Text>
-          </View>
-        </View>
-
-        <View style={styles.headerStats}>
-          <View style={styles.headerStatPill}>
-            <Text style={styles.headerStatNum}>
-              {items.filter((a) => a.status === 'Scheduled' || a.status === 'Pending').length}
-            </Text>
-            <Text style={styles.headerStatLabel}>Scheduled</Text>
-          </View>
-          <View style={styles.headerStatDivider} />
-          <View style={styles.headerStatPill}>
-            <Text style={styles.headerStatNum}>
-              {items.filter((a) => a.status === 'Completed').length}
-            </Text>
-            <Text style={styles.headerStatLabel}>Completed</Text>
-          </View>
-          <View style={styles.headerStatDivider} />
-          <View style={styles.headerStatPill}>
-            <Text style={styles.headerStatNum}>
-              {items.filter((a) => a.status === 'Cancelled').length}
-            </Text>
-            <Text style={styles.headerStatLabel}>Cancelled</Text>
-          </View>
-        </View>
-      </View>
-
       <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        style={styles.pageScroll}
+        contentContainerStyle={styles.pageScrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <SectionCard title="Actions" subtitle="Book an appointment or request queue entry." badge="Actions" delay={30}>
-          <View style={styles.actionRow}>
+        <View style={styles.headerBackgroundFill} />
+        <View style={styles.header}>
+          <View style={styles.circleTopRight} />
+          <View style={styles.circleBottomLeft} />
+          <View style={styles.circleMidLeft} />
+          <View style={styles.headerRow}>
+            <View>
+              <Text style={styles.headerEyebrow}>PATIENT PORTAL</Text>
+              <Text style={styles.headerTitle}>Appointments</Text>
+              <Text style={styles.headerGreeting}>View your upcoming clinic schedule and visit details.</Text>
+            </View>
             <Pressable
-              onPress={() => router.push('/screenviews/booking' as any)}
-              style={({ pressed }) => [styles.actionPill, pressed && { opacity: 0.7 }]}
+              style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.85 }]}
+              onPress={() => router.replace('/screenviews/(tabs)' as any)}
             >
-              <Text style={styles.actionPillText}>Book appointment</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => router.push('/screenviews/queue' as any)}
-              style={({ pressed }) => [styles.actionPill, pressed && { opacity: 0.7 }]}
-            >
-              <Text style={styles.actionPillText}>Request queue</Text>
+              <Text style={styles.headerBtnText}>Back</Text>
             </Pressable>
           </View>
-        </SectionCard>
+        </View>
 
-        {queueRequests.length > 0 ? (
-          <SectionCard title="Queue requests" subtitle="Waiting for approval." badge="Queue" delay={45}>
-            {queueRequests.map((item) => (
-              <View key={item.id} style={styles.row}>
-                <View style={styles.rowDot} />
-                <View style={styles.rowMain}>
-                  <Text style={styles.rowTitle}>{item.doctor}</Text>
-                  <Text style={styles.rowSubtitle}>{item.reason}</Text>
-                  <View style={styles.pillWrap}>
-                    <View style={[styles.pill, { backgroundColor: 'rgba(245,158,11,0.10)' }]}>
-                      <Text style={[styles.pillText, { color: '#b45309' }]}>Pending</Text>
-                    </View>
-                  </View>
-                </View>
-                <View style={styles.actionsColumn}>
-                  <Pressable style={({ pressed }) => [styles.primaryAction, pressed && { opacity: 0.7 }]}>
-                    <Text style={styles.primaryActionText}>View</Text>
-                  </Pressable>
-                </View>
-              </View>
-            ))}
-          </SectionCard>
-        ) : null}
-
-        <SectionCard
-          title="Appointments"
-          subtitle="Tap on an appointment to see details."
-          badge="Appointments"
-          delay={60}
-        >
+        <View style={styles.contentSurface}>
           {error ? <Text style={styles.inlineError}>{error}</Text> : null}
-          {items.map((item) => (
-            <AppointmentRow
-              key={item.id}
-              doctor={item.doctor}
-              date={item.date}
-              time={item.time}
-              type={item.type}
-              status={item.status as RowItemProps['status']}
+
+          <View style={styles.infoRow}>
+            <InfoCard
+              icon="calendar-clear-outline"
+              label="Upcoming appointments"
+              value={stats.total}
+              sub={stats.scheduled}
+              delay={30}
             />
-          ))}
-        </SectionCard>
+            <InfoCard
+              icon="time-outline"
+              label="Next visit"
+              value={stats.nextDate}
+              sub={stats.nextSub}
+              delay={60}
+            />
+            <InfoCard
+              icon="people-outline"
+              label="Queue-linked visits"
+              value={stats.queueValue}
+              sub={stats.queueSub}
+              delay={90}
+            />
+          </View>
+
+          {nextAppointment ? (
+            <SectionCard title="Next Appointment" badge="Next" delay={120}>
+              <AppointmentDetailsCard item={nextAppointment} />
+            </SectionCard>
+          ) : null}
+
+          <SectionCard title="Upcoming Appointments" badge="Schedule" delay={160} style={{ marginBottom: 24 }}>
+            {items.length === 0 ? <EmptyState /> : items.map((item) => <AppointmentDetailsCard key={item.id} item={item} />)}
+          </SectionCard>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -380,236 +403,325 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: T.cyan700,
   },
-
+  headerBackgroundFill: {
+    backgroundColor: T.cyan700,
+    position: 'absolute',
+    top: -1000,
+    left: 0,
+    right: 0,
+    height: 1000,
+  },
   header: {
     backgroundColor: T.cyan700,
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 24,
+    paddingTop: 10,
+    paddingBottom: 20,
+    position: 'relative',
+    overflow: 'hidden',
   },
-  headerInner: {
+  circleTopRight: {
+    position: 'absolute',
+    top: -80,
+    right: -80,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  circleBottomLeft: {
+    position: 'absolute',
+    bottom: -80,
+    left: -60,
+    width: 190,
+    height: 190,
+    borderRadius: 95,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+  },
+  circleMidLeft: {
+    position: 'absolute',
+    top: 30,
+    left: -90,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    position: 'relative',
+    zIndex: 1,
+  },
+  headerEyebrow: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    color: 'rgba(255,255,255,0.65)',
+    marginBottom: 2,
   },
   headerTitle: {
+    fontSize: 35,
+    fontWeight: '800',
     fontFamily: 'serif',
-    fontSize: 26,
-    fontWeight: '700',
     color: T.white,
-    marginBottom: 2,
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
+    lineHeight: 34,
   },
-  headerSub: {
+  headerGreeting: {
     fontSize: 12,
     color: 'rgba(255,255,255,0.75)',
-    fontWeight: '400',
-  },
-  avatarCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.35)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    color: T.white,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  headerStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.13)',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  headerStatPill: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerStatNum: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: T.white,
-    lineHeight: 22,
-  },
-  headerStatLabel: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.7)',
-    fontWeight: '500',
     marginTop: 2,
-    letterSpacing: 0.3,
+    fontWeight: '400',
+    maxWidth: 250,
   },
-  headerStatDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  headerBtn: {
+    marginTop: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
   },
-
-  scroll: {
+  headerBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: T.white,
+  },
+  pageScroll: {
+    flex: 1,
+    backgroundColor: T.cyan700,
+  },
+  pageScrollContent: {
+    flexGrow: 1,
+  },
+  contentSurface: {
     flex: 1,
     backgroundColor: T.slate100,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    marginTop: -16,
-  },
-  scrollContent: {
     paddingTop: 20,
-    paddingHorizontal: 16,
-    paddingBottom: 24,
+    paddingHorizontal: 14,
+    paddingBottom: 84,
   },
-
-  card: {
+  inlineError: {
+    fontSize: 12,
+    color: T.red700,
+    marginBottom: 10,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 18,
+    alignItems: 'stretch',
+  },
+  infoCard: {
+    flex: 1,
+  },
+  infoCardInner: {
+    flex: 1,
     backgroundColor: T.white,
-    borderRadius: 20,
-    marginBottom: 14,
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: T.slate200,
+    shadowColor: T.slate900,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    minHeight: 142,
+  },
+  infoCardTop: {
+    width: '100%',
+  },
+  infoCardBottom: {
+    width: '100%',
+  },
+  infoIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(6,182,212,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  infoLabel: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: T.slate400,
+    letterSpacing: 0.2,
+    marginBottom: 4,
+    lineHeight: 12,
+  },
+  infoValue: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: T.cyan700,
+    lineHeight: 15,
+    marginBottom: 2,
+  },
+  infoSub: {
+    fontSize: 9,
+    color: T.slate500,
+    lineHeight: 13,
+  },
+  sectionCard: {
+    backgroundColor: T.white,
+    borderRadius: 18,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: T.slate200,
     shadowColor: T.slate900,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 10,
+    shadowRadius: 8,
     elevation: 2,
     overflow: 'hidden',
   },
-  cardHeader: {
+  sectionHeader: {
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 14,
     paddingBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     borderBottomWidth: 1,
     borderBottomColor: T.slate100,
   },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: T.slate900,
-    letterSpacing: 0.1,
+  sectionBadge: {
+    backgroundColor: 'rgba(6,182,212,0.1)',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
-  cardSubtitle: {
-    fontSize: 11,
-    color: T.slate400,
-    marginTop: 2,
-  },
-  cardBody: {
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-  },
-
-  eyebrowRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    marginBottom: 4,
-  },
-  eyebrowDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: T.cyan500,
-  },
-  eyebrowText: {
+  sectionBadgeText: {
     fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.9,
+    fontWeight: '800',
+    color: T.cyan700,
+    letterSpacing: 0.5,
     textTransform: 'uppercase',
-    color: T.cyan600,
   },
-
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 11,
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: T.slate800,
+  },
+  sectionBody: {
+    paddingBottom: 4,
+  },
+  appointmentCard: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: T.slate100,
   },
-  inlineError: {
-    fontSize: 12,
-    color: '#b91c1c',
-    marginBottom: 10,
+  appointmentTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
-  rowDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: T.cyan400,
-    marginRight: 10,
+  rowIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: T.slate100,
+    alignItems: 'center',
+    justifyContent: 'center',
     flexShrink: 0,
-    alignSelf: 'flex-start',
-    marginTop: 5,
   },
   rowMain: {
     flex: 1,
-    marginRight: 12,
   },
   rowTitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: T.slate800,
     marginBottom: 2,
   },
   rowSubtitle: {
-    fontSize: 11,
+    fontSize: 10,
     color: T.slate500,
-    lineHeight: 15,
-  },
-  pillWrap: {
-    marginTop: 6,
-  },
-  actionsColumn: {
-    alignItems: 'flex-end',
-    gap: 6,
-    marginLeft: 8,
-  },
-  primaryAction: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: 'rgba(6,182,212,0.08)',
-    borderWidth: 1,
-    borderColor: T.cyan600,
-  },
-  primaryActionText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: T.cyan700,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    paddingVertical: 8,
-  },
-  actionPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: T.slate200,
-    backgroundColor: T.slate50,
-  },
-  actionPillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: T.slate700,
+    lineHeight: 14,
   },
   pill: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: 'rgba(6,182,212,0.10)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     alignSelf: 'flex-start',
   },
   pillText: {
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: '700',
-    color: T.cyan700,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  metaWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+  },
+  metaChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: T.slate50,
+    borderWidth: 1,
+    borderColor: T.slate200,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  metaChipText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: T.slate700,
+  },
+  detailList: {
+    marginTop: 12,
+    gap: 8,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  detailText: {
+    flex: 1,
+    fontSize: 11,
+    color: T.slate600,
+    lineHeight: 16,
+  },
+  emptyState: {
+    paddingHorizontal: 16,
+    paddingVertical: 22,
+    alignItems: 'center',
+  },
+  emptyIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: 'rgba(6,182,212,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  emptyTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: T.slate800,
+    marginBottom: 4,
+  },
+  emptyText: {
+    fontSize: 11,
+    color: T.slate500,
+    lineHeight: 16,
+    textAlign: 'center',
+    maxWidth: 250,
   },
 });

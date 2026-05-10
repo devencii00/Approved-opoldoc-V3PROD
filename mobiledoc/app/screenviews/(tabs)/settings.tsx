@@ -13,6 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 // @ts-ignore
 import * as DocumentPicker from 'expo-document-picker';
+import { clearPersistedAuthSession, persistCurrentUser } from '@/lib/auth-storage';
 
 const T = {
   cyan500: '#06b6d4',
@@ -119,7 +120,7 @@ export default function PatientSettingsScreen() {
 
         if (!cancelled) {
           setUser(nextUser);
-          (globalThis as any).currentUser = nextUser;
+          await persistCurrentUser(nextUser);
           setEmail(nextUser.email ?? '');
         }
       } catch {
@@ -297,7 +298,7 @@ export default function PatientSettingsScreen() {
       };
 
       setUser(nextUser);
-      (globalThis as any).currentUser = nextUser;
+      await persistCurrentUser(nextUser);
       setSuccess('Email updated.');
     } catch {
       setError('Network error. Please try again.');
@@ -376,8 +377,7 @@ export default function PatientSettingsScreen() {
         }).catch(() => null);
       }
     } finally {
-      (globalThis as any).apiToken = undefined;
-      (globalThis as any).currentUser = undefined;
+      await clearPersistedAuthSession();
       setUser(null);
       setLogoutOpen(false);
       setLoggingOut(false);

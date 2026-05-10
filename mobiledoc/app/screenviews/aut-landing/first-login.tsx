@@ -15,6 +15,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { persistCurrentUser } from '@/lib/auth-storage';
 
 const { height } = Dimensions.get('window');
 
@@ -110,7 +111,7 @@ export default function FirstLoginScreen() {
         return;
       }
 
-      (globalThis as any).currentUser = data;
+      await persistCurrentUser(data);
       router.replace('/screenviews/(tabs)');
     } catch {
       setError('Network error. Please try again.');
