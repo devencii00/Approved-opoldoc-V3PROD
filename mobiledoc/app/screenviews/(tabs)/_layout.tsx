@@ -41,6 +41,7 @@ type TabIconProps = {
 function TabIcon({ name, outlineName, label, focused, color }: TabIconProps) {
   return (
     <View style={tabStyles.wrap}>
+      {focused && <View style={[tabStyles.indicator, { backgroundColor: color }]} />}
       <Ionicons name={focused ? name : outlineName} size={22} color={color} />
       <Text style={[tabStyles.label, { color }]}>{label}</Text>
     </View>
@@ -52,9 +53,18 @@ const tabStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 3,
-    paddingTop: 4,
+    paddingTop: 10,
     position: 'relative',
-    minWidth: 56,
+    minWidth: 64,
+  },
+
+  indicator: {
+    position: 'absolute',
+    top: 0,
+    width: 28,
+    height: 3,
+    borderBottomLeftRadius: 3,
+    borderBottomRightRadius: 3,
   },
 
   label: {

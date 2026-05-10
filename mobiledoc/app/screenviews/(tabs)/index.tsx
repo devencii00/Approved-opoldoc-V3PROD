@@ -370,6 +370,7 @@ export default function PatientDashboardScreen() {
         contentContainerStyle={styles.pageScrollContent}
         showsVerticalScrollIndicator={false}
       >
+        <View style={{ backgroundColor: T.cyan700, position: 'absolute', top: -1000, left: 0, right: 0, height: 1000 }} />
         <View style={styles.header}>
           <View style={styles.headerRow}>
             <View>
@@ -561,10 +562,10 @@ const styles = StyleSheet.create({
   // ── Page Scroll ──
   pageScroll: {
     flex: 1,
-    backgroundColor: T.cyan700,
+    backgroundColor: T.slate100,
   },
   pageScrollContent: {
-    paddingBottom: 0,
+    flexGrow: 1,
   },
   contentSurface: {
     flex: 1,

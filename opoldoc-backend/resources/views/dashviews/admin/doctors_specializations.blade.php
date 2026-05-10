@@ -260,7 +260,6 @@
                             <option value="General Surgeon"></option>
                             <option value="obstetrician - gynecologist"></option>
                         
-
                         </datalist>
                     </div>
                     <div>
