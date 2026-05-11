@@ -368,7 +368,12 @@ export default function ChatScreen() {
           <View style={styles.circleMidLeft} />
           <View style={styles.headerRow}>
             <View>
-              <Text style={styles.headerEyebrow}>PATIENT PORTAL</Text>
+            
+ <View style={styles.eyebrowRow}>
+              <View style={[styles.eyebrowDot, { backgroundColor: 'rgba(255,255,255,0.7)' }]} />
+              <Text style={[styles.eyebrowText, { color: 'rgba(255,255,255,0.8)' }]}>Patient Portal</Text>
+            </View>
+
               <Text style={styles.headerTitle}>Messages</Text>
               <Text style={styles.headerGreeting}>Chat with the receptionist about appointments, queue updates, and clinic concerns.</Text>
             </View>
@@ -569,6 +574,9 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.65)',
     marginBottom: 2,
   },
+   eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 },
+  eyebrowDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: T.cyan500 },
+  eyebrowText: { fontSize: 9, fontWeight: '700', letterSpacing: 0.9, textTransform: 'uppercase', color: T.cyan600 },
   headerTitle: {
     fontSize: 35,
     fontWeight: '800',
@@ -600,7 +608,7 @@ const styles = StyleSheet.create({
   },
   pageScroll: {
     flex: 1,
-    backgroundColor: T.cyan700,
+    backgroundColor: 'rgba(255,255,255,0.07)',
   },
   pageScrollContent: {
     flexGrow: 1,

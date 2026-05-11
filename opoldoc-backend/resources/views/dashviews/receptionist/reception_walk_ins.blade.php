@@ -603,6 +603,26 @@ function setWalkInTab(tab) {
                 .trim()
         }
 
+        function isValidPersonName(value) {
+            var v = String(value || '').trim()
+            if (v === '') {
+                return true
+            }
+            try {
+                return /^[\p{L}\p{M}][\p{L}\p{M}\s.'\-\u00B7]*$/u.test(v)
+            } catch (_) {
+                return /^[A-Za-z][A-Za-z\s.'-]*$/.test(v)
+            }
+        }
+
+        function normalizePersonName(value) {
+            var s = String(value || '').trim()
+            if (!s) return ''
+            s = s.replace(/\s+/g, ' ')
+            s = s.replace(/\s*([.'\-\u00B7])\s*/g, '$1')
+            return s
+        }
+
         function wordPrefixMatch(text, query) {
             var t = normalizeText(text)
             var q = normalizeText(query)
@@ -722,9 +742,12 @@ function setWalkInTab(tab) {
 
         function loadGuestHistoryForNames() {
             if (typeof apiFetch !== 'function') return Promise.resolve(null)
-            var fn = guestFirstNameInput ? String(guestFirstNameInput.value || '').trim() : ''
-            var mn = guestMiddleNameInput ? String(guestMiddleNameInput.value || '').trim() : ''
-            var ln = guestLastNameInput ? String(guestLastNameInput.value || '').trim() : ''
+            var fn = guestFirstNameInput ? normalizePersonName(guestFirstNameInput.value) : ''
+            var mn = guestMiddleNameInput ? normalizePersonName(guestMiddleNameInput.value) : ''
+            var ln = guestLastNameInput ? normalizePersonName(guestLastNameInput.value) : ''
+            if (guestFirstNameInput) guestFirstNameInput.value = fn
+            if (guestMiddleNameInput) guestMiddleNameInput.value = mn
+            if (guestLastNameInput) guestLastNameInput.value = ln
             if (!fn || !mn || !ln) {
                 applyGuestHistory(null)
                 return Promise.resolve(null)
@@ -1127,9 +1150,9 @@ function setWalkInTab(tab) {
                     service_ids: serviceIds
                 }
 
-                var firstName = firstNameInput ? String(firstNameInput.value || '').trim() : ''
-                var middleName = middleNameInput ? String(middleNameInput.value || '').trim() : ''
-                var lastName = lastNameInput ? String(lastNameInput.value || '').trim() : ''
+                var firstName = firstNameInput ? normalizePersonName(firstNameInput.value) : ''
+                var middleName = middleNameInput ? normalizePersonName(middleNameInput.value) : ''
+                var lastName = lastNameInput ? normalizePersonName(lastNameInput.value) : ''
                 var contact = contactInput ? String(contactInput.value || '').trim() : ''
                 var reason = reasonInput ? String(reasonInput.value || '').trim() : ''
                 var priorityLevel = priorityInput && priorityInput.value ? parseInt(priorityInput.value, 10) : null
@@ -1138,6 +1161,13 @@ function setWalkInTab(tab) {
                     showGuestError('First name and last name are required.')
                     return
                 }
+                if (!isValidPersonName(firstName) || (middleName !== '' && !isValidPersonName(middleName)) || !isValidPersonName(lastName)) {
+                    showGuestError('Name fields must contain letters only (accents allowed), plus hyphens, apostrophes, periods, and middle dots.')
+                    return
+                }
+                if (firstNameInput) firstNameInput.value = firstName
+                if (middleNameInput) middleNameInput.value = middleName
+                if (lastNameInput) lastNameInput.value = lastName
 
                 body.firstname = firstName
                 body.middlename = middleName

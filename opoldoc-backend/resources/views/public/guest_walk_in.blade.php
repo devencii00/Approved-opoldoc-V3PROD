@@ -281,6 +281,26 @@
                     .replace(/'/g, '&#039;')
             }
 
+            function isValidPersonName(value) {
+                var v = String(value || '').trim()
+                if (v === '') {
+                    return true
+                }
+                try {
+                    return /^[\p{L}\p{M}][\p{L}\p{M}\s.'\-\u00B7]*$/u.test(v)
+                } catch (_) {
+                    return /^[A-Za-z][A-Za-z\s.'-]*$/.test(v)
+                }
+            }
+
+            function normalizePersonName(value) {
+                var s = String(value || '').trim()
+                if (!s) return ''
+                s = s.replace(/\s+/g, ' ')
+                s = s.replace(/\s*([.'\-\u00B7])\s*/g, '$1')
+                return s
+            }
+
             function dayKeyFromDate(dateStr) {
                 if (!dateStr) return ''
                 var d = new Date(dateStr + 'T00:00:00')
@@ -621,9 +641,9 @@
                 form.addEventListener('submit', function (e) {
                     e.preventDefault()
 
-                    var firstName = firstNameInput ? String(firstNameInput.value || '').trim() : ''
-                    var middleName = middleNameInput ? String(middleNameInput.value || '').trim() : ''
-                    var lastName = lastNameInput ? String(lastNameInput.value || '').trim() : ''
+                    var firstName = firstNameInput ? normalizePersonName(firstNameInput.value) : ''
+                    var middleName = middleNameInput ? normalizePersonName(middleNameInput.value) : ''
+                    var lastName = lastNameInput ? normalizePersonName(lastNameInput.value) : ''
                     var contact = contactInput ? String(contactInput.value || '').trim() : ''
                     var reason = reasonInput ? String(reasonInput.value || '').trim() : ''
 
@@ -635,6 +655,13 @@
                         showError('First name and last name are required.')
                         return
                     }
+                    if (!isValidPersonName(firstName) || (middleName !== '' && !isValidPersonName(middleName)) || !isValidPersonName(lastName)) {
+                        showError('Name fields must contain letters only (accents allowed), plus hyphens, apostrophes, periods, and middle dots.')
+                        return
+                    }
+                    if (firstNameInput) firstNameInput.value = firstName
+                    if (middleNameInput) middleNameInput.value = middleName
+                    if (lastNameInput) lastNameInput.value = lastName
                     if (!serviceIds.length) {
                         showError('Services are required.')
                         return

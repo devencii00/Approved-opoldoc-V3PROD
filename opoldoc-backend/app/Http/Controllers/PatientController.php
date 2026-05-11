@@ -355,12 +355,10 @@ class PatientController extends Controller
     public function vitals(Request $request)
     {
         $currentUser = $request->user();
-        if ($currentUser && $currentUser->role === 'patient') {
-            abort(403);
-        }
+        $isPatient = $currentUser && $currentUser->role === 'patient';
 
         $data = $request->validate([
-            'patient_id' => ['required', 'integer', 'exists:users,user_id'],
+            'patient_id' => [$isPatient ? 'sometimes' : 'required', 'integer', 'exists:users,user_id'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
@@ -372,7 +370,18 @@ class PatientController extends Controller
             $perPage = 100;
         }
 
-        $patientId = (int) $data['patient_id'];
+        if ($isPatient) {
+            $patientId = (int) ($currentUser->user_id ?? 0);
+            if (array_key_exists('patient_id', $data)) {
+                $candidate = (int) $data['patient_id'];
+                if (! $currentUser->canAccessPatientId($candidate)) {
+                    abort(403);
+                }
+                $patientId = $candidate;
+            }
+        } else {
+            $patientId = (int) $data['patient_id'];
+        }
 
         LogEntry::write(
             $currentUser ? (int) $currentUser->user_id : null,

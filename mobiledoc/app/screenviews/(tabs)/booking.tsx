@@ -86,6 +86,7 @@ type DropdownOption = {
   id: string;
   label: string;
   description?: string;
+  meta?: string;
   disabled?: boolean;
 };
 
@@ -244,6 +245,7 @@ function SelectionSheet({
                     {option.label}
                   </Text>
                   {option.description ? <Text style={styles.sheetOptionDescription}>{option.description}</Text> : null}
+                  {option.meta ? <Text style={styles.sheetOptionMeta}>{option.meta}</Text> : null}
                 </View>
                 <Ionicons
                   name={selected ? (multiSelect ? 'checkbox' : 'radio-button-on') : multiSelect ? 'square-outline' : 'radio-button-off'}
@@ -293,6 +295,22 @@ function formatTimeRange(startTime: string, endTime: string): string {
 function formatPriceLabel(value: number | null): string {
   if (typeof value !== 'number' || Number.isNaN(value)) return 'Price unavailable';
   return `P ${value.toFixed(2)}`;
+}
+
+function formatDurationLabel(value: number | null): string {
+  if (typeof value !== 'number' || Number.isNaN(value) || value <= 0) return 'Duration unavailable';
+  return `${value} mins`;
+}
+
+function normalizeCompareValue(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function getServiceDescription(service: ServiceOption): string {
+  const description = typeof service.description === 'string' ? service.description.trim() : '';
+  if (!description) return 'No description provided.';
+  if (normalizeCompareValue(description) === normalizeCompareValue(service.name)) return 'No description provided.';
+  return description;
 }
 
 function toDateKey(date: Date): string {
@@ -394,11 +412,18 @@ export default function BookingScreen() {
 
     return (
       <View style={styles.summaryStack}>
-        <Text style={styles.summaryText}>{selectedServices.length} service{selectedServices.length > 1 ? 's' : ''} selected</Text>
         <Text style={styles.summaryText}>{selectedDoctor.name}</Text>
+        {selectedServices.slice(0, 2).map((service) => (
+          <Text key={service.id} style={styles.summaryText}>
+            {`${service.name} • ${formatPriceLabel(service.price)} • ${formatDurationLabel(service.durationMinutes)}`}
+          </Text>
+        ))}
+        {selectedServices.length > 2 ? (
+          <Text style={styles.summaryText}>{`+${selectedServices.length - 2} more service${selectedServices.length - 2 > 1 ? 's' : ''}`}</Text>
+        ) : null}
       </View>
     );
-  }, [selectedDoctor, selectedServices.length]);
+  }, [selectedDoctor, selectedServices]);
 
   const dateSlots = useMemo(() => {
     if (!selectedDateKey) return [];
@@ -455,7 +480,8 @@ export default function BookingScreen() {
     return {
       id: service.id,
       label: service.name,
-      description: service.category,
+      description: getServiceDescription(service),
+      meta: `${service.category} • ${formatPriceLabel(service.price)} • ${formatDurationLabel(service.durationMinutes)}`,
       disabled: categoryMismatch,
     };
   });
@@ -862,7 +888,10 @@ export default function BookingScreen() {
           <View style={styles.circleMidLeft} />
           <View style={styles.headerRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.headerEyebrow}>PATIENT PORTAL</Text>
+             <View style={styles.eyebrowRow}>
+                <View style={[styles.eyebrowDot, { backgroundColor: 'rgba(255,255,255,0.7)' }]} />
+                <Text style={[styles.eyebrowText, { color: 'rgba(255,255,255,0.8)' }]}>Patient Portal</Text>
+              </View>
               <Text style={styles.headerTitle}>Book Appointment</Text>
               <Text style={styles.headerGreeting}>Schedule a visit with the right specialist.</Text>
             </View>
@@ -926,7 +955,7 @@ export default function BookingScreen() {
 
           <SectionCard
             title="Appointment Details"
-            subtitle="Scheduled appointments use the clinic schedule and current availability."
+            subtitle=""
             badge="Step 1"
             delay={80}
             collapsed={stepOneCollapsed}
@@ -949,7 +978,7 @@ export default function BookingScreen() {
                 <Text style={styles.dropdownValue}>
                   {selectedServices.length > 0 ? selectedServices.map((service) => service.name).join(', ') : 'Select one or more services'}
                 </Text>
-                <Text style={styles.dropdownHint}>Only obstetrician - gynecologist and general surgeon services are available here.</Text>
+                <Text style={styles.dropdownHint}></Text>
               </View>
               <Ionicons name="chevron-down" size={18} color={T.slate500} />
             </Pressable>
@@ -962,10 +991,10 @@ export default function BookingScreen() {
                     <View key={service.id} style={styles.selectedServiceCard}>
                       <Text style={styles.selectedServiceTitle}>{service.name}</Text>
                       <Text style={styles.selectedServiceDescription}>
-                        {service.description || 'No description provided.'}
+                        {getServiceDescription(service)}
                       </Text>
                       <Text style={styles.selectedServiceMeta}>
-                        {formatPriceLabel(service.price)} · {service.durationMinutes ? `${service.durationMinutes} mins` : 'Duration unavailable'}
+                        {formatPriceLabel(service.price)} · {formatDurationLabel(service.durationMinutes)}
                       </Text>
                     </View>
                   ))}
@@ -997,7 +1026,7 @@ export default function BookingScreen() {
 
           <SectionCard
             title="Date and Time"
-            subtitle="Only scheduled clinic days are enabled. Booked time slots stay unavailable."
+            subtitle=""
             badge="Step 2"
             delay={120}
             collapsed={stepTwoCollapsed}
@@ -1180,7 +1209,7 @@ const styles = StyleSheet.create({
   },
   pageScroll: {
     flex: 1,
-    backgroundColor: T.slate100,
+    backgroundColor:'rgba(255,255,255,0.07)',
   },
   pageScrollContent: {
     flexGrow: 1,
@@ -1235,9 +1264,14 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.65)',
     marginBottom: 2,
   },
+
+   eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 },
+  eyebrowDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: T.cyan500 },
+  eyebrowText: { fontSize: 9, fontWeight: '700', letterSpacing: 0.9, textTransform: 'uppercase', color: T.cyan600 },
   headerTitle: {
     fontSize: 30,
     fontWeight: '800',
+    fontFamily: 'serif',
     color: T.white,
     letterSpacing: 0.2,
     lineHeight: 34,
@@ -1768,5 +1802,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: T.slate500,
     lineHeight: 15,
+  },
+  sheetOptionMeta: {
+    marginTop: 4,
+    fontSize: 10,
+    fontWeight: '700',
+    color: T.cyan700,
+    lineHeight: 14,
   },
 });

@@ -362,6 +362,19 @@ export default function PatientDashboardScreen() {
 
   const nextAppt = upcomingAppointments[0];
 
+
+  const getGreeting = () => {
+  const currentHour = new Date().getHours();
+  
+  if (currentHour < 12) {
+    return 'Good morning';
+  } else if (currentHour < 18) {
+    return 'Good afternoon';
+  } else {
+    return 'Good evening';
+  }
+};
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor={T.cyan700} />
@@ -376,11 +389,18 @@ export default function PatientDashboardScreen() {
           <View style={styles.circleBottomLeft} />
           <View style={styles.circleMidLeft} />
           <View style={styles.headerRow}>
-            <View>
-              <Text style={styles.headerEyebrow}>PATIENT PORTAL</Text>
-              <Text style={styles.headerTitle}>Dashboard</Text>
-              <Text style={styles.headerGreeting}>Good morning, Patient 👋</Text>
+          <View>
+ 
+ <View style={styles.eyebrowRow}>
+              <View style={[styles.eyebrowDot, { backgroundColor: 'rgba(255,255,255,0.7)' }]} />
+              <Text style={[styles.eyebrowText, { color: 'rgba(255,255,255,0.8)' }]}>Patient Portal</Text>
             </View>
+  <Text style={styles.headerTitle}>Dashboard</Text>
+  <View style={styles.greetingContainer}>
+    <Text style={styles.headerGreeting}>{getGreeting()}, Patient</Text>
+    <Ionicons name="hand-right-outline" size={14} color="rgba(255,255,255,0.75)" style={styles.waveIcon} />
+  </View>
+</View>
             <View style={styles.notifBtnWrap}>
               <Pressable style={styles.notifBtn} onPress={() => router.push('/screenviews/notifications' as any)}>
                 <Ionicons name="notifications-outline" size={19} color={T.white} />
@@ -402,8 +422,10 @@ export default function PatientDashboardScreen() {
             <InfoCard
               icon="people-outline"
               label="Your current Queue"
-              value={queueStatus ? queueStatus.queueNumber || '—' : '—'}
-              sub={queueStatus && queueStatus.position != null ? `Patient in front: ${queueStatus.position}` : 'No active queue'}
+              value={queueStatus ? queueStatus.queueNumber || '—' : 'Join Queue'}
+              sub={queueStatus
+                ? (queueStatus.position != null ? `Patient in front: ${queueStatus.position}` : 'Queue entry active')
+                : 'Tap here to join the walk-in queue'}
               delay={30}
               onPress={() => router.push('/screenviews/queue' as any)}
             />
@@ -533,7 +555,7 @@ const styles = StyleSheet.create({
     width: 180,
     height: 180,
     borderRadius: 90,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(255,255,255,0.07)',
   },
   headerRow: {
     flexDirection: 'row',
@@ -549,6 +571,9 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.65)',
     marginBottom: 2,
   },
+     eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 },
+  eyebrowDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: T.cyan500 },
+  eyebrowText: { fontSize: 9, fontWeight: '700', letterSpacing: 0.9, textTransform: 'uppercase', color: T.cyan600 },
   headerTitle: {
     fontSize:35,
     fontWeight: '800',
@@ -565,6 +590,14 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontWeight: '400',
   },
+  greetingContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginTop: 2,
+},
+waveIcon: {
+  marginLeft: 6,
+},
   notifBtnWrap: {
     marginTop: 4,
   },
@@ -599,7 +632,7 @@ const styles = StyleSheet.create({
   // ── Page Scroll ──
   pageScroll: {
     flex: 1,
-    backgroundColor: T.cyan700, 
+    backgroundColor: 'rgba(255,255,255,0.07)', 
   },
 
 
@@ -621,7 +654,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingTop: 20,
     paddingHorizontal: 14,
-    paddingBottom: 84,
+    paddingBottom: 14,
   },
   inlineError: {
     fontSize: 12,

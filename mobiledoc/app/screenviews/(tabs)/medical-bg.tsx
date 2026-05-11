@@ -191,6 +191,12 @@ export default function PatientMedicalBackgroundScreen() {
       <StatusBar barStyle="light-content" backgroundColor={T.cyan700} />
 
       <View style={styles.header}>
+        
+
+
+  <View style={styles.circleTopRight} />
+          <View style={styles.circleBottomLeft} />
+          <View style={styles.circleMidLeft} />
         <View style={styles.headerInner}>
           <View style={{ flex: 1 }}>
             <View style={styles.eyebrowRow}>
@@ -354,6 +360,35 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     marginTop: -16,
   },
+    circleTopRight: {
+    position: 'absolute',
+    top: -80,
+    right: -80,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  circleBottomLeft: {
+    position: 'absolute',
+    bottom: -80,
+    left: -60,
+    width: 190,
+    height: 190,
+    borderRadius: 95,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+  },
+  circleMidLeft: {
+    position: 'absolute',
+    top: 30,
+    left: -90,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+
+
   scrollContent: { padding: 16, gap: 12, paddingBottom: 28 },
   inlineError: {
     backgroundColor: T.red100,

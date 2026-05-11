@@ -254,6 +254,9 @@ export default function TabsLayout() {
         <Tabs.Screen name="prescriptions" options={{ href: null }} />
         <Tabs.Screen name="settings"     options={{ href: null }} />
         <Tabs.Screen name="medical-bg"   options={{ href: null }} />
+         <Tabs.Screen name="records"   options={{ href: null }} />
+          <Tabs.Screen name="booking"   options={{ href: null }} />
+           <Tabs.Screen name="chat"   options={{ href: null }} />
       </Tabs>
 
       {!USE_GLOBAL_CHATBOT_OVERLAY ? (

@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Appointment;
 use App\Models\Conversation;
 use App\Models\DoctorSchedule;
+use App\Models\MedicalBackground;
 use App\Models\Message;
 use App\Models\Queue;
+use App\Models\Service;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -553,6 +555,8 @@ class QueueController extends Controller
             'doctor_id' => ['required', 'exists:users,user_id'],
             'reason_for_visit' => ['nullable', 'string'],
             'patient_id' => ['sometimes', 'exists:users,user_id'],
+            'service_ids' => ['required', 'array', 'min:1'],
+            'service_ids.*' => ['integer', 'exists:services,service_id'],
         ]);
 
         $doctor = User::query()->find((int) $data['doctor_id']);
@@ -579,6 +583,8 @@ class QueueController extends Controller
         }
 
         $today = now()->toDateString();
+        $currentDayKey = strtolower(now()->format('D'));
+        $currentTime = now()->format('H:i:s');
         $activeExists = Queue::query()
             ->whereDate('queue_datetime', $today)
             ->whereIn('status', ['waiting', 'serving'])
@@ -593,9 +599,100 @@ class QueueController extends Controller
             ], 422);
         }
 
+        $hasActiveSchedule = DoctorSchedule::query()
+            ->where('doctor_id', (int) $data['doctor_id'])
+            ->where('day_of_week', $currentDayKey)
+            ->where('is_available', true)
+            ->where('start_time', '<=', $currentTime)
+            ->where('end_time', '>=', $currentTime)
+            ->exists();
+
+        if (! $hasActiveSchedule) {
+            return response()->json([
+                'message' => 'Selected doctor is not in an active schedule right now.',
+                'code' => 'DOCTOR_NOT_ACTIVE',
+            ], 422);
+        }
+
+        $hasMedicalBackground = MedicalBackground::query()
+            ->where('patient_id', $targetPatientId)
+            ->exists();
+
+        if (! $hasMedicalBackground) {
+            return response()->json([
+                'message' => 'Medical background is required before joining the queue.',
+                'code' => 'MEDICAL_BACKGROUND_REQUIRED',
+            ], 428);
+        }
+
+        $serviceIds = array_values(array_unique(array_map('intval', $data['service_ids'] ?? [])));
+        if (! count($serviceIds)) {
+            return response()->json([
+                'message' => 'Service is required.',
+                'code' => 'SERVICE_REQUIRED',
+            ], 422);
+        }
+
+        $services = Service::query()
+            ->whereIn('service_id', $serviceIds)
+            ->get();
+
+        $inactive = $services->firstWhere('is_active', false);
+        if ($inactive) {
+            return response()->json([
+                'message' => 'Selected service is inactive.',
+                'code' => 'SERVICE_INACTIVE',
+            ], 422);
+        }
+
+        $serviceGroups = $services
+            ->map(function (Service $service) {
+                $serviceName = (string) ($service->service_name ?? '');
+                $serviceCategory = strtolower(trim(explode(':', $serviceName, 2)[0] ?? $serviceName));
+                return trim($serviceCategory);
+            })
+            ->filter(fn ($v) => (string) $v !== '')
+            ->unique()
+            ->values();
+
+        if ($serviceGroups->count() > 1) {
+            return response()->json([
+                'message' => 'All selected services must match the first chosen service.',
+                'code' => 'SERVICE_GROUP_MISMATCH',
+            ], 422);
+        }
+
+        $blocked = ['obsterician - gynecologist', 'obstetrician - gynecologist', 'general surgeon'];
+        if ($serviceGroups->count() === 1 && in_array((string) $serviceGroups->first(), $blocked, true)) {
+            return response()->json([
+                'message' => 'Selected service is only available for scheduled appointments.',
+                'code' => 'SERVICE_SCHEDULED_ONLY',
+            ], 422);
+        }
+
+        $doctorSpec = strtolower(trim((string) ($doctor->specialization ?? '')));
+        if ($doctorSpec !== '') {
+            foreach ($services as $service) {
+                $serviceName = (string) ($service->service_name ?? '');
+                $serviceCategory = strtolower(trim(explode(':', $serviceName, 2)[0] ?? $serviceName));
+                $serviceCategory = trim($serviceCategory);
+                if ($serviceCategory === '') {
+                    continue;
+                }
+
+                $matches = str_contains($doctorSpec, $serviceCategory) || str_contains($serviceCategory, $doctorSpec);
+                if (! $matches) {
+                    return response()->json([
+                        'message' => 'Selected doctor does not match the chosen service.',
+                        'code' => 'SPECIALIZATION_MISMATCH',
+                    ], 422);
+                }
+            }
+        }
+
         $priorityLevel = Queue::priorityLevelForPatientId($targetPatientId) ?? 5;
 
-        $result = DB::transaction(function () use ($currentUser, $data, $targetPatientId, $priorityLevel) {
+        $result = DB::transaction(function () use ($currentUser, $data, $targetPatientId, $priorityLevel, $serviceIds) {
             $appointment = Appointment::create([
                 'patient_id' => $targetPatientId,
                 'doctor_id' => (int) $data['doctor_id'],
@@ -606,6 +703,8 @@ class QueueController extends Controller
                 'reason_for_visit' => $data['reason_for_visit'] ?? null,
                 'priority_level' => $priorityLevel,
             ]);
+
+            $appointment->services()->sync($serviceIds);
 
             $queueAt = now();
             $date = $queueAt->toDateString();
@@ -620,7 +719,7 @@ class QueueController extends Controller
                 'priority_level' => $priorityLevel,
             ]);
 
-            return $queue->load(['appointment.patient', 'appointment.doctor']);
+            return $queue->load(['appointment.patient', 'appointment.doctor', 'appointment.services']);
         });
 
         return response()->json($result, 201);
