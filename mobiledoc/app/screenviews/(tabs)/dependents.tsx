@@ -807,7 +807,7 @@ export default function DependentsScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: T.cyan700 },
-  header: { backgroundColor: T.cyan700, paddingHorizontal: 20, paddingTop: 10,   paddingBottom: 30 },
+  header: { backgroundColor: T.cyan700, paddingHorizontal: 20, paddingTop: 50,   paddingBottom: 30 },
   eyebrow: {
     fontSize: 9,
     fontWeight: '700',

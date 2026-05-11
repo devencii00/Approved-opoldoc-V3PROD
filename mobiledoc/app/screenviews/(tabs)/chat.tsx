@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: T.cyan700,
     paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingTop: 50,
     paddingBottom: 20,
     position: 'relative',
     overflow: 'hidden',
@@ -578,7 +578,7 @@ const styles = StyleSheet.create({
   eyebrowDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: T.cyan500 },
   eyebrowText: { fontSize: 9, fontWeight: '700', letterSpacing: 0.9, textTransform: 'uppercase', color: T.cyan600 },
   headerTitle: {
-    fontSize: 35,
+    fontSize: 30,
     fontWeight: '800',
     fontFamily: 'serif',
     color: T.white,

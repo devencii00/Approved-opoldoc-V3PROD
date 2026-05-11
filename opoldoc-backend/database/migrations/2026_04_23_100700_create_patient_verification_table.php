@@ -20,21 +20,21 @@ return new class extends Migration
                 ->on('users')
                 ->cascadeOnDelete();
 
-            // what is being verified
-            $table->enum('type', ['senior', 'pwd', 'pregnant']);
+         
+            $table->enum('type', ['senior', 'pwd', 'pregnant'])->nullable();
 
-            // request lifecycle
+          
             $table->enum('status', ['pending', 'approved', 'rejected'])
                 ->default('pending');
 
-            // 🔥 PROOF FILES (this is what you were missing)
+            
             $table->string('document_path')->nullable();
-            // e.g. storage/verifications/pwd_card.jpg
+          
 
             $table->text('remarks')->nullable();
-            // admin/receptionist notes
+         
 
-            // who processed it (important for audit)
+           
             $table->unsignedBigInteger('verified_by')->nullable();
             $table->foreign('verified_by')
                 ->references('user_id')

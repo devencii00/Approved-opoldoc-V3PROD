@@ -769,13 +769,13 @@ export default function ProfileScreen() {
               <Text style={styles.cardText}>Set your medical background or Verify your patient type.</Text>
             </View> */}
           </View>
-          <Pressable
-            onPress={() => router.push('/screenviews/medical-bg' as any)}
-            style={({ pressed }) => [styles.medicalButton, pressed && { opacity: 0.85 }]}
-          >
-            <Text style={styles.medicalButtonText}>Medical Background</Text>
-          </Pressable>
-<br />
+       <Pressable 
+  onPress={() => router.push('/screenviews/medical-bg' as any)} 
+  style={({ pressed }) => [styles.medicalButton, pressed && { opacity: 0.85 }, { marginBottom: 15 }]} 
+>
+  <Text style={styles.medicalButtonText}>Medical Background</Text>
+</Pressable>
+
              <Pressable
                     onPress={() => router.push('/screenviews/verify' as any)}
                     style={({ pressed }) => [styles.verifyButton, pressed && { opacity: 0.85 }]}
@@ -832,7 +832,7 @@ const styles = StyleSheet.create({
    header: {
     backgroundColor: T.cyan700,
     paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingTop: 50,
     paddingBottom: 30,
     position: 'relative',
     overflow: 'hidden',

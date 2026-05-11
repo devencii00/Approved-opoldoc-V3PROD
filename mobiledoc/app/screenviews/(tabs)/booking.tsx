@@ -1224,7 +1224,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: T.cyan700,
     paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingTop: 50,
     paddingBottom: 20,
     position: 'relative',
     overflow: 'hidden',

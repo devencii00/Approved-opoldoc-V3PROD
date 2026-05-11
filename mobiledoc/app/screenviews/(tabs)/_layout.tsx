@@ -193,7 +193,7 @@ export default function TabsLayout() {
           headerShown: false,
           tabBarActiveTintColor: '#0891b2',
           tabBarInactiveTintColor: '#94a3b8',
-          tabBarShowLabel: false, // Labels are rendered inside TabIcon
+          tabBarShowLabel: false, 
           tabBarStyle: {
             backgroundColor: '#ffffff',
             borderTopWidth: 0,
@@ -207,6 +207,16 @@ export default function TabsLayout() {
         }}
       >
         {/* ── Dependents ── */}
+
+           <Tabs.Screen
+          name="index"
+          options={{
+            tabBarIcon: ({ color, focused }) => (
+              <TabIcon name="home" outlineName="home-outline" label="Home" focused={focused} color={color} />
+            ),
+          }}
+        />
+        
         <Tabs.Screen
           name="dependents"
           options={{
@@ -222,14 +232,7 @@ export default function TabsLayout() {
           }}
         />
 
-        <Tabs.Screen
-          name="index"
-          options={{
-            tabBarIcon: ({ color, focused }) => (
-              <TabIcon name="home" outlineName="home-outline" label="Home" focused={focused} color={color} />
-            ),
-          }}
-        />
+     
 
         {/* ── Profile ── */}
         <Tabs.Screen
