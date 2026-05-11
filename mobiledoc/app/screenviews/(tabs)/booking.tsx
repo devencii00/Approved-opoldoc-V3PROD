@@ -1174,6 +1174,13 @@ export default function BookingScreen() {
             >
               <Text style={styles.primaryButtonText}>{booking ? 'Booking appointment...' : 'Book Appointment'}</Text>
             </Pressable>
+
+               <Pressable
+                          onPress={() => router.push('/screenviews/queue' as any)}
+                          style={({ pressed }) => [styles.secondaryButton, pressed && { opacity: 0.85 }]}
+                        >
+                          <Text style={styles.secondaryButtonText}>Join queue instead</Text>
+                        </Pressable>
           </SectionCard>
         </View>
       </ScrollView>
@@ -1353,6 +1360,24 @@ const styles = StyleSheet.create({
     elevation: 2,
     minHeight: 136,
   },
+
+  
+  secondaryButton: {
+    marginTop: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: T.slate200,
+    backgroundColor: T.white,
+    paddingVertical: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: T.slate700,
+  },
+
   infoIconCircle: {
     width: 36,
     height: 36,

@@ -190,29 +190,27 @@ export default function PatientMedicalBackgroundScreen() {
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor={T.cyan700} />
 
-      <View style={styles.header}>
-        
-
-
-  <View style={styles.circleTopRight} />
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <View style={styles.circleTopRight} />
           <View style={styles.circleBottomLeft} />
           <View style={styles.circleMidLeft} />
-        <View style={styles.headerInner}>
-          <View style={{ flex: 1 }}>
-            <View style={styles.eyebrowRow}>
-              <View style={[styles.eyebrowDot, { backgroundColor: 'rgba(255,255,255,0.7)' }]} />
-              <Text style={[styles.eyebrowText, { color: 'rgba(255,255,255,0.8)' }]}>Patient Portal</Text>
+          <View style={styles.headerInner}>
+            <View style={{ flex: 1 }}>
+              <View style={styles.eyebrowRow}>
+                <View style={[styles.eyebrowDot, { backgroundColor: 'rgba(255,255,255,0.7)' }]} />
+                <Text style={[styles.eyebrowText, { color: 'rgba(255,255,255,0.8)' }]}>Patient Portal</Text>
+              </View>
+              <Text style={styles.headerTitle}>Medical background</Text>
+              <Text style={styles.headerSub}>Add allergies and conditions before booking.</Text>
             </View>
-            <Text style={styles.headerTitle}>Medical background</Text>
-            <Text style={styles.headerSub}>Add allergies and conditions before booking.</Text>
+            <Pressable onPress={() => router.back()} style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.7 }]}>
+              <Text style={styles.headerBtnText}>Back</Text>
+            </Pressable>
           </View>
-          <Pressable onPress={() => router.back()} style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.7 }]}>
-            <Text style={styles.headerBtnText}>Back</Text>
-          </Pressable>
         </View>
-      </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={[styles.scroll, styles.scrollContent]}>
         {error ? <Text style={styles.inlineError}>{error}</Text> : null}
         {success ? <Text style={styles.inlineSuccess}>{success}</Text> : null}
 
@@ -323,6 +321,7 @@ export default function PatientMedicalBackgroundScreen() {
         >
           <Text style={styles.secondaryButtonText}>Done</Text>
         </Pressable>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -330,11 +329,11 @@ export default function PatientMedicalBackgroundScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: T.cyan700 },
-  header: { backgroundColor: T.cyan700, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24 },
+  header: { backgroundColor: T.cyan700, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 30 },
   headerInner: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
   headerTitle: {
     fontFamily: 'serif',
-    fontSize: 26,
+    fontSize: 30,
     fontWeight: '700',
     color: T.white,
     marginBottom: 2,

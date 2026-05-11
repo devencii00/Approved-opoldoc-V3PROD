@@ -65,14 +65,9 @@ export default function PatientSettingsScreen() {
   const [loading, setLoading] = useState(false);
   const [savingEmail, setSavingEmail] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
-  const [loadingVerification, setLoadingVerification] = useState(false);
-  const [submittingVerification, setSubmittingVerification] = useState(false);
   const [email, setEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [verificationType, setVerificationType] = useState<'senior' | 'pwd' | 'pregnant'>('senior');
-  const [verificationDoc, setVerificationDoc] = useState<PickedDoc | null>(null);
-  const [verificationItems, setVerificationItems] = useState<VerificationRequest[]>([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [logoutOpen, setLogoutOpen] = useState(false);
@@ -135,120 +130,6 @@ export default function PatientSettingsScreen() {
       cancelled = true;
     };
   }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadVerifications() {
-      setLoadingVerification(true);
-      try {
-        const token = (globalThis as any)?.apiToken as string | undefined;
-        if (!token) return;
-
-        const response = await fetch(`${API_BASE_URL}/patient-verifications?per_page=10`, {
-          headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
-        });
-
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) return;
-
-        const list: VerificationRequest[] = Array.isArray((data as any)?.data)
-          ? (data as any).data
-          : Array.isArray(data)
-            ? data
-            : [];
-
-        if (!cancelled) setVerificationItems(list);
-      } finally {
-        if (!cancelled) setLoadingVerification(false);
-      }
-    }
-
-    loadVerifications();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  async function handlePickVerificationDoc() {
-    setError('');
-    setSuccess('');
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['image/*', 'application/pdf'],
-        copyToCacheDirectory: true,
-        multiple: false,
-      });
-
-      if (result.canceled) return;
-      const asset = result.assets && result.assets.length ? result.assets[0] : null;
-      if (!asset) {
-        setError('Unable to read selected document.');
-        return;
-      }
-
-      setVerificationDoc({
-        uri: asset.uri,
-        name: asset.name,
-        mimeType: asset.mimeType ?? 'application/octet-stream',
-      });
-    } catch {
-      setError('Unable to pick a document on this device.');
-    }
-  }
-
-  async function handleSubmitVerification() {
-    if (!verificationDoc) {
-      setError('Please upload a document first.');
-      return;
-    }
-
-    setError('');
-    setSuccess('');
-    setSubmittingVerification(true);
-
-    try {
-      const token = (globalThis as any)?.apiToken as string | undefined;
-      if (!token) {
-        setError('Please log in again.');
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append('type', verificationType);
-      formData.append('document', { uri: verificationDoc.uri, name: verificationDoc.name, type: verificationDoc.mimeType } as any);
-
-      const response = await fetch(`${API_BASE_URL}/patient-verifications`, {
-        method: 'POST',
-        headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        const message =
-          typeof (data as any)?.message === 'string' && (data as any).message.length > 0
-            ? (data as any).message
-            : 'Unable to submit verification request.';
-        setError(message);
-        return;
-      }
-
-      setSuccess('Verification request submitted.');
-      setVerificationDoc(null);
-
-      const refreshed = await fetch(`${API_BASE_URL}/patient-verifications?per_page=10`, {
-        headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
-      });
-      const refreshedData = await refreshed.json().catch(() => ({}));
-      const list: VerificationRequest[] = Array.isArray((refreshedData as any)?.data) ? (refreshedData as any).data : [];
-      setVerificationItems(list);
-    } catch {
-      setError('Network error. Please try again.');
-    } finally {
-      setSubmittingVerification(false);
-    }
-  }
 
   async function handleSaveEmail() {
     const trimmed = email.trim();
@@ -486,60 +367,12 @@ export default function PatientSettingsScreen() {
             <Text style={styles.cardSubtitle}>Submit PWD, Pregnant, or Senior proof for clinic records.</Text>
           </View>
           <View style={styles.cardBody}>
-            <Text style={styles.label}>Type</Text>
-            <View style={styles.chipRow}>
-              {(['senior', 'pwd', 'pregnant'] as const).map((t) => (
-                <Pressable
-                  key={t}
-                  onPress={() => setVerificationType(t)}
-                  style={({ pressed }) => [
-                    styles.chip,
-                    verificationType === t && styles.chipActive,
-                    pressed && { opacity: 0.85 },
-                  ]}
-                >
-                  <Text style={[styles.chipText, verificationType === t && styles.chipTextActive]}>
-                    {t === 'pwd' ? 'PWD' : t === 'senior' ? 'Senior' : 'Pregnant'}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-
             <Pressable
-              onPress={handlePickVerificationDoc}
-              style={({ pressed }) => [styles.outlineButton, pressed && { opacity: 0.85 }]}
+              onPress={() => router.push('/screenviews/verify' as any)}
+              style={({ pressed }) => [styles.primaryButton, pressed && { opacity: 0.85 }]}
             >
-              <Text style={styles.outlineButtonText}>
-                {verificationDoc ? `Document: ${verificationDoc.name}` : 'Upload document (JPG/PNG/PDF)'}
-              </Text>
+              <Text style={styles.primaryButtonText}>Manage Verification</Text>
             </Pressable>
-
-            <Pressable
-              onPress={handleSubmitVerification}
-              disabled={submittingVerification || loadingVerification}
-              style={({ pressed }) => [
-                styles.primaryButton,
-                (submittingVerification || loadingVerification) && { opacity: 0.6 },
-                pressed && { opacity: 0.85 },
-              ]}
-            >
-              <Text style={styles.primaryButtonText}>{submittingVerification ? 'Submitting...' : 'Submit verification request'}</Text>
-            </Pressable>
-
-            <View style={styles.divider} />
-            <Text style={styles.label}>Recent requests</Text>
-            {loadingVerification ? <Text style={styles.mutedText}>Loading…</Text> : null}
-            {!loadingVerification && verificationItems.length === 0 ? (
-              <Text style={styles.mutedText}>No verification requests yet.</Text>
-            ) : null}
-            {verificationItems.slice(0, 3).map((v) => (
-              <View key={String(v.verification_id)} style={styles.verifRow}>
-                <Text style={styles.verifTitle}>
-                  {(v.type === 'pwd' ? 'PWD' : v.type === 'senior' ? 'Senior' : 'Pregnant') + ' · ' + v.status.toUpperCase()}
-                </Text>
-                {v.remarks ? <Text style={styles.verifSub}>{v.remarks}</Text> : null}
-              </View>
-            ))}
           </View>
         </View>
 

@@ -349,7 +349,7 @@ export default function PatientAppointmentsScreen() {
             </View>
 
               <Text style={styles.headerTitle}>Appointments</Text>
-              <Text style={styles.headerGreeting}>View your upcoming clinic schedule and visit details.</Text>
+              <Text style={styles.headerGreeting}>View your upcoming appointments & history.</Text>
             </View>
             <Pressable
               style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.85 }]}
@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
   eyebrowDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: T.cyan500 },
   eyebrowText: { fontSize: 9, fontWeight: '700', letterSpacing: 0.9, textTransform: 'uppercase', color: T.cyan600 },
   headerTitle: {
-    fontSize: 33,
+    fontSize: 30,
     fontWeight: '800',
     fontFamily: 'serif',
     color: T.white,

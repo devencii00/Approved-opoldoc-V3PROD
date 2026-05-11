@@ -18,7 +18,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 // @ts-ignore
 import * as DocumentPicker from 'expo-document-picker';
 import { clearPersistedAuthSession, persistCurrentUser } from '@/lib/auth-storage';
-
+import { Platform } from 'react-native';
 const T = {
   cyan500: '#06b6d4',
   cyan600: '#0891b2',
@@ -132,7 +132,18 @@ function formatDateOnly(value: string | null): string {
   if (!value) return 'Not provided';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'Not provided';
-  return date.toLocaleDateString();
+  return formatDateToWords(date);
+}
+
+function formatDateToWords(date: Date): string {
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  const month = months[date.getMonth()];
+  const day = date.getDate();
+  const year = date.getFullYear();
+  return `${month} ${day}, ${year}`;
 }
 
 function calculateAge(value: string | null): string {
@@ -162,12 +173,17 @@ function getInitials(user: ProfileUser | null): string {
 }
 
 function mapApiUserToProfileUser(data: any): ProfileUser {
+  let birthdate = data?.birthdate != null ? String(data.birthdate) : null;
+  if (birthdate && birthdate.includes('T')) {
+    birthdate = birthdate.split('T')[0];
+  }
+
   return {
     user_id: Number(data?.user_id),
     firstname: data?.firstname != null ? String(data.firstname) : null,
     middlename: data?.middlename != null ? String(data.middlename) : null,
     lastname: data?.lastname != null ? String(data.lastname) : null,
-    birthdate: data?.birthdate != null ? String(data.birthdate) : null,
+    birthdate: birthdate,
     email: data?.email != null ? String(data.email) : null,
     sex: data?.sex != null ? String(data.sex) : null,
     contact_number: data?.contact_number != null ? String(data.contact_number) : null,
@@ -510,22 +526,23 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor={T.cyan700} />
-      <View style={styles.header}>
-        
-  <View style={styles.circleTopRight} />
-          <View style={styles.circleBottomLeft} />
-          <View style={styles.circleMidLeft} />
-   
-   <View style={styles.eyebrowRow}>
-              <View style={[styles.eyebrowDot, { backgroundColor: 'rgba(255,255,255,0.7)' }]} />
-              <Text style={[styles.eyebrowText, { color: 'rgba(255,255,255,0.8)' }]}>Patient Portal</Text>
-            </View>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          
+    <View style={styles.circleTopRight} />
+            <View style={styles.circleBottomLeft} />
+            <View style={styles.circleMidLeft} />
+    
+    <View style={styles.eyebrowRow}>
+                <View style={[styles.eyebrowDot, { backgroundColor: 'rgba(255,255,255,0.7)' }]} />
+                <Text style={[styles.eyebrowText, { color: 'rgba(255,255,255,0.8)' }]}>Patient Portal</Text>
+              </View>
 
-        <Text style={styles.headerTitle}>Profile</Text>
-        <Text style={styles.subtitle}>View your account details, profile image, and health shortcuts.</Text>
-      </View>
+          <Text style={styles.headerTitle}>Profile</Text>
+          <Text style={styles.subtitle}>View your account details, profile image, and health shortcuts.</Text>
+        </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={[styles.scroll, styles.content]}>
         {!editingInfo && error ? <Text style={styles.inlineError}>{error}</Text> : null}
         {!editingInfo && success ? <Text style={styles.inlineSuccess}>{success}</Text> : null}
 
@@ -609,7 +626,7 @@ export default function ProfileScreen() {
                       style={({ pressed }) => [styles.selectInput, pressed && { opacity: 0.85 }]}
                     >
                       <Text style={form.birthdate ? styles.selectInputValue : styles.selectInputPlaceholder}>
-                        {form.birthdate || 'Select date of birth'}
+                        {form.birthdate ? formatDateToWords(new Date(form.birthdate)) : 'Select date of birth'}
                       </Text>
                       <Ionicons name="calendar-outline" size={18} color={T.slate600} />
                     </Pressable>
@@ -674,7 +691,7 @@ export default function ProfileScreen() {
                     </Pressable>
                   </View>
                   <Pressable
-                    onPress={() => router.push('/screenviews/settings' as any)}
+                    onPress={() => router.push('/screenviews/verify' as any)}
                     style={({ pressed }) => [styles.secondaryWideButton, pressed && { opacity: 0.85 }]}
                   >
                     <Text style={styles.secondaryWideButtonText}>Verify patient type</Text>
@@ -709,7 +726,7 @@ export default function ProfileScreen() {
                     <Text style={styles.infoValue}>{verificationTypeLabel}</Text>
                   </View>
                   <Pressable
-                    onPress={() => router.push('/screenviews/settings' as any)}
+                    onPress={() => router.push('/screenviews/verify' as any)}
                     style={({ pressed }) => [styles.secondaryWideButton, pressed && { opacity: 0.85 }]}
                   >
                     <Text style={styles.secondaryWideButtonText}>Verify patient type</Text>
@@ -750,6 +767,7 @@ export default function ProfileScreen() {
         >
           <Text style={styles.logoutButtonText}>Log Out</Text>
         </Pressable>
+      </View>
       </ScrollView>
 
       <Modal visible={logoutOpen} transparent animationType="fade" onRequestClose={() => setLogoutOpen(false)}>
@@ -781,27 +799,34 @@ export default function ProfileScreen() {
         </View>
       </Modal>
 
-      {showDobPicker ? (
+      {showDobPicker && (
         <DateTimePicker
           value={form.birthdate ? new Date(form.birthdate) : new Date(2000, 0, 1)}
           mode="date"
-          display="default"
+          display="spinner"
           maximumDate={new Date()}
-          onChange={(_, selectedDate) => {
+          onChange={(event, selectedDate) => {
             setShowDobPicker(false);
-            if (selectedDate) {
+            if (event.type === 'set' && selectedDate) {
               updateForm('birthdate', formatDateInput(selectedDate));
             }
           }}
         />
-      ) : null}
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: T.cyan700 },
-  header: { backgroundColor: T.cyan700, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 20 },
+   header: {
+    backgroundColor: T.cyan700,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 30,
+    position: 'relative',
+    overflow: 'hidden',
+  },
   eyebrow: {
     fontSize: 9,
     fontWeight: '700',

@@ -460,7 +460,7 @@ export default function PatientDashboardScreen() {
               <ActionTile
                 icon="calendar-number-outline"
                 title="Appointments"
-                subtitle="View and manage your upcoming appointments."
+                subtitle="Manage your appointments & history."
                 delay={160}
                 onPress={() => router.push('/screenviews/appointments' as any)}
               />
@@ -574,8 +574,10 @@ const styles = StyleSheet.create({
      eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 },
   eyebrowDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: T.cyan500 },
   eyebrowText: { fontSize: 9, fontWeight: '700', letterSpacing: 0.9, textTransform: 'uppercase', color: T.cyan600 },
-  headerTitle: {
-    fontSize:35,
+  
+
+    headerTitle: {
+    fontSize: 30,
     fontWeight: '800',
     fontFamily: 'serif',
     color: T.white,

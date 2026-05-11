@@ -509,11 +509,11 @@ export default function PatientRecordsScreen() {
             </View>
 
               <Text style={styles.headerTitle}>Records</Text>
-              <Text style={styles.headerGreeting}>Review your visit history, prescriptions, and vitals in one place.</Text>
+              <Text style={styles.headerGreeting}>Review your visit history, prescriptions, and vitals.</Text>
             </View>
             <Pressable
               style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.85 }]}
-              onPress={() => router.back()}
+               onPress={() => router.navigate('/screenviews' as any)}
             >
               <Text style={styles.headerBtnText}>Back</Text>
             </Pressable>
@@ -595,7 +595,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.cyan700,
     paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 20,
+    paddingBottom: 30,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -646,7 +646,7 @@ const styles = StyleSheet.create({
   eyebrowDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: T.cyan500 },
   eyebrowText: { fontSize: 9, fontWeight: '700', letterSpacing: 0.9, textTransform: 'uppercase', color: T.cyan600 },
   headerTitle: {
-    fontSize: 35,
+    fontSize: 30,
     fontWeight: '800',
     fontFamily: 'serif',
     color: T.white,

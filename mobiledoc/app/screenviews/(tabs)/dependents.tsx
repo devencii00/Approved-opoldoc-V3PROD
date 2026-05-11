@@ -649,7 +649,7 @@ export default function DependentsScreen() {
             </View>
 
         <Text style={styles.headerTitle}>Dependents</Text>
-        <Text style={styles.subtitle}>Review linked dependent accounts and their records from one place.</Text>
+        <Text style={styles.subtitle}>View linked dependent accounts and their records.</Text>
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -807,7 +807,7 @@ export default function DependentsScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: T.cyan700 },
-  header: { backgroundColor: T.cyan700, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 20 },
+  header: { backgroundColor: T.cyan700, paddingHorizontal: 20, paddingTop: 10,   paddingBottom: 30 },
   eyebrow: {
     fontSize: 9,
     fontWeight: '700',

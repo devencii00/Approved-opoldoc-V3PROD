@@ -375,7 +375,7 @@ export default function ChatScreen() {
             </View>
 
               <Text style={styles.headerTitle}>Messages</Text>
-              <Text style={styles.headerGreeting}>Chat with the receptionist about appointments, queue updates, and clinic concerns.</Text>
+              <Text style={styles.headerGreeting}>Communicate with the receptionist.</Text>
             </View>
             <Pressable style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.85 }]} onPress={() => router.replace('/screenviews/(tabs)' as any)}>
               <Text style={styles.headerBtnText}>Back</Text>
