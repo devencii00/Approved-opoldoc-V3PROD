@@ -741,12 +741,12 @@ export default function ProfileScreen() {
                     <Text style={styles.infoLabel}>Type</Text>
                     <Text style={styles.infoValue}>{verificationTypeLabel}</Text>
                   </View>
-                  <Pressable
+                  {/* <Pressable
                     onPress={() => router.push('/screenviews/verify' as any)}
                     style={({ pressed }) => [styles.secondaryWideButton, pressed && { opacity: 0.85 }]}
                   >
                     <Text style={styles.secondaryWideButtonText}>Verify patient type</Text>
-                  </Pressable>
+                  </Pressable> */}
                   <Pressable
                     onPress={handleStartEditing}
                     style={({ pressed }) => [styles.primaryButton, pressed && { opacity: 0.85 }]}
@@ -761,21 +761,30 @@ export default function ProfileScreen() {
 
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <View style={styles.iconWrap}>
+            {/* <View style={styles.iconWrap}>
               <Ionicons name="medkit-outline" size={20} color={T.cyan700} />
             </View>
             <View style={styles.cardHeaderText}>
-              <Text style={styles.cardTitle}>Health tools</Text>
-              <Text style={styles.cardText}>Open the medical background screen to review allergies and conditions.</Text>
-            </View>
+              <Text style={styles.cardTitle}>Other tools</Text>
+              <Text style={styles.cardText}>Set your medical background or Verify your patient type.</Text>
+            </View> */}
           </View>
           <Pressable
             onPress={() => router.push('/screenviews/medical-bg' as any)}
-            style={({ pressed }) => [styles.primaryButton, pressed && { opacity: 0.85 }]}
+            style={({ pressed }) => [styles.medicalButton, pressed && { opacity: 0.85 }]}
           >
-            <Text style={styles.primaryButtonText}>Medical Background</Text>
+            <Text style={styles.medicalButtonText}>Medical Background</Text>
           </Pressable>
+<br />
+             <Pressable
+                    onPress={() => router.push('/screenviews/verify' as any)}
+                    style={({ pressed }) => [styles.verifyButton, pressed && { opacity: 0.85 }]}
+                  >
+                    <Text style={styles.verifyButtonText}>Verify patient type</Text>
+                  </Pressable>
         </View>
+
+
 
         <Pressable
           onPress={() => setLogoutOpen(true)}
@@ -1160,6 +1169,37 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: T.red700,
+  },
+
+   medicalButton: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.22)', // Subtle amber/orange border
+    backgroundColor: '#FFFBEB', // Very light amber (like T.orange100)
+    paddingVertical: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  medicalButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#D97706', // Strong amber/orange (like T.orange700)
+  },
+
+  // Verify Patient: Green
+  verifyButton: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.22)', // Subtle green border
+    backgroundColor: '#F0FDF4', // Very light green (like T.green100)
+    paddingVertical: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  verifyButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#15803D', // Strong green (like T.green700)
   },
   modalOverlay: {
     flex: 1,

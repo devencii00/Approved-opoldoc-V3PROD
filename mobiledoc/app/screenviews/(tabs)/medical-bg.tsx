@@ -204,9 +204,12 @@ export default function PatientMedicalBackgroundScreen() {
               <Text style={styles.headerTitle}>Medical background</Text>
               <Text style={styles.headerSub}>Add allergies and conditions before booking.</Text>
             </View>
-            <Pressable onPress={() => router.back()} style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.7 }]}>
-              <Text style={styles.headerBtnText}>Back</Text>
-            </Pressable>
+            <Pressable
+                         style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.85 }]}
+                          onPress={() => router.navigate('/screenviews/profile' as any)}
+                       >
+                         <Text style={styles.headerBtnText}>Back</Text>
+                       </Pressable>
           </View>
         </View>
 

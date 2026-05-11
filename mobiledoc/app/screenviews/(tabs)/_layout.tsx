@@ -249,15 +249,15 @@ export default function TabsLayout() {
 
         {/* Hidden screens */}
         <Tabs.Screen name="appointments" options={{ href: null, tabBarStyle: { display: 'none' } }} />
-        <Tabs.Screen name="queue"        options={{ href: null }} />
-        <Tabs.Screen name="visits"       options={{ href: null }} />
-        <Tabs.Screen name="prescriptions" options={{ href: null }} />
-        <Tabs.Screen name="settings"     options={{ href: null }} />
-        <Tabs.Screen name="medical-bg"   options={{ href: null }} />
-         <Tabs.Screen name="records"   options={{ href: null }} />
-          <Tabs.Screen name="booking"   options={{ href: null }} />
-           <Tabs.Screen name="chat"   options={{ href: null }} />
-           <Tabs.Screen name="verify"   options={{ href: null }} />
+        <Tabs.Screen name="queue"        options={{ href: null, tabBarStyle: { display: 'none' } }} />
+        <Tabs.Screen name="visits"       options={{ href: null , tabBarStyle: { display: 'none' } }} />
+        <Tabs.Screen name="prescriptions" options={{ href: null , tabBarStyle: { display: 'none' } }} />
+        <Tabs.Screen name="settings"     options={{ href: null, tabBarStyle: { display: 'none' } }} />
+        <Tabs.Screen name="medical-bg"   options={{ href: null , tabBarStyle: { display: 'none' } }} />
+         <Tabs.Screen name="records"   options={{ href: null , tabBarStyle: { display: 'none' } }} />
+          <Tabs.Screen name="booking"   options={{ href: null , tabBarStyle: { display: 'none' } }} />
+           <Tabs.Screen name="chat"   options={{ href: null, tabBarStyle: { display: 'none' } }} />
+           <Tabs.Screen name="verify"   options={{ href: null, tabBarStyle: { display: 'none' } }} />
       </Tabs>
 
       {!USE_GLOBAL_CHATBOT_OVERLAY ? (

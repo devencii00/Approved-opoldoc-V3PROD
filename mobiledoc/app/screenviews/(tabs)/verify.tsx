@@ -235,7 +235,14 @@ export default function PatientVerificationScreen() {
               <Text style={styles.headerTitle}>Verification</Text>
                     <Text style={styles.headerGreeting}>Review your visit history, prescriptions, and vitals.</Text>
             </View>
+             <Pressable
+                          style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.85 }]}
+                           onPress={() => router.navigate('/screenviews/profile' as any)}
+                        >
+                          <Text style={styles.headerBtnText}>Back</Text>
+                        </Pressable>
           </View>
+          
         </View>
 
         <View style={styles.contentSurface}>
@@ -426,6 +433,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 15,
     zIndex: 1,
+  },
+  headerBtn: {
+  position: 'absolute', // Pulls it out of the layout flow
+  top: 0.1,              // Distance from the top
+  right: 3,            // Distance from the right
+  
+  marginTop: 4,
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  borderRadius: 999,
+  backgroundColor: 'rgba(255,255,255,0.15)',
+  borderWidth: 1,
+  borderColor: 'rgba(255,255,255,0.25)',
+},
+  headerBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: T.white,
   },
   backBtn: {
     width: 40,
