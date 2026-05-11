@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import DateTimePicker from '@react-native-community/datetimepicker';
 // @ts-ignore
 import * as DocumentPicker from 'expo-document-picker';
 import { clearPersistedAuthSession, persistCurrentUser } from '@/lib/auth-storage';
@@ -218,7 +217,6 @@ export default function ProfileScreen() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [form, setForm] = useState<EditableProfileForm>(buildEditableForm((globalThis as any)?.currentUser ?? null));
-  const [showDobPicker, setShowDobPicker] = useState(false);
   const [verificationTypeLabel, setVerificationTypeLabel] = useState('Not specified');
 
   const profileName = useMemo(() => formatFullName(user), [user]);
@@ -621,15 +619,33 @@ export default function ProfileScreen() {
                   </View>
                   <View style={styles.fieldGroup}>
                     <Text style={styles.infoLabel}>Date of birth</Text>
-                    <Pressable
-                      onPress={() => setShowDobPicker(true)}
-                      style={({ pressed }) => [styles.selectInput, pressed && { opacity: 0.85 }]}
-                    >
-                      <Text style={form.birthdate ? styles.selectInputValue : styles.selectInputPlaceholder}>
-                        {form.birthdate ? formatDateToWords(new Date(form.birthdate)) : 'Select date of birth'}
-                      </Text>
-                      <Ionicons name="calendar-outline" size={18} color={T.slate600} />
-                    </Pressable>
+                    {Platform.OS === 'web' ? (
+                      <View style={styles.selectInput}>
+                        {React.createElement('input', {
+                          type: 'date',
+                          value: form.birthdate || '',
+                          max: formatDateInput(new Date()),
+                          onChange: (event: any) => updateForm('birthdate', event?.target?.value ?? ''),
+                          style: {
+                            flex: 1,
+                            borderWidth: 0,
+                            outlineStyle: 'none',
+                            backgroundColor: 'transparent',
+                            fontSize: 13,
+                            color: T.slate800,
+                          },
+                        })}
+                        {/* <Ionicons name="calendar-outline" size={18} color={T.slate600} /> */}
+                      </View>
+                    ) : (
+                      <TextInput
+                        value={form.birthdate}
+                        onChangeText={(value) => updateForm('birthdate', value)}
+                        placeholder="YYYY-MM-DD"
+                        placeholderTextColor="#9ca3af"
+                        style={styles.input}
+                      />
+                    )}
                   </View>
                   <View style={styles.fieldGroup}>
                     <Text style={styles.infoLabel}>Sex</Text>
@@ -798,21 +814,6 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
-
-      {showDobPicker && (
-        <DateTimePicker
-          value={form.birthdate ? new Date(form.birthdate) : new Date(2000, 0, 1)}
-          mode="date"
-          display="spinner"
-          maximumDate={new Date()}
-          onChange={(event, selectedDate) => {
-            setShowDobPicker(false);
-            if (event.type === 'set' && selectedDate) {
-              updateForm('birthdate', formatDateInput(selectedDate));
-            }
-          }}
-        />
-      )}
     </SafeAreaView>
   );
 }
