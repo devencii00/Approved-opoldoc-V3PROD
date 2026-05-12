@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 const T = {
   cyan500: '#06b6d4',
@@ -335,9 +335,20 @@ function isDoctorAvailableForWalkIn(doctor: DoctorOption): boolean {
   ));
 }
 
+function readRouteParam(value: string | string[] | undefined): string {
+  if (Array.isArray(value)) return typeof value[0] === 'string' ? value[0].trim() : '';
+  return typeof value === 'string' ? value.trim() : '';
+}
+
 export default function PatientQueueScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ patient_id?: string | string[]; patient_name?: string | string[] }>();
   const isFocused = useIsFocused();
+  const currentUserId = Number((globalThis as any)?.currentUser?.user_id ?? 0);
+  const requestedPatientId = Number(readRouteParam(params.patient_id));
+  const targetPatientId = requestedPatientId > 0 ? requestedPatientId : currentUserId;
+  const targetPatientName = readRouteParam(params.patient_name);
+  const isDependentQueue = targetPatientId > 0 && currentUserId > 0 && targetPatientId !== currentUserId;
   const loadingQueueStatusRef = useRef(false);
   const loadingQueueLineRef = useRef(false);
 
@@ -438,7 +449,13 @@ export default function PatientQueueScreen() {
       }
 
       const queueRaw = Array.isArray(data?.data) ? data.data : [];
-      const activeQueue = queueRaw.find((q: any) => q?.status === 'waiting' || q?.status === 'serving') ?? null;
+      const matchingQueues = requestedPatientId > 0
+        ? queueRaw.filter((q: any) => {
+            const patientId = Number(q?.appointment?.patient_id ?? q?.appointment?.patient?.user_id ?? 0);
+            return patientId === targetPatientId;
+          })
+        : queueRaw;
+      const activeQueue = matchingQueues.find((q: any) => q?.status === 'waiting' || q?.status === 'serving') ?? null;
       const mappedQueue: QueueStatus | null = activeQueue
         ? {
             queueId: String(activeQueue.queue_id ?? ''),
@@ -490,7 +507,7 @@ export default function PatientQueueScreen() {
     } finally {
       loadingQueueStatusRef.current = false;
     }
-  }, []);
+  }, [requestedPatientId, targetPatientId]);
 
   const loadQueueLine = useCallback(async (doctorId: string, queueId: string) => {
     if (!doctorId || !queueId || loadingQueueLineRef.current) return;
@@ -748,6 +765,7 @@ export default function PatientQueueScreen() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
+          ...(requestedPatientId > 0 ? { patient_id: targetPatientId } : {}),
           doctor_id: Number(selectedDoctorId),
           reason_for_visit: reason.trim().length > 0 ? reason.trim() : null,
           service_ids: selectedServiceIds.map((id) => Number(id)),
@@ -829,6 +847,12 @@ export default function PatientQueueScreen() {
         <View style={styles.contentSurface}>
           {error ? <Text style={styles.inlineError}>{error}</Text> : null}
           {success ? <Text style={styles.inlineSuccess}>{success}</Text> : null}
+          {isDependentQueue ? (
+            <View style={styles.contextBanner}>
+              <Text style={styles.contextBannerTitle}>Queueing for dependent</Text>
+              <Text style={styles.contextBannerText}>{targetPatientName || `Dependent #${targetPatientId}`}</Text>
+            </View>
+          ) : null}
 
           <View style={styles.infoRow}>
             <AnimatedCard delay={60} style={styles.infoCard}>
@@ -1048,7 +1072,17 @@ export default function PatientQueueScreen() {
             </Pressable>
 
             <Pressable
-              onPress={() => router.push('/screenviews/booking' as any)}
+              onPress={() => router.push(
+                requestedPatientId > 0
+                  ? {
+                      pathname: '/screenviews/booking',
+                      params: {
+                        patient_id: String(targetPatientId),
+                        patient_name: targetPatientName || `Dependent #${targetPatientId}`,
+                      },
+                    } as any
+                  : ('/screenviews/booking' as any)
+              )}
               style={({ pressed }) => [styles.secondaryButton, pressed && { opacity: 0.85 }]}
             >
               <Text style={styles.secondaryButtonText}>Book appointment instead</Text>
@@ -1194,6 +1228,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: T.green700,
     marginBottom: 10,
+  },
+  contextBanner: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(6,182,212,0.18)',
+    backgroundColor: 'rgba(6,182,212,0.08)',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 14,
+  },
+  contextBannerTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: T.cyan700,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  contextBannerText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: T.slate800,
   },
   warningButton: {
     borderRadius: 999,

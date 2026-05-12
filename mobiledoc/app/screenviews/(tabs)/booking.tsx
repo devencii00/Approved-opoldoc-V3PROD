@@ -16,7 +16,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 const T = {
   cyan500: '#06b6d4',
@@ -355,8 +355,19 @@ function minutesFromTime(value: string): number {
   return (Number(parts[0] ?? 0) * 60) + Number(parts[1] ?? 0);
 }
 
+function readRouteParam(value: string | string[] | undefined): string {
+  if (Array.isArray(value)) return typeof value[0] === 'string' ? value[0].trim() : '';
+  return typeof value === 'string' ? value.trim() : '';
+}
+
 export default function BookingScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ patient_id?: string | string[]; patient_name?: string | string[] }>();
+  const currentUserId = Number((globalThis as any)?.currentUser?.user_id ?? 0);
+  const requestedPatientId = Number(readRouteParam(params.patient_id));
+  const targetPatientId = requestedPatientId > 0 ? requestedPatientId : currentUserId;
+  const targetPatientName = readRouteParam(params.patient_name);
+  const isDependentBooking = targetPatientId > 0 && currentUserId > 0 && targetPatientId !== currentUserId;
   const [services, setServices] = useState<ServiceOption[]>([]);
   const [doctors, setDoctors] = useState<DoctorOption[]>([]);
   const [doctorSchedules, setDoctorSchedules] = useState<ScheduleSlot[]>([]);
@@ -508,9 +519,12 @@ export default function BookingScreen() {
           fetch(`${API_BASE_URL}/doctors?per_page=100&available_only=1`, {
             headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
           }),
-          fetch(`${API_BASE_URL}/appointments/active-exists`, {
-            headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
-          }),
+          fetch(
+            `${API_BASE_URL}/appointments/active-exists${requestedPatientId > 0 ? `?patient_id=${encodeURIComponent(String(targetPatientId))}` : ''}`,
+            {
+              headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+            }
+          ),
         ]);
 
         const [servicesData, doctorsData, activeData] = await Promise.all([
@@ -594,7 +608,7 @@ export default function BookingScreen() {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [requestedPatientId, router, targetPatientId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -770,9 +784,12 @@ export default function BookingScreen() {
       return true;
     }
 
-    const response = await fetch(`${API_BASE_URL}/appointments/active-exists`, {
+    const response = await fetch(
+      `${API_BASE_URL}/appointments/active-exists${requestedPatientId > 0 ? `?patient_id=${encodeURIComponent(String(targetPatientId))}` : ''}`,
+      {
       headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
-    });
+      }
+    );
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
       throw new Error(typeof data?.message === 'string' && data.message.length > 0 ? data.message : 'Unable to verify active appointments.');
@@ -832,6 +849,7 @@ export default function BookingScreen() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
+          ...(requestedPatientId > 0 ? { patient_id: targetPatientId } : {}),
           doctor_id: Number(selectedDoctorId),
           appointment_type: 'scheduled',
           appointment_datetime: appointmentDateTime,
@@ -905,6 +923,12 @@ export default function BookingScreen() {
         <View style={styles.contentSurface}>
           {error ? <Text style={styles.inlineError}>{error}</Text> : null}
           {success ? <Text style={styles.inlineSuccess}>{success}</Text> : null}
+          {isDependentBooking ? (
+            <View style={styles.contextBanner}>
+              <Text style={styles.contextBannerTitle}>Booking for dependent</Text>
+              <Text style={styles.contextBannerText}>{targetPatientName || `Dependent #${targetPatientId}`}</Text>
+            </View>
+          ) : null}
 
 
           <SectionCard
@@ -1141,12 +1165,22 @@ export default function BookingScreen() {
               <Text style={styles.primaryButtonText}>{booking ? 'Booking appointment...' : 'Book Appointment'}</Text>
             </Pressable>
 
-               <Pressable
-                          onPress={() => router.push('/screenviews/queue' as any)}
-                          style={({ pressed }) => [styles.secondaryButton, pressed && { opacity: 0.85 }]}
-                        >
-                          <Text style={styles.secondaryButtonText}>Join queue instead</Text>
-                        </Pressable>
+            <Pressable
+              onPress={() => router.push(
+                requestedPatientId > 0
+                  ? {
+                      pathname: '/screenviews/queue',
+                      params: {
+                        patient_id: String(targetPatientId),
+                        patient_name: targetPatientName || `Dependent #${targetPatientId}`,
+                      },
+                    } as any
+                  : ('/screenviews/queue' as any)
+              )}
+              style={({ pressed }) => [styles.secondaryButton, pressed && { opacity: 0.85 }]}
+            >
+              <Text style={styles.secondaryButtonText}>Join queue instead</Text>
+            </Pressable>
           </SectionCard>
         </View>
       </ScrollView>
@@ -1287,6 +1321,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: T.green700,
     marginBottom: 10,
+  },
+  contextBanner: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(6,182,212,0.18)',
+    backgroundColor: 'rgba(6,182,212,0.08)',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 14,
+  },
+  contextBannerTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: T.cyan700,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  contextBannerText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: T.slate800,
   },
   warningButton: {
     borderRadius: 999,

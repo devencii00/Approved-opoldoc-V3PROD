@@ -10,11 +10,15 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 
 const T = {
   cyan500: '#06b6d4',
   cyan600: '#0891b2',
   cyan700: '#0e7490',
+  amber100: 'rgba(245,158,11,0.12)',
+  amber700: '#b45309',
   slate50: '#f8fafc',
   slate100: '#f1f5f9',
   slate200: '#e2e8f0',
@@ -33,6 +37,7 @@ const T = {
 };
 
 const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000/api').replace(/\/+$/, '');
+const APP_BASE_URL = API_BASE_URL.replace(/\/api$/, '');
 
 type RecordsTabKey = 'visits' | 'prescriptions' | 'vitals';
 
@@ -52,6 +57,53 @@ type DependentUser = {
   relationship: string | null;
   is_dependent: boolean;
   account_activated: boolean;
+};
+
+type DependentAppointmentSummary = {
+  id: string;
+  patientId: number;
+  doctor: string;
+  dateTime: string;
+  sortAt: number;
+  reason: string;
+  status: string;
+  statusRaw: string;
+  type: string;
+  serviceNames: string[];
+  totalFee: number;
+  queueNumber: string | null;
+};
+
+type DependentBillingSummary = {
+  id: string;
+  patientId: number;
+  appointmentId: string;
+  amount: number;
+  paymentStatus: string;
+  dateTime: string;
+  doctor: string;
+  serviceNames: string[];
+};
+
+type DependentQueueSummary = {
+  queueId: string;
+  patientId: number;
+  queueNumber: string;
+  status: 'waiting' | 'serving' | 'done' | 'cancelled';
+  doctorId: string;
+  doctor: string;
+  position: number | null;
+  estimatedWaitMinutes: number | null;
+  serviceNames: string[];
+  totalFee: number;
+  servingQueueNumber: string | null;
+  nextQueueNumber: string | null;
+};
+
+type DependentOverview = {
+  upcomingAppointment: DependentAppointmentSummary | null;
+  pendingBilling: DependentBillingSummary | null;
+  activeQueue: DependentQueueSummary | null;
 };
 
 type VisitHistoryItem = {
@@ -125,8 +177,21 @@ function createRecordsState(): DependentRecordsState {
   };
 }
 
+function createDependentOverview(): DependentOverview {
+  return {
+    upcomingAppointment: null,
+    pendingBilling: null,
+    activeQueue: null,
+  };
+}
+
 function normalizeText(value: any): string {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function parseNumericId(value: any): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
 function formatDateOnly(value: any): string {
@@ -143,6 +208,11 @@ function formatDateTime(value: any): string {
   return `${date.toLocaleDateString()} · ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 }
 
+function formatCurrency(value: number): string {
+  if (!Number.isFinite(value)) return 'P 0.00';
+  return `P ${value.toFixed(2)}`;
+}
+
 function formatDoctorName(raw: any): string {
   const first = raw?.firstname ? String(raw.firstname) : '';
   const last = raw?.lastname ? String(raw.lastname) : '';
@@ -155,6 +225,56 @@ function formatAppointmentType(value: any): string {
   if (raw === 'walk_in' || raw === 'walk-in' || raw === 'walk in') return 'Walk-in';
   if (raw === 'scheduled') return 'Scheduled';
   return 'Visit';
+}
+
+function formatAppointmentStatus(value: any): string {
+  const raw = normalizeText(value).toLowerCase();
+  if (raw === 'confirmed') return 'Confirmed';
+  if (raw === 'pending') return 'Pending';
+  if (raw === 'consulted') return 'Consulted';
+  if (raw === 'completed') return 'Completed';
+  if (raw === 'cancelled') return 'Cancelled';
+  if (raw === 'no_show') return 'No show';
+  return raw ? `${raw.charAt(0).toUpperCase()}${raw.slice(1).replace(/_/g, ' ')}` : 'Unknown';
+}
+
+function formatPaymentStatus(value: any): string {
+  const raw = normalizeText(value).toLowerCase();
+  if (raw === 'paid') return 'Paid';
+  if (raw === 'pending') return 'Pending payment';
+  if (raw === 'failed') return 'Payment failed';
+  return raw ? `${raw.charAt(0).toUpperCase()}${raw.slice(1).replace(/_/g, ' ')}` : 'Pending payment';
+}
+
+function formatQueueStatus(value: any): 'waiting' | 'serving' | 'done' | 'cancelled' {
+  const raw = normalizeText(value).toLowerCase();
+  if (raw === 'serving') return 'serving';
+  if (raw === 'done') return 'done';
+  if (raw === 'cancelled') return 'cancelled';
+  return 'waiting';
+}
+
+function formatQueueStatusLabel(value: any): string {
+  const status = formatQueueStatus(value);
+  if (status === 'serving') return 'In service';
+  if (status === 'done') return 'Done';
+  if (status === 'cancelled') return 'Cancelled';
+  return 'Waiting';
+}
+
+function extractServiceNames(services: any): string[] {
+  if (!Array.isArray(services)) return [];
+  return services
+    .map((service: any) => normalizeText(service?.service_name || service?.name))
+    .filter(Boolean);
+}
+
+function calculateServiceTotal(services: any): number {
+  if (!Array.isArray(services)) return 0;
+  return services.reduce((sum: number, service: any) => {
+    const price = typeof service?.price === 'number' ? service.price : service?.price != null ? Number(service.price) : 0;
+    return sum + (Number.isNaN(price) ? 0 : price);
+  }, 0);
 }
 
 function formatNumberLabel(value: any, suffix = ''): string {
@@ -215,19 +335,27 @@ function formatDependentName(item: DependentUser): string {
 }
 
 export default function DependentsScreen() {
+  const router = useRouter();
+  const isFocused = useIsFocused();
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>((globalThis as any)?.currentUser ?? null);
   const [dependents, setDependents] = useState<DependentUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [overviewLoading, setOverviewLoading] = useState(false);
+  const [overviewError, setOverviewError] = useState('');
+  const [overviewByDependent, setOverviewByDependent] = useState<Record<number, DependentOverview>>({});
   const [expandedDependentId, setExpandedDependentId] = useState<number | null>(null);
   const [recordsByDependent, setRecordsByDependent] = useState<Record<number, DependentRecordsState>>({});
 
   useEffect(() => {
+    if (!isFocused) return;
+
     let cancelled = false;
 
     async function loadDependents() {
       setLoading(true);
       setError('');
+      setOverviewError('');
 
       try {
         const token = (globalThis as any)?.apiToken as string | undefined;
@@ -281,7 +409,205 @@ export default function DependentsScreen() {
         if (!cancelled) {
           setCurrentUser({ user_id: Number(userData?.user_id ?? currentUserId) });
           setDependents(mapped);
+          setOverviewByDependent(() => (
+            mapped.reduce<Record<number, DependentOverview>>((acc, item) => {
+              acc[item.user_id] = createDependentOverview();
+              return acc;
+            }, {})
+          ));
           setExpandedDependentId((current) => (current && mapped.some((item) => item.user_id === current) ? current : null));
+        }
+
+        if (mapped.length === 0) {
+          return;
+        }
+
+        if (!cancelled) {
+          setOverviewLoading(true);
+        }
+
+        try {
+          const [appointmentsRes, transactionsRes, queuesRes] = await Promise.all([
+            fetch(`${API_BASE_URL}/appointments?per_page=100&order=oldest`, {
+              headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+            }),
+            fetch(`${API_BASE_URL}/transactions?per_page=100&order=latest`, {
+              headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+            }),
+            fetch(`${API_BASE_URL}/queues?per_page=100`, {
+              headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+            }),
+          ]);
+
+          const [appointmentsData, transactionsData, queuesData] = await Promise.all([
+            appointmentsRes.json().catch(() => ({})),
+            transactionsRes.json().catch(() => ({})),
+            queuesRes.json().catch(() => ({})),
+          ]);
+
+          if (!appointmentsRes.ok || !transactionsRes.ok || !queuesRes.ok) {
+            const message = appointmentsData?.message || transactionsData?.message || queuesData?.message;
+            if (!cancelled) {
+              setOverviewError(typeof message === 'string' && message.length > 0 ? message : 'Unable to load dependent care overview.');
+            }
+            return;
+          }
+
+          const dependentIds = new Set(mapped.map((item) => item.user_id));
+          const appointmentRows = Array.isArray(appointmentsData?.data) ? appointmentsData.data : [];
+          const transactionRows = Array.isArray(transactionsData?.data) ? transactionsData.data : [];
+          const queueRows = Array.isArray(queuesData?.data) ? queuesData.data : [];
+
+          const appointments = appointmentRows
+            .map((row: any): DependentAppointmentSummary | null => {
+              const patientId = parseNumericId(row?.patient_id ?? row?.patient?.user_id);
+              if (!dependentIds.has(patientId)) return null;
+
+              const rawDate = row?.appointment_datetime ? new Date(row.appointment_datetime) : null;
+              const sortAt = rawDate && !Number.isNaN(rawDate.getTime()) ? rawDate.getTime() : 0;
+              return {
+                id: String(row?.appointment_id ?? ''),
+                patientId,
+                doctor: row?.doctor ? formatDoctorName(row.doctor) : 'Doctor',
+                dateTime: formatDateTime(row?.appointment_datetime),
+                sortAt,
+                reason: normalizeText(row?.reason_for_visit) || 'Reason for visit not provided.',
+                status: formatAppointmentStatus(row?.status),
+                statusRaw: normalizeText(row?.status).toLowerCase(),
+                type: formatAppointmentType(row?.appointment_type),
+                serviceNames: extractServiceNames(row?.services),
+                totalFee: calculateServiceTotal(row?.services),
+                queueNumber: row?.queue?.queue_number != null ? String(row.queue.queue_number) : null,
+              };
+            })
+            .filter((item: DependentAppointmentSummary | null): item is DependentAppointmentSummary => Boolean(item?.id));
+
+          const transactions = transactionRows
+            .map((row: any): DependentBillingSummary | null => {
+              const patientId = parseNumericId(row?.appointment?.patient_id ?? row?.appointment?.patient?.user_id);
+              if (!dependentIds.has(patientId)) return null;
+
+              const appointmentServices = Array.isArray(row?.appointment?.services) ? row.appointment.services : [];
+              const fallbackAmount = calculateServiceTotal(appointmentServices);
+              const rawAmount = typeof row?.amount === 'number' ? row.amount : row?.amount != null ? Number(row.amount) : fallbackAmount;
+              return {
+                id: String(row?.transaction_id ?? ''),
+                patientId,
+                appointmentId: row?.appointment_id != null
+                  ? String(row.appointment_id)
+                  : row?.appointment?.appointment_id != null
+                    ? String(row.appointment.appointment_id)
+                    : '',
+                amount: Number.isNaN(rawAmount) ? fallbackAmount : rawAmount,
+                paymentStatus: normalizeText(row?.payment_status).toLowerCase(),
+                dateTime: formatDateTime(row?.transaction_datetime ?? row?.visit_datetime ?? row?.created_at),
+                doctor: row?.appointment?.doctor ? formatDoctorName(row.appointment.doctor) : 'Doctor',
+                serviceNames: extractServiceNames(appointmentServices),
+              };
+            })
+            .filter((item: DependentBillingSummary | null): item is DependentBillingSummary => Boolean(item?.id));
+
+          const queues = queueRows
+            .map((row: any): DependentQueueSummary | null => {
+              const patientId = parseNumericId(row?.appointment?.patient_id ?? row?.appointment?.patient?.user_id);
+              if (!dependentIds.has(patientId)) return null;
+
+              return {
+                queueId: String(row?.queue_id ?? ''),
+                patientId,
+                queueNumber: row?.queue_number != null ? String(row.queue_number) : '',
+                status: formatQueueStatus(row?.status),
+                doctorId: row?.appointment?.doctor_id != null ? String(row.appointment.doctor_id) : '',
+                doctor: row?.appointment?.doctor ? formatDoctorName(row.appointment.doctor) : 'Doctor',
+                position: typeof row?.position === 'number' ? row.position : row?.position != null ? Number(row.position) : null,
+                estimatedWaitMinutes: typeof row?.estimated_wait_minutes === 'number'
+                  ? row.estimated_wait_minutes
+                  : row?.estimated_wait_minutes != null
+                    ? Number(row.estimated_wait_minutes)
+                    : null,
+                serviceNames: extractServiceNames(row?.appointment?.services),
+                totalFee: calculateServiceTotal(row?.appointment?.services),
+                servingQueueNumber: null,
+                nextQueueNumber: null,
+              };
+            })
+            .filter((item: DependentQueueSummary | null): item is DependentQueueSummary => Boolean(item?.queueId))
+            .filter((item: DependentQueueSummary) => item.status === 'waiting' || item.status === 'serving');
+
+          const doctorIds: string[] = Array.from(
+            new Set(
+              queues
+                .map((item: DependentQueueSummary) => item.doctorId)
+                .filter((doctorId: string): doctorId is string => doctorId.length > 0)
+            )
+          );
+          const queueBoardEntries = await Promise.all(
+            doctorIds.map(async (doctorId: string) => {
+              try {
+                const response = await fetch(`${APP_BASE_URL}/queue-display/data?doctor_id=${encodeURIComponent(doctorId)}`, {
+                  headers: { Accept: 'application/json' },
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) return null;
+                const nowServing = Array.isArray(data?.now_serving) ? data.now_serving[0] : null;
+                const nextInLine = Array.isArray(data?.next) ? data.next[0] : null;
+                return {
+                  doctorId,
+                  servingQueueNumber: nowServing?.queue_number != null ? String(nowServing.queue_number) : null,
+                  nextQueueNumber: nextInLine?.queue_number != null ? String(nextInLine.queue_number) : null,
+                };
+              } catch {
+                return null;
+              }
+            })
+          );
+
+          const boardByDoctor = new Map<string, { servingQueueNumber: string | null; nextQueueNumber: string | null }>();
+          queueBoardEntries.forEach((entry) => {
+            if (!entry) return;
+            boardByDoctor.set(entry.doctorId, {
+              servingQueueNumber: entry.servingQueueNumber,
+              nextQueueNumber: entry.nextQueueNumber,
+            });
+          });
+
+          const nextOverview: Record<number, DependentOverview> = mapped.reduce((acc, item) => {
+            const dependentAppointments = appointments
+              .filter((appointment: DependentAppointmentSummary) => appointment.patientId === item.user_id)
+              .sort((a: DependentAppointmentSummary, b: DependentAppointmentSummary) => a.sortAt - b.sortAt);
+            const dependentTransactions = transactions.filter((transaction: DependentBillingSummary) => transaction.patientId === item.user_id);
+            const dependentQueue = queues.find((queue: DependentQueueSummary) => queue.patientId === item.user_id) ?? null;
+            const queueBoard = dependentQueue?.doctorId ? boardByDoctor.get(dependentQueue.doctorId) : null;
+
+            acc[item.user_id] = {
+              upcomingAppointment: dependentAppointments.find((appointment: DependentAppointmentSummary) => (
+                appointment.sortAt >= Date.now() &&
+                (appointment.statusRaw === 'pending' || appointment.statusRaw === 'confirmed')
+              )) ?? null,
+              pendingBilling: dependentTransactions.find((transaction: DependentBillingSummary) => transaction.paymentStatus !== 'paid') ?? null,
+              activeQueue: dependentQueue
+                ? {
+                    ...dependentQueue,
+                    servingQueueNumber: queueBoard?.servingQueueNumber ?? null,
+                    nextQueueNumber: queueBoard?.nextQueueNumber ?? null,
+                  }
+                : null,
+            };
+            return acc;
+          }, {} as Record<number, DependentOverview>);
+
+          if (!cancelled) {
+            setOverviewByDependent(nextOverview);
+            setOverviewError('');
+          }
+        } catch {
+          if (!cancelled) {
+            setOverviewError('Network error while loading dependent care overview.');
+          }
+        } finally {
+          if (!cancelled) {
+            setOverviewLoading(false);
+          }
         }
       } catch {
         if (!cancelled) setError('Network error. Please try again.');
@@ -294,13 +620,26 @@ export default function DependentsScreen() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isFocused]);
 
   const dependentCountLabel = useMemo(() => {
     if (loading) return 'Loading linked dependents...';
     if (dependents.length === 0) return 'No linked dependent accounts found.';
     return `${dependents.length} linked dependent${dependents.length === 1 ? '' : 's'}`;
   }, [dependents.length, loading]);
+
+  const overviewCounts = useMemo(() => {
+    return dependents.reduce(
+      (acc, dependent) => {
+        const overview = overviewByDependent[dependent.user_id] ?? createDependentOverview();
+        if (overview.upcomingAppointment) acc.upcoming += 1;
+        if (overview.pendingBilling) acc.billing += 1;
+        if (overview.activeQueue) acc.queue += 1;
+        return acc;
+      },
+      { upcoming: 0, billing: 0, queue: 0 }
+    );
+  }, [dependents, overviewByDependent]);
 
   function updateRecordsState(
     dependentId: number,
@@ -654,13 +993,26 @@ export default function DependentsScreen() {
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {error ? <Text style={styles.inlineError}>{error}</Text> : null}
+        {overviewError ? <Text style={styles.inlineError}>{overviewError}</Text> : null}
 
         <View style={styles.summaryCard}>
-          <View style={styles.iconWrap}>
-            <Ionicons name="people-outline" size={24} color={T.cyan700} />
+          <View style={styles.summaryHeaderRow}>
+            <View style={styles.iconWrap}>
+              <Ionicons name="people-outline" size={24} color={T.cyan700} />
+            </View>
+            <View style={styles.summaryMain}>
+              <Text style={styles.cardTitle}>Guardian care overview</Text>
+              <Text style={styles.cardText}>{dependentCountLabel}</Text>
+            </View>
           </View>
-          <Text style={styles.cardTitle}>Guardian access</Text>
-          <Text style={styles.cardText}>{dependentCountLabel}</Text>
+
+
+          {overviewLoading ? (
+            <View style={styles.summaryLoadingRow}>
+              <ActivityIndicator size="small" color={T.cyan700} />
+              <Text style={styles.loadingText}>Refreshing dependent care status...</Text>
+            </View>
+          ) : null}
         </View>
 
         {loading ? (
@@ -685,6 +1037,10 @@ export default function DependentsScreen() {
               const isExpanded = expandedDependentId === dependent.user_id;
               const state = recordsByDependent[dependent.user_id] ?? createRecordsState();
               const name = formatDependentName(dependent);
+              const overview = overviewByDependent[dependent.user_id] ?? createDependentOverview();
+              const appointment = overview.upcomingAppointment;
+              const pendingBilling = overview.pendingBilling;
+              const activeQueue = overview.activeQueue;
               return (
                 <View key={dependent.user_id} style={styles.dependentCard}>
                   <View style={styles.dependentCardTop}>
@@ -714,6 +1070,104 @@ export default function DependentsScreen() {
                     </View>
                   </View>
 
+                  <View style={styles.badgeRow}>
+                    {appointment ? (
+                      <View style={styles.alertBadge}>
+                        <Ionicons name="calendar-outline" size={13} color={T.cyan700} />
+                        <Text style={styles.alertBadgeText}>Upcoming appointment</Text>
+                      </View>
+                    ) : null}
+                    {pendingBilling ? (
+                      <View style={[styles.alertBadge, styles.alertBadgeWarning]}>
+                        <Ionicons name="receipt-outline" size={13} color={T.amber700} />
+                        <Text style={[styles.alertBadgeText, styles.alertBadgeTextWarning]}>Pending bill</Text>
+                      </View>
+                    ) : null}
+                    {activeQueue ? (
+                      <View style={[styles.alertBadge, styles.alertBadgeSuccess]}>
+                        <Ionicons name="people-outline" size={13} color={T.green700} />
+                        <Text style={[styles.alertBadgeText, styles.alertBadgeTextSuccess]}>
+                          {`Queue ${formatQueueStatusLabel(activeQueue.status)}`}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  <View style={styles.careOverviewGrid}>
+                    <View style={styles.careOverviewCard}>
+                      <Text style={styles.infoLabel}>Upcoming</Text>
+                      <Text style={styles.carePrimaryText}>
+                        {appointment ? appointment.dateTime : 'No appointments'}
+                      </Text>
+                      <Text style={styles.careSecondaryText}>
+                        {appointment
+                          ? `${appointment.doctor} · ${appointment.type} · ${appointment.status}`
+                          : '_ _'}
+                      </Text>
+                      {appointment?.serviceNames.length ? (
+                        <Text style={styles.careMetaText}>{appointment.serviceNames.join(', ')}</Text>
+                      ) : null}
+                    </View>
+
+                    <View style={styles.careOverviewCard}>
+                      <Text style={styles.infoLabel}>Pending bills</Text>
+                      <Text style={styles.carePrimaryText}>
+                        {pendingBilling ? formatCurrency(pendingBilling.amount) : 'No unpaid bill'}
+                      </Text>
+                      <Text style={styles.careSecondaryText}>
+                        {pendingBilling
+                          ? `${pendingBilling.doctor} · ${formatPaymentStatus(pendingBilling.paymentStatus)}`
+                          : '_ _'}
+                      </Text>
+                      {pendingBilling?.serviceNames.length ? (
+                        <Text style={styles.careMetaText}>{pendingBilling.serviceNames.join(', ')}</Text>
+                      ) : null}
+                    </View>
+
+                    <View style={[styles.careOverviewCard, styles.careOverviewCardFull]}>
+                      <Text style={styles.infoLabel}>Current queue</Text>
+                      <Text style={styles.carePrimaryText}>
+                        {activeQueue ? `Queue #${activeQueue.queueNumber || '---'}` : 'Not in queue'}
+                      </Text>
+                      <Text style={styles.careSecondaryText}>
+                        {activeQueue
+                          ? `${activeQueue.doctor} · ${formatQueueStatusLabel(activeQueue.status)}${activeQueue.position != null ? ` · Position ${activeQueue.position}` : ''}`
+                          : 'Join the queue to track waiting status and line position.'}
+                      </Text>
+
+                      {activeQueue ? (
+                        <View style={styles.queueOverviewMetrics}>
+                          <View style={styles.queueMetricCard}>
+                            <Text style={styles.queueMetricLabel}>Estimated wait</Text>
+                            <Text style={styles.queueMetricText}>
+                              {activeQueue.estimatedWaitMinutes != null ? `${activeQueue.estimatedWaitMinutes} mins` : 'Updating'}
+                            </Text>
+                          </View>
+                          <View style={styles.queueMetricCard}>
+                            <Text style={styles.queueMetricLabel}>Now serving</Text>
+                            <Text style={styles.queueMetricText}>
+                              {activeQueue.servingQueueNumber ? `#${activeQueue.servingQueueNumber}` : 'Not available'}
+                            </Text>
+                          </View>
+                          <View style={styles.queueMetricCard}>
+                            <Text style={styles.queueMetricLabel}>Next in line</Text>
+                            <Text style={styles.queueMetricText}>
+                              {activeQueue.nextQueueNumber ? `#${activeQueue.nextQueueNumber}` : 'Waiting'}
+                            </Text>
+                          </View>
+                          <View style={styles.queueMetricCard}>
+                            <Text style={styles.queueMetricLabel}>Consultation fee</Text>
+                            <Text style={styles.queueMetricText}>{formatCurrency(activeQueue.totalFee)}</Text>
+                          </View>
+                        </View>
+                      ) : null}
+
+                      {activeQueue?.serviceNames.length ? (
+                        <Text style={styles.careMetaText}>{activeQueue.serviceNames.join(', ')}</Text>
+                      ) : null}
+                    </View>
+                  </View>
+
                   <View style={styles.infoGrid}>
                     <View style={styles.infoItem}>
                       <Text style={styles.infoLabel}>Sex</Text>
@@ -724,17 +1178,60 @@ export default function DependentsScreen() {
                       <Text style={styles.infoValue}>{normalizeText(dependent.contact_number) || 'Not provided'}</Text>
                     </View>
                     <View style={styles.infoItemFull}>
-                      <Text style={styles.infoLabel}>Email</Text>
-                      <Text style={styles.infoValue}>{normalizeText(dependent.email) || 'Not provided'}</Text>
+                      <Text style={styles.infoLabel}>Dependent tracking</Text>
+                      <Text style={styles.infoValue}>
+                        {appointment
+                          ? `Dependent appointment: appointment for "${name}".`
+                          : activeQueue
+                            ? `Queue tracking enabled for "${name}".`
+                            : `No active appointment or queue entry for "${name}" yet.`}
+                      </Text>
                     </View>
                   </View>
 
-                  <Pressable
-                    onPress={() => handleToggleRecords(dependent.user_id)}
-                    style={({ pressed }) => [styles.primaryButton, pressed && { opacity: 0.85 }]}
-                  >
-                    <Text style={styles.primaryButtonText}>{isExpanded ? 'Hide records' : 'View records'}</Text>
-                  </Pressable>
+                  <View style={styles.actionRow}>
+                    <Pressable
+                      onPress={() => router.push({
+                        pathname: '/screenviews/queue',
+                        params: {
+                          patient_id: String(dependent.user_id),
+                          patient_name: name,
+                        },
+                      } as any)}
+                      style={({ pressed }) => [styles.primaryButton, styles.actionButton, pressed && { opacity: 0.85 }]}
+                    >
+                      <Text style={styles.primaryButtonText}>Join Queue</Text>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() => router.push({
+                        pathname: '/screenviews/booking',
+                        params: {
+                          patient_id: String(dependent.user_id),
+                          patient_name: name,
+                        },
+                      } as any)}
+                      style={({ pressed }) => [styles.secondaryButton, styles.actionButton, pressed && { opacity: 0.85 }]}
+                    >
+                      <Text style={styles.secondaryButtonText}>Create Appointment</Text>
+                    </Pressable>
+                  </View>
+
+                  <View style={styles.actionRow}>
+                    <Pressable
+                      onPress={() => router.push('/screenviews/appointments' as any)}
+                      style={({ pressed }) => [styles.ghostButton, styles.actionButton, pressed && { opacity: 0.85 }]}
+                    >
+                      <Text style={styles.ghostButtonText}>Track Appointments</Text>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() => handleToggleRecords(dependent.user_id)}
+                      style={({ pressed }) => [styles.ghostButton, styles.actionButton, pressed && { opacity: 0.85 }]}
+                    >
+                      <Text style={styles.ghostButtonText}>{isExpanded ? 'Hide Records' : 'View Records'}</Text>
+                    </Pressable>
+                  </View>
 
                   {isExpanded ? (
                     <View style={styles.recordsSection}>
@@ -807,7 +1304,16 @@ export default function DependentsScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: T.cyan700 },
-  header: { backgroundColor: T.cyan700, paddingHorizontal: 20, paddingTop: 50,   paddingBottom: 30 },
+  header: {
+    backgroundColor: T.cyan700,
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 20,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  
+  
   eyebrow: {
     fontSize: 9,
     fontWeight: '700',
@@ -822,7 +1328,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.slate100,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    marginTop: -10,
+    
   },
    headerTitle: {
     fontSize: 30,
@@ -845,6 +1351,14 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
+  summaryHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  summaryMain: {
+    flex: 1,
+  },
   iconWrap: {
     width: 48,
     height: 48,
@@ -852,10 +1366,43 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(6,182,212,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
   },
   cardTitle: { fontSize: 16, fontWeight: '700', color: T.slate800, marginBottom: 6 },
   cardText: { fontSize: 13, lineHeight: 18, color: T.slate500 },
+  summaryMetricsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 16,
+  },
+  summaryMetricCard: {
+    flex: 1,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: T.slate200,
+    backgroundColor: T.slate50,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+  },
+  summaryMetricValue: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: T.slate900,
+    marginBottom: 4,
+  },
+  summaryMetricLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: T.slate500,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+  },
+  summaryLoadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 14,
+  },
   inlineError: {
     backgroundColor: T.red100,
     borderRadius: 14,
@@ -959,6 +1506,42 @@ const styles = StyleSheet.create({
   dependentMain: {
     flex: 1,
   },
+  badgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  alertBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(6,182,212,0.2)',
+    backgroundColor: 'rgba(6,182,212,0.08)',
+  },
+  alertBadgeWarning: {
+    borderColor: 'rgba(245,158,11,0.18)',
+    backgroundColor: T.amber100,
+  },
+  alertBadgeSuccess: {
+    borderColor: 'rgba(34,197,94,0.2)',
+    backgroundColor: T.green100,
+  },
+  alertBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: T.cyan700,
+  },
+  alertBadgeTextWarning: {
+    color: T.amber700,
+  },
+  alertBadgeTextSuccess: {
+    color: T.green700,
+  },
   nameRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1012,6 +1595,67 @@ const styles = StyleSheet.create({
   statusPillTextPending: {
     color: T.red700,
   },
+  careOverviewGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 14,
+  },
+  careOverviewCard: {
+    width: '48%',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: T.slate200,
+    backgroundColor: T.slate50,
+    padding: 14,
+  },
+  careOverviewCardFull: {
+    width: '100%',
+  },
+  carePrimaryText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: T.slate900,
+    marginBottom: 4,
+  },
+  careSecondaryText: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: T.slate600,
+  },
+  careMetaText: {
+    marginTop: 10,
+    fontSize: 11,
+    lineHeight: 17,
+    color: T.slate500,
+  },
+  queueOverviewMetrics: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+    marginBottom: 2,
+  },
+  queueMetricCard: {
+    width: '48%',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: T.slate200,
+    backgroundColor: T.white,
+    padding: 10,
+  },
+  queueMetricLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: T.slate500,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  queueMetricText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: T.slate800,
+  },
   infoGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1050,6 +1694,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: T.cyan700,
     paddingVertical: 12,
+    paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1057,6 +1702,44 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: T.white,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 10,
+  },
+  actionButton: {
+    flex: 1,
+  },
+  secondaryButton: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: T.cyan700,
+    backgroundColor: T.white,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: T.cyan700,
+  },
+  ghostButton: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: T.slate300,
+    backgroundColor: T.slate50,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ghostButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: T.slate700,
   },
   recordsSection: {
     marginTop: 14,

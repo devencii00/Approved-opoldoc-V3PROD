@@ -50,6 +50,8 @@ type AppointmentListItem = {
   reason: string;
   services: string[];
   queueNumber: string | null;
+  patientName: string;
+  isDependentAppointment: boolean;
 };
 
 type AnimatedCardProps = {
@@ -158,9 +160,21 @@ function AppointmentDetailsCard({ item }: { item: AppointmentListItem }) {
             <Text style={styles.metaChipText}>{`Queue #${item.queueNumber}`}</Text>
           </View>
         ) : null}
+        {item.isDependentAppointment ? (
+          <View style={styles.metaChip}>
+            <Ionicons name="person-outline" size={14} color={T.cyan700} />
+            <Text style={styles.metaChipText}>Dependent</Text>
+          </View>
+        ) : null}
       </View>
 
       <View style={styles.detailList}>
+        {item.isDependentAppointment ? (
+          <View style={styles.detailRow}>
+            <Ionicons name="people-outline" size={15} color={T.slate500} />
+            <Text style={styles.detailText}>{`Dependent appointment: appointment for "${item.patientName}"`}</Text>
+          </View>
+        ) : null}
         <View style={styles.detailRow}>
           <Ionicons name="document-text-outline" size={15} color={T.slate500} />
           <Text style={styles.detailText}>{item.reason}</Text>
@@ -190,6 +204,7 @@ function EmptyState() {
 
 export default function PatientAppointmentsScreen() {
   const router = useRouter();
+  const currentUserId = Number((globalThis as any)?.currentUser?.user_id ?? 0);
   const [items, setItems] = useState<AppointmentListItem[]>([]);
   const [error, setError] = useState('');
 
@@ -234,6 +249,10 @@ export default function PatientAppointmentsScreen() {
             const doctorLast = appointment?.doctor?.lastname ? String(appointment.doctor.lastname) : '';
             const doctorName = `Dr. ${[doctorFirst, doctorLast].filter(Boolean).join(' ')}`.trim();
             const statusRaw = typeof appointment?.status === 'string' ? appointment.status.toLowerCase() : '';
+            const patientFirst = appointment?.patient?.firstname ? String(appointment.patient.firstname) : '';
+            const patientLast = appointment?.patient?.lastname ? String(appointment.patient.lastname) : '';
+            const patientName = [patientFirst, patientLast].filter(Boolean).join(' ').trim() || 'Dependent';
+            const patientId = Number(appointment?.patient_id ?? appointment?.patient?.user_id ?? 0);
 
             let status = 'Pending';
             let statusTone: AppointmentStatusTone = 'warning';
@@ -267,6 +286,8 @@ export default function PatientAppointmentsScreen() {
               services: services as string[],
               queueNumber:
                 appointment?.queue?.queue_number != null ? String(appointment.queue.queue_number) : null,
+              patientName,
+              isDependentAppointment: patientId > 0 && currentUserId > 0 && patientId !== currentUserId,
             };
           });
 
@@ -283,7 +304,7 @@ export default function PatientAppointmentsScreen() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [currentUserId]);
 
   const nextAppointment = items[0] ?? null;
 
