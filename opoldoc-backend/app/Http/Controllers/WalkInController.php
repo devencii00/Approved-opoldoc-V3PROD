@@ -32,6 +32,16 @@ class WalkInController extends Controller
 
     public function storeGuest(Request $request)
     {
+        return $this->createGuestWalkIn($request, true);
+    }
+
+    public function storeGuestRequest(Request $request)
+    {
+        return $this->createGuestWalkIn($request, false);
+    }
+
+    private function createGuestWalkIn(Request $request, bool $createQueue = true)
+    {
         $currentUser = $request->user();
         if ($currentUser && $currentUser->role === 'patient') {
             abort(403);
@@ -95,7 +105,7 @@ class WalkInController extends Controller
 
         $plainPassword = Str::random(12);
 
-        $result = DB::transaction(function () use ($currentUser, $data, $plainPassword, $serviceIds) {
+        $result = DB::transaction(function () use ($currentUser, $data, $plainPassword, $serviceIds, $createQueue) {
             $patient = User::create([
                 'email' => null,
                 'password_hash' => Hash::make($plainPassword),
@@ -131,7 +141,7 @@ class WalkInController extends Controller
                 'created_by' => $currentUser?->user_id,
                 'appointment_datetime' => $appointmentDatetime,
                 'appointment_type' => 'walk_in',
-                'status' => 'confirmed',
+                'status' => $createQueue ? 'confirmed' : 'pending',
                 'reason_for_visit' => $data['reason_for_visit'] ?? null,
                 'priority_level' => $priorityLevel,
             ]);
@@ -140,18 +150,21 @@ class WalkInController extends Controller
                 $appointment->services()->sync($serviceIds);
             }
 
-            $queueAt = now();
-            $date = $queueAt->toDateString();
-            $max = Queue::whereDate('queue_datetime', $date)->max('queue_number');
-            $queueNumber = ((int) $max) + 1;
+            $queue = null;
+            if ($createQueue) {
+                $queueAt = now();
+                $date = $queueAt->toDateString();
+                $max = Queue::whereDate('queue_datetime', $date)->max('queue_number');
+                $queueNumber = ((int) $max) + 1;
 
-            $queue = Queue::create([
-                'appointment_id' => $appointment->appointment_id,
-                'queue_number' => $queueNumber,
-                'queue_datetime' => $queueAt,
-                'status' => 'waiting',
-                'priority_level' => $priorityLevel,
-            ]);
+                $queue = Queue::create([
+                    'appointment_id' => $appointment->appointment_id,
+                    'queue_number' => $queueNumber,
+                    'queue_datetime' => $queueAt,
+                    'status' => 'waiting',
+                    'priority_level' => $priorityLevel,
+                ]);
+            }
 
             return [
                 'patient' => $patient->refresh(),
@@ -161,7 +174,7 @@ class WalkInController extends Controller
                     'generated' => true,
                 ],
                 'appointment' => $appointment->load(['patient', 'doctor', 'services', 'queue']),
-                'queue' => $queue->load(['appointment.patient', 'appointment.doctor']),
+                'queue' => $queue ? $queue->load(['appointment.patient', 'appointment.doctor']) : null,
             ];
         });
 

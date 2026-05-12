@@ -128,7 +128,7 @@ class PublicGuestWalkInController extends Controller
             ], 422);
         }
 
-        return app(WalkInController::class)->storeGuest($request);
+        return app(WalkInController::class)->storeGuestRequest($request);
     }
 
     public function checkDuplicates(Request $request, string $token)

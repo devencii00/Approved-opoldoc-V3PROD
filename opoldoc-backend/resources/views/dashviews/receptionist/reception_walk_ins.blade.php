@@ -152,6 +152,9 @@
                     <option value="4">4 : Senior</option>
                     <option value="5">5 : General</option>
                 </select>
+                <div id="receptionWalkInPriorityHelp" class="mt-1 text-[0.68rem] text-slate-500">
+                    Manual priority stays available until an approved patient type is found.
+                </div>
             </div>
             <div class="md:col-span-3">
                 <label for="reception_walkin_reason" class="block text-[0.7rem] text-slate-600 mb-1">Reason (optional)</label>
@@ -167,6 +170,86 @@
                 </button>
             </div>
         </form>
+    </div>
+
+    <div class="mt-4 rounded-2xl border border-slate-100 bg-white overflow-hidden">
+        <div class="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100">
+            <div>
+                <h3 class="text-xs font-semibold text-slate-900">Walk-in appointments history</h3>
+                <p class="text-[0.72rem] text-slate-500">View walk-in appointment records and statuses.</p>
+            </div>
+            <button id="receptionWalkInHistoryToggle" type="button" class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white text-[0.75rem] font-semibold text-slate-700 hover:bg-slate-50">
+                Show history
+            </button>
+        </div>
+
+        <div id="receptionWalkInHistoryPanel" class="hidden p-4 border-t border-slate-100 bg-slate-50/40">
+            <div id="receptionWalkInHistoryError" class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[0.75rem] text-red-700"></div>
+
+            <div class="flex items-center justify-between mb-3 gap-3">
+                <div class="text-[0.72rem] text-slate-500">Same filters as manage appointment, but view-only for walk-ins.</div>
+                <button id="receptionWalkInHistoryTodayOnlyBtn" type="button" class="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white text-[0.75rem] font-semibold text-slate-700">
+                    Show today only
+                </button>
+            </div>
+
+            <div class="grid gap-3 grid-cols-1 md:grid-cols-5 items-start mb-4">
+                <div class="md:col-span-2 min-w-0">
+                    <label for="receptionWalkInHistorySearch" class="block text-[0.7rem] text-slate-600 mb-1">Search</label>
+                    <input id="receptionWalkInHistorySearch" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Search by patient or doctor">
+                </div>
+                <div class="min-w-0">
+                    <label for="receptionWalkInHistoryServiceSearch" class="block text-[0.7rem] text-slate-600 mb-1">Service</label>
+                    <div class="relative">
+                        <input id="receptionWalkInHistoryServiceSearch" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="All services" autocomplete="off">
+                        <input id="receptionWalkInHistoryServiceId" type="hidden">
+                        <div id="receptionWalkInHistoryServiceResults" class="hidden absolute left-0 right-0 top-full mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-sm max-h-64 overflow-y-auto overscroll-contain z-50"></div>
+                    </div>
+                </div>
+                <div class="min-w-0">
+                    <label for="receptionWalkInHistorySort" class="block text-[0.7rem] text-slate-600 mb-1">Sort by date</label>
+                    <select id="receptionWalkInHistorySort" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                        <option value="latest">Latest first</option>
+                        <option value="oldest">Oldest first</option>
+                    </select>
+                </div>
+                <div class="min-w-0">
+                    <label for="receptionWalkInHistoryStatus" class="block text-[0.7rem] text-slate-600 mb-1">Status</label>
+                    <select id="receptionWalkInHistoryStatus" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                        <option value="">All statuses</option>
+                        <option value="pending">Pending</option>
+                        <option value="confirmed">Confirmed</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                        <option value="no_show">No-show</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="rounded-2xl border border-slate-200 overflow-hidden bg-white">
+                <div class="overflow-x-auto overflow-y-auto scrollbar-hidden h-[300px]">
+                    <table class="text-xs" style="min-width:780px;width:100%;table-layout:auto;">
+                        <thead class="bg-slate-50 text-slate-600 sticky top-0">
+                            <tr>
+                                <th class="text-left px-3 py-2 font-semibold whitespace-nowrap">Date</th>
+                                <th class="text-left px-3 py-2 font-semibold whitespace-nowrap">Time</th>
+                                <th class="text-left px-3 py-2 font-semibold whitespace-nowrap">Patient</th>
+                                <th class="text-left px-3 py-2 font-semibold whitespace-nowrap">Age</th>
+                                <th class="text-left px-3 py-2 font-semibold whitespace-nowrap">Contact</th>
+                                <th class="text-left px-3 py-2 font-semibold whitespace-nowrap">Service</th>
+                                <th class="text-left px-3 py-2 font-semibold whitespace-nowrap">Doctor</th>
+                                <th class="text-left px-3 py-2 font-semibold whitespace-nowrap">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="receptionWalkInHistoryTableBody" class="divide-y divide-slate-100 bg-white"></tbody>
+                    </table>
+                </div>
+                <div id="receptionWalkInHistoryTableFooter" class="px-3 py-2 text-[0.72rem] text-slate-500 bg-white border-t border-slate-100 flex items-center justify-between">
+                    <div id="receptionWalkInHistoryMeta">History is hidden.</div>
+                    <button id="receptionWalkInHistoryRefresh" type="button" class="text-cyan-700 font-semibold hover:text-cyan-800">Refresh</button>
+                </div>
+            </div>
+        </div>
     </div>
     </div>
 </div>
@@ -402,6 +485,419 @@ function setWalkInTab(tab) {
         if (tabAccountBtn) tabAccountBtn.addEventListener('click', function () { setWalkInTab('account') })
         if (tabGuestBtn) tabGuestBtn.addEventListener('click', function () { setWalkInTab('guest') })
         setWalkInTab('account')
+    })
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var toggleBtn = document.getElementById('receptionWalkInHistoryToggle')
+        var panel = document.getElementById('receptionWalkInHistoryPanel')
+        var errorBox = document.getElementById('receptionWalkInHistoryError')
+        var todayOnlyBtn = document.getElementById('receptionWalkInHistoryTodayOnlyBtn')
+        var searchInput = document.getElementById('receptionWalkInHistorySearch')
+        var serviceSearch = document.getElementById('receptionWalkInHistoryServiceSearch')
+        var serviceIdInput = document.getElementById('receptionWalkInHistoryServiceId')
+        var serviceResults = document.getElementById('receptionWalkInHistoryServiceResults')
+        var sortSelect = document.getElementById('receptionWalkInHistorySort')
+        var statusSelect = document.getElementById('receptionWalkInHistoryStatus')
+        var tableBody = document.getElementById('receptionWalkInHistoryTableBody')
+        var metaBox = document.getElementById('receptionWalkInHistoryMeta')
+        var refreshBtn = document.getElementById('receptionWalkInHistoryRefresh')
+        var isOpen = false
+        var showTodayOnly = false
+        var searchTimer = null
+        var services = []
+        var servicesLoaded = false
+        var servicesLoading = false
+
+        function normalizeText(value) {
+            return String(value || '').trim().toLowerCase()
+        }
+
+        function escapeHtml(input) {
+            return String(input == null ? '' : input)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;')
+        }
+
+        function formatLocalDateIso(date) {
+            var value = date instanceof Date ? date : new Date()
+            var y = value.getFullYear()
+            var m = String(value.getMonth() + 1).padStart(2, '0')
+            var d = String(value.getDate()).padStart(2, '0')
+            return y + '-' + m + '-' + d
+        }
+
+        function safeIsoParts(raw) {
+            var value = String(raw || '')
+            if (!value) return { date: '', time: '' }
+            if (value.indexOf('T') !== -1) value = value.replace('T', ' ')
+            return {
+                date: value.slice(0, 10),
+                time: value.slice(11, 16)
+            }
+        }
+
+        function formatTime12h(hhmm) {
+            var value = String(hhmm || '').slice(0, 5)
+            if (!/^\d{2}:\d{2}$/.test(value)) return value || '—'
+            var parts = value.split(':')
+            var hour = parseInt(parts[0], 10)
+            var minute = parts[1]
+            var suffix = hour >= 12 ? 'PM' : 'AM'
+            var hour12 = hour % 12
+            if (!hour12) hour12 = 12
+            return hour12 + ':' + minute + ' ' + suffix
+        }
+
+        function personName(person, fallback) {
+            var parts = person ? [person.firstname, person.middlename, person.lastname] : []
+            var name = parts.filter(function (v) { return String(v || '').trim() !== '' }).join(' ').trim()
+            return name || fallback || '—'
+        }
+
+        function ageFromBirthdate(value) {
+            var raw = String(value || '').slice(0, 10)
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return ''
+            var birth = new Date(raw + 'T00:00:00')
+            if (isNaN(birth.getTime())) return ''
+            var now = new Date()
+            var age = now.getFullYear() - birth.getFullYear()
+            var monthDiff = now.getMonth() - birth.getMonth()
+            if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) age -= 1
+            return age >= 0 ? String(age) : ''
+        }
+
+        function serviceSummary(appt) {
+            var list = appt && Array.isArray(appt.services) ? appt.services : []
+            var names = list.map(function (item) {
+                return String(item && item.service_name ? item.service_name : '').trim()
+            }).filter(Boolean)
+            return names.length ? names.join(', ') : '—'
+        }
+
+        function statusText(appt) {
+            var status = appt && appt.status ? String(appt.status) : ''
+            if (!status) return '—'
+            if (status === 'confirmed' && appt && appt.check_in_time) return 'checked-in'
+            return status.replace(/_/g, ' ')
+        }
+
+        function statusBadgeClass(appt) {
+            var status = normalizeText(appt && appt.status ? appt.status : '')
+            if (status === 'completed') return 'border-emerald-200 bg-emerald-50 text-emerald-700'
+            if (status === 'cancelled') return 'border-rose-200 bg-rose-50 text-rose-700'
+            if (status === 'no_show') return 'border-slate-200 bg-slate-100 text-slate-600'
+            if (status === 'pending') return 'border-amber-200 bg-amber-50 text-amber-700'
+            return 'border-cyan-200 bg-cyan-50 text-cyan-700'
+        }
+
+        function showError(message) {
+            if (!errorBox) return
+            errorBox.textContent = message || ''
+            errorBox.classList.toggle('hidden', !message)
+        }
+
+        function updateToggleButton() {
+            if (!toggleBtn) return
+            toggleBtn.textContent = isOpen ? 'Hide history' : 'Show history'
+        }
+
+        function updateTodayButton() {
+            if (!todayOnlyBtn) return
+            if (showTodayOnly) {
+                todayOnlyBtn.textContent = 'Showing today only'
+                todayOnlyBtn.classList.remove('bg-white', 'text-slate-700', 'border-slate-200')
+                todayOnlyBtn.classList.add('bg-cyan-600', 'text-white', 'border-cyan-600')
+            } else {
+                todayOnlyBtn.textContent = 'Show today only'
+                todayOnlyBtn.classList.add('bg-white', 'text-slate-700', 'border-slate-200')
+                todayOnlyBtn.classList.remove('bg-cyan-600', 'text-white', 'border-cyan-600')
+            }
+        }
+
+        function renderRows(rows) {
+            if (!tableBody) return
+            var list = Array.isArray(rows) ? rows : []
+            if (!list.length) {
+                tableBody.innerHTML = '<tr><td colspan="8" class="px-3 py-6 text-center text-[0.78rem] text-slate-500">No walk-in appointments found.</td></tr>'
+                return
+            }
+
+            tableBody.innerHTML = list.map(function (appt) {
+                var when = safeIsoParts(appt && appt.appointment_datetime ? appt.appointment_datetime : '')
+                var patient = appt && appt.patient ? appt.patient : null
+                var doctor = appt && appt.doctor ? appt.doctor : null
+                var patientName = personName(patient, 'Patient #' + String(patient && patient.user_id != null ? patient.user_id : ''))
+                var doctorName = personName(doctor, 'Doctor #' + String(doctor && doctor.user_id != null ? doctor.user_id : ''))
+                var age = ageFromBirthdate(patient && patient.birthdate ? patient.birthdate : '')
+                var contact = patient && patient.contact_number ? String(patient.contact_number) : '—'
+                var status = statusText(appt)
+
+                return '' +
+                    '<tr>' +
+                        '<td class="px-3 py-2 text-slate-700 whitespace-nowrap">' + escapeHtml(when.date || '—') + '</td>' +
+                        '<td class="px-3 py-2 text-slate-700 whitespace-nowrap">' + escapeHtml(formatTime12h(when.time)) + '</td>' +
+                        '<td class="px-3 py-2 text-slate-700 min-w-[12rem] whitespace-nowrap">' + escapeHtml(patientName) + '</td>' +
+                        '<td class="px-3 py-2 text-slate-700 whitespace-nowrap">' + escapeHtml(age || '—') + '</td>' +
+                        '<td class="px-3 py-2 text-slate-700 whitespace-nowrap">' + escapeHtml(contact) + '</td>' +
+                        '<td class="px-3 py-2 text-slate-700 min-w-[14rem] whitespace-nowrap">' + escapeHtml(serviceSummary(appt)) + '</td>' +
+                        '<td class="px-3 py-2 text-slate-700 min-w-[12rem] whitespace-nowrap">' + escapeHtml(doctorName) + '</td>' +
+                        '<td class="px-3 py-2 whitespace-nowrap"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-[0.68rem] border ' + statusBadgeClass(appt) + '">' + escapeHtml(status) + '</span></td>' +
+                    '</tr>'
+            }).join('')
+        }
+
+        function setMeta(text) {
+            if (metaBox) metaBox.textContent = text || ''
+        }
+
+        function wordPrefixMatch(value, query) {
+            var source = normalizeText(value)
+            var term = normalizeText(query)
+            if (!term) return true
+            if (!source) return false
+            if (source.indexOf(term) === 0) return true
+            return source.split(/\s+/).some(function (piece) { return piece.indexOf(term) === 0 })
+        }
+
+        function renderServiceResults() {
+            if (!serviceResults || !serviceSearch) return
+            var query = String(serviceSearch.value || '').trim()
+            var filtered = (Array.isArray(services) ? services : []).filter(function (item) {
+                return wordPrefixMatch(item && item.service_name ? item.service_name : '', query)
+            }).slice(0, 25)
+
+            if (!filtered.length) {
+                serviceResults.innerHTML = '<div class="px-3 py-2 text-[0.75rem] text-slate-500">No services found.</div>'
+            } else {
+                serviceResults.innerHTML = filtered.map(function (item) {
+                    var id = item && item.service_id != null ? item.service_id : ''
+                    var name = item && item.service_name ? item.service_name : ('Service #' + id)
+                    return '<button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-50 text-[0.78rem] text-slate-700" data-service-id="' + escapeHtml(id) + '">' + escapeHtml(name) + '</button>'
+                }).join('')
+            }
+
+            serviceResults.classList.remove('hidden')
+        }
+
+        function setServiceSelection(service) {
+            if (serviceIdInput) {
+                serviceIdInput.value = service && service.service_id != null ? String(service.service_id) : ''
+            }
+            if (serviceSearch) {
+                serviceSearch.value = service && service.service_name ? String(service.service_name) : ''
+                if (!service) serviceSearch.placeholder = 'All services'
+            }
+            if (serviceResults) serviceResults.classList.add('hidden')
+        }
+
+        function loadServices() {
+            if (servicesLoaded || servicesLoading || typeof apiFetch !== 'function') return
+            servicesLoading = true
+            apiFetch("{{ url('/api/services') }}?per_page=100", { method: 'GET' })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, data: data }
+                    }).catch(function () {
+                        return { ok: response.ok, data: null }
+                    })
+                })
+                .then(function (result) {
+                    if (!result.ok) return
+                    services = result.data && Array.isArray(result.data.data) ? result.data.data : (Array.isArray(result.data) ? result.data : [])
+                    servicesLoaded = true
+                })
+                .catch(function () {})
+                .finally(function () {
+                    servicesLoading = false
+                })
+        }
+
+        function loadHistory() {
+            if (!isOpen || typeof apiFetch !== 'function') return
+            showError('')
+            renderRows([])
+            setMeta('Loading walk-in history…')
+
+            var url = "{{ url('/api/appointments') }}" + '?per_page=100&appointment_type=walk_in'
+            var order = sortSelect && sortSelect.value === 'oldest' ? 'oldest' : 'latest'
+            url += '&order=' + encodeURIComponent(order)
+
+            var now = new Date()
+            var startIso = ''
+            var endIso = ''
+            if (showTodayOnly) {
+                startIso = formatLocalDateIso(now)
+                endIso = startIso
+            } else {
+                startIso = formatLocalDateIso(new Date(now.getFullYear(), now.getMonth(), 1))
+                endIso = formatLocalDateIso(new Date(now.getFullYear(), now.getMonth() + 1, 0))
+            }
+            url += '&start_date=' + encodeURIComponent(startIso)
+            url += '&end_date=' + encodeURIComponent(endIso)
+
+            var search = searchInput ? normalizeText(searchInput.value) : ''
+            if (search) url += '&search=' + encodeURIComponent(search)
+
+            var serviceId = serviceIdInput && serviceIdInput.value ? parseInt(serviceIdInput.value, 10) : 0
+            if (serviceId) url += '&service_id=' + encodeURIComponent(serviceId)
+
+            var status = statusSelect && statusSelect.value ? String(statusSelect.value) : ''
+            if (status) url += '&status=' + encodeURIComponent(status)
+
+            apiFetch(url, { method: 'GET' })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, data: data }
+                    }).catch(function () {
+                        return { ok: response.ok, data: null }
+                    })
+                })
+                .then(function (result) {
+                    if (!result.ok) {
+                        showError((result.data && result.data.message) ? String(result.data.message) : 'Failed to load walk-in history.')
+                        renderRows([])
+                        setMeta('No walk-in history loaded.')
+                        return
+                    }
+
+                    var rows = result.data && Array.isArray(result.data.data) ? result.data.data.slice() : (Array.isArray(result.data) ? result.data.slice() : [])
+
+                    function statusRank(appt) {
+                        var key = normalizeText(appt && appt.status ? appt.status : '')
+                        if (key === 'cancelled') return 3
+                        if (key === 'completed') return 2
+                        if (key === 'no_show') return 1
+                        return 0
+                    }
+
+                    rows.sort(function (a, b) {
+                        var rankA = statusRank(a)
+                        var rankB = statusRank(b)
+                        if (rankA < rankB) return -1
+                        if (rankA > rankB) return 1
+
+                        var dateA = a && a.appointment_datetime ? String(a.appointment_datetime) : ''
+                        var dateB = b && b.appointment_datetime ? String(b.appointment_datetime) : ''
+                        if (order === 'oldest') {
+                            if (dateA < dateB) return -1
+                            if (dateA > dateB) return 1
+                            return 0
+                        }
+                        if (dateA < dateB) return 1
+                        if (dateA > dateB) return -1
+                        return 0
+                    })
+
+                    renderRows(rows)
+                    if (showTodayOnly) {
+                        setMeta('Showing ' + String(rows.length) + ' walk-in appointments for ' + startIso + '.')
+                    } else {
+                        setMeta('Showing ' + String(rows.length) + ' walk-in appointments for ' + startIso.slice(0, 7) + '.')
+                    }
+                })
+                .catch(function () {
+                    showError('Network error while loading walk-in history.')
+                    renderRows([])
+                    setMeta('No walk-in history loaded.')
+                })
+        }
+
+        function setOpen(nextOpen) {
+            isOpen = !!nextOpen
+            if (panel) panel.classList.toggle('hidden', !isOpen)
+            updateToggleButton()
+            if (isOpen) {
+                loadHistory()
+            } else {
+                showError('')
+                setMeta('History is hidden.')
+            }
+        }
+
+        updateToggleButton()
+        updateTodayButton()
+
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', function () {
+                setOpen(!isOpen)
+            })
+        }
+
+        if (todayOnlyBtn) {
+            todayOnlyBtn.addEventListener('click', function () {
+                showTodayOnly = !showTodayOnly
+                updateTodayButton()
+                loadHistory()
+            })
+        }
+
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', function () {
+                loadHistory()
+            })
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                if (searchTimer) clearTimeout(searchTimer)
+                searchTimer = setTimeout(function () {
+                    loadHistory()
+                }, 250)
+            })
+        }
+
+        if (sortSelect) {
+            sortSelect.addEventListener('change', loadHistory)
+        }
+
+        if (statusSelect) {
+            statusSelect.addEventListener('change', loadHistory)
+        }
+
+        if (serviceSearch) {
+            serviceSearch.addEventListener('focus', function () {
+                loadServices()
+                renderServiceResults()
+            })
+            serviceSearch.addEventListener('input', function () {
+                if (serviceIdInput && serviceIdInput.value) {
+                    var chosen = services.find(function (item) {
+                        return String(item && item.service_id) === String(serviceIdInput.value)
+                    }) || null
+                    var chosenName = chosen && chosen.service_name ? String(chosen.service_name) : ''
+                    if (normalizeText(serviceSearch.value) !== normalizeText(chosenName)) {
+                        setServiceSelection(null)
+                        loadHistory()
+                    }
+                }
+                loadServices()
+                renderServiceResults()
+            })
+        }
+
+        if (serviceResults) {
+            serviceResults.addEventListener('click', function (e) {
+                var button = e.target && e.target.closest ? e.target.closest('button[data-service-id]') : null
+                if (!button) return
+                var id = button.getAttribute('data-service-id') || ''
+                var picked = services.find(function (item) {
+                    return String(item && item.service_id) === String(id)
+                }) || null
+                setServiceSelection(picked)
+                loadHistory()
+            })
+        }
+
+        document.addEventListener('click', function (e) {
+            if (!serviceResults || !serviceSearch) return
+            if (serviceSearch.contains(e.target) || serviceResults.contains(e.target)) return
+            serviceResults.classList.add('hidden')
+        })
     })
 </script>
 
@@ -1461,9 +1957,12 @@ function setWalkInTab(tab) {
         var timeOverlay = accountQuery('#receptionWalkInTimeOverlay')
         var availableDaysEl = accountQuery('#reception_walkin_available_days')
         var timeSlotsEl = accountQuery('#reception_walkin_time_slots')
+        var priorityInput = accountQuery('#reception_walkin_priority')
+        var priorityHelp = accountQuery('#receptionWalkInPriorityHelp')
         var previousDoctorId = 0
         var previousServiceIds = []
         var previousServiceIdSet = {}
+        var approvedVerificationType = ''
         var services = []
         var doctors = []
         var servicesLoaded = false
@@ -1567,12 +2066,87 @@ function setWalkInTab(tab) {
             return name
         }
 
+        function verificationTypeLabel(type) {
+            var key = normalizeText(type || '')
+            if (key === 'pwd') return 'PWD'
+            if (key === 'pregnant') return 'Pregnant'
+            if (key === 'senior') return 'Senior'
+            if (key === 'none') return 'None'
+            return ''
+        }
+
+        function priorityTypeLabel(level) {
+            var value = parseInt(level, 10)
+            if (value === 1) return 'Emergency'
+            if (value === 2) return 'PWD'
+            if (value === 3) return 'Pregnant'
+            if (value === 4) return 'Senior'
+            if (value === 5) return 'General'
+            return ''
+        }
+
+        function verificationPriorityLevel(type) {
+            var key = normalizeText(type || '')
+            if (key === 'pwd') return 2
+            if (key === 'pregnant') return 3
+            if (key === 'senior') return 4
+            return null
+        }
+
+        function syncPriorityInputState() {
+            if (!priorityInput) return
+            var verificationType = normalizeText(approvedVerificationType || '')
+            var autoPriorityLevel = getAppointmentType() === 'walk_in' ? verificationPriorityLevel(verificationType) : null
+
+            if (autoPriorityLevel !== null) {
+                priorityInput.value = String(autoPriorityLevel)
+                priorityInput.disabled = true
+                if (priorityHelp) {
+                    priorityHelp.textContent = 'Priority is auto-set from approved patient type: ' + verificationTypeLabel(verificationType) + '.'
+                }
+                return
+            }
+
+            priorityInput.disabled = false
+            if (getAppointmentType() !== 'walk_in') {
+                if (priorityHelp) priorityHelp.textContent = 'Priority can be adjusted manually for this appointment.'
+                return
+            }
+
+            if (verificationType === 'none') {
+                if (priorityHelp) priorityHelp.textContent = 'Approved patient type is None, so priority stays manual.'
+                return
+            }
+
+            if (priorityHelp) priorityHelp.textContent = 'Manual priority stays available until an approved patient type is found.'
+        }
+
+        function loadApprovedPatientVerification(patientId) {
+            approvedVerificationType = ''
+            syncPriorityInputState()
+
+            if (!patientId || typeof apiFetch !== 'function') return
+            apiFetch("{{ url('/api/patient-verifications') }}?patient_id=" + encodeURIComponent(patientId) + "&status=approved&per_page=20", { method: 'GET' })
+                .then(function (r) { return readResponse(r) })
+                .then(function (res) {
+                    if (!res.ok) return
+                    var list = res.data && Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : [])
+                    var latest = list && list.length ? list[0] : null
+                    approvedVerificationType = latest && latest.type ? String(latest.type) : ''
+                    syncPriorityInputState()
+                })
+                .catch(function () {})
+        }
+
         function setPatientSelection(patient) {
             selectedPatient = patient || null
             if (patientSelect) patientSelect.value = patient && patient.user_id ? String(patient.user_id) : ''
             previousDoctorId = 0
             previousServiceIds = []
             previousServiceIdSet = {}
+            approvedVerificationType = ''
+            if (priorityInput) priorityInput.value = ''
+            syncPriorityInputState()
 
             if (patientPreview) {
                 if (!patient) {
@@ -1598,6 +2172,7 @@ function setWalkInTab(tab) {
 
             if (patient && patient.user_id) {
                 loadPreviousProvider(String(patient.user_id))
+                loadApprovedPatientVerification(String(patient.user_id))
             }
         }
 
@@ -2739,6 +3314,7 @@ function setWalkInTab(tab) {
                     loadDoctorSchedulesAndAvailability(String(doctorSelect.value), null)
                 }
             }
+            syncPriorityInputState()
             renderTimeSlots()
         }
 
@@ -2895,6 +3471,7 @@ function setWalkInTab(tab) {
                 var type = currentTypeInput && currentTypeInput.value ? String(currentTypeInput.value) : 'walk_in'
                 var priority = priorityInput && priorityInput.value ? parseInt(priorityInput.value, 10) : null
                 var reason = reasonInput ? reasonInput.value : ''
+                var patientType = verificationTypeLabel(approvedVerificationType) || ((priority !== null && !isNaN(priority)) ? priorityTypeLabel(priority) : '')
                 var autoQueue = true
 
                 if (!patientId || !serviceIds.length || !doctorId) {
@@ -2942,6 +3519,7 @@ function setWalkInTab(tab) {
                     'Date': type === 'walk_in' ? localDateIso() : date,
                     'Time': type === 'walk_in' ? 'Now' : time,
                     'Reason': reason || 'N/A',
+                    'Patient Type': patientType || 'Manual / General',
                     'Priority Level': (priority !== null && !isNaN(priority)) ? String(priority) : 'N/A'
                 }
 

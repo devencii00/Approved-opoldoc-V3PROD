@@ -86,16 +86,16 @@
                     @endforeach
                 </select>
             </div>
-            <button id="receptionCallNextButton" type="button" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-[0.8rem] font-semibold hover:bg-slate-800 transition-colors disabled:opacity-70 disabled:hover:bg-slate-900 min-w-[122px] relative">
+            <button id="receptionCallNextButton" type="button" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-700 text-white text-[0.8rem] font-semibold hover:bg-cyan-600 transition-colors disabled:opacity-70 disabled:hover:bg-cyan-800 min-w-[122px] relative">
                 <span id="receptionCallNextSpinner" class="hidden absolute w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
                 <span id="receptionCallNextContent" class="inline-flex items-center gap-2">
                     <x-lucide-megaphone class="w-[18px] h-[18px]" />
                     Call next
                 </span>
             </button>
-            <button id="receptionRefreshQueueButton" type="button" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-[0.8rem] font-semibold hover:bg-slate-200 transition-colors border border-slate-200">
+            <button id="receptionRefreshQueueButton" type="button" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-[0.8rem] font-semibold hover:bg-slate-800 transition-colors border border-slate-200">
                 <x-lucide-refresh-cw class="w-[18px] h-[18px]" />
-                Refresh
+                Qeueu requests
             </button>
             <a href="{{ route('queue.display', ['date' => now()->toDateString()]) }}" target="_blank" id="receptionPublicQueueLinkButton" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-slate-800 text-[0.8rem] font-semibold hover:bg-slate-50 transition-colors border border-slate-200">
                 <x-lucide-link class="w-[18px] h-[18px]" />
@@ -511,6 +511,26 @@
     </div>
 </div>
 
+<div id="receptionQueueRequestsOverlay" class="hidden fixed inset-0 z-[66] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="w-full max-w-3xl rounded-2xl bg-white border border-slate-200 shadow-[0_20px_80px_rgba(15,23,42,0.35)] overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
+            <div class="min-w-0">
+                <div class="text-sm font-semibold text-slate-900">Guest walk-in queue requests</div>
+                <div class="text-[0.78rem] text-slate-500">Track today&apos;s queue requests.</div>
+            </div>
+            <button id="receptionQueueRequestsClose" type="button" class="inline-flex items-center justify-center w-9 h-9 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50">
+                <x-lucide-x class="w-[20px] h-[20px]" />
+            </button>
+        </div>
+        <div class="px-5 py-4">
+            <div id="receptionQueueRequestsError" class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[0.75rem] text-red-700"></div>
+            <div id="receptionQueueRequestsList" class="space-y-3 max-h-[65vh] overflow-y-auto">
+                <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-[0.78rem] text-slate-500">Loading queue requests…</div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="receptionConfirmOverlay" class="hidden fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-[0_20px_80px_rgba(15,23,42,0.35)]">
         <div class="px-5 py-4 border-b border-slate-100">
@@ -567,6 +587,10 @@
         var serviceOverlayTitle = document.getElementById('receptionServiceOverlayTitle')
         var serviceOverlayMeta = document.getElementById('receptionServiceOverlayMeta')
         var serviceOverlayBody = document.getElementById('receptionServiceOverlayBody')
+        var queueRequestsOverlay = document.getElementById('receptionQueueRequestsOverlay')
+        var queueRequestsClose = document.getElementById('receptionQueueRequestsClose')
+        var queueRequestsError = document.getElementById('receptionQueueRequestsError')
+        var queueRequestsList = document.getElementById('receptionQueueRequestsList')
 
         function confirmAction(title, message) {
             return new Promise(function (resolve) {
@@ -680,6 +704,152 @@
         function closeServiceOverlay() {
             if (serviceOverlayBackdrop) serviceOverlayBackdrop.classList.add('hidden')
             if (serviceOverlayPanel) serviceOverlayPanel.classList.add('hidden')
+        }
+
+        function showQueueRequestsError(message) {
+            if (!queueRequestsError) return
+            queueRequestsError.textContent = message || ''
+            queueRequestsError.classList.toggle('hidden', !message)
+        }
+
+        function closeQueueRequests() {
+            if (queueRequestsOverlay) queueRequestsOverlay.classList.add('hidden')
+            showQueueRequestsError('')
+        }
+
+        function guestRequestPatientType(level) {
+            var value = parseInt(level, 10)
+            if (value === 1) return 'Emergency'
+            if (value === 2) return 'PWD'
+            if (value === 3) return 'Pregnant'
+            if (value === 4) return 'Senior'
+            return 'General'
+        }
+
+        function guestRequestStatusMeta(item) {
+            var status = normalizeText(item && item.status ? item.status : 'pending')
+            if (status === 'cancelled') {
+                return {
+                    label: 'Rejected',
+                    badgeClass: 'border-slate-200 bg-slate-100 text-slate-600',
+                    cardClass: 'bg-slate-50/50',
+                    showActions: false
+                }
+            }
+
+            return {
+                label: 'Pending',
+                badgeClass: 'border-amber-200 bg-amber-50 text-amber-700',
+                cardClass: 'bg-slate-50/70',
+                showActions: true
+            }
+        }
+
+        function renderQueueRequests(items) {
+            if (!queueRequestsList) return
+            var list = Array.isArray(items) ? items : []
+            if (!list.length) {
+                queueRequestsList.innerHTML = '<div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-[0.78rem] text-slate-500">No guest walk-in queue requests found.</div>'
+                return
+            }
+
+            queueRequestsList.innerHTML = list.map(function (item) {
+                var patient = item && item.patient ? item.patient : null
+                var doctor = item && item.doctor ? item.doctor : null
+                var services = item && Array.isArray(item.services) ? item.services : []
+                var patientName = patient && [patient.firstname, patient.middlename, patient.lastname].filter(function (v) { return String(v || '').trim() !== '' }).join(' ').trim()
+                var doctorName = doctor && [doctor.firstname, doctor.middlename, doctor.lastname].filter(function (v) { return String(v || '').trim() !== '' }).join(' ').trim()
+                var serviceNames = services.map(function (service) { return service && service.service_name ? String(service.service_name) : '' }).filter(Boolean)
+                var typeLabel = guestRequestPatientType(item && item.priority_level != null ? item.priority_level : 5)
+                var appointmentId = item && item.appointment_id != null ? String(item.appointment_id) : ''
+                var statusMeta = guestRequestStatusMeta(item)
+                var actionsHtml = statusMeta.showActions
+                    ? (
+                        '<div class="mt-3 flex items-center justify-end gap-2">' +
+                            '<button type="button" class="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-3 py-1.5 text-[0.72rem] font-semibold text-rose-700 hover:bg-rose-50 reception-queue-request-action" data-appointment-id="' + escapeHtml(appointmentId) + '" data-action="reject">Reject</button>' +
+                            '<button type="button" class="inline-flex items-center gap-1 rounded-lg bg-cyan-600 px-3 py-1.5 text-[0.72rem] font-semibold text-white hover:bg-cyan-700 reception-queue-request-action" data-appointment-id="' + escapeHtml(appointmentId) + '" data-action="accept">Accept</button>' +
+                        '</div>'
+                    )
+                    : (
+                        '<div class="mt-3 text-right text-[0.7rem] text-slate-500">Rejected requests remain visible here until the day changes.</div>'
+                    )
+
+                return '' +
+                    '<div class="rounded-2xl border border-slate-200 ' + statusMeta.cardClass + ' px-4 py-4">' +
+                        '<div class="flex items-start justify-between gap-3">' +
+                            '<div class="min-w-0">' +
+                                '<div class="text-[0.78rem] font-semibold text-slate-900">' + escapeHtml(patientName || ('Patient #' + appointmentId)) + '</div>' +
+                                '<div class="mt-1 text-[0.72rem] text-slate-500">Doctor: ' + escapeHtml(doctorName || 'Doctor not assigned') + '</div>' +
+                                '<div class="mt-1 text-[0.72rem] text-slate-500">Services: ' + escapeHtml(serviceNames.join(', ') || 'No services listed') + '</div>' +
+                                '<div class="mt-1 text-[0.72rem] text-slate-500">Patient type: ' + escapeHtml(typeLabel) + '</div>' +
+                            '</div>' +
+                            '<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[0.65rem] font-semibold border ' + statusMeta.badgeClass + '">' + escapeHtml(statusMeta.label) + '</span>' +
+                        '</div>' +
+                        actionsHtml +
+                    '</div>'
+            }).join('')
+        }
+
+        function loadQueueRequests() {
+            if (typeof apiFetch !== 'function') {
+                showQueueRequestsError('API client is not available.')
+                return
+            }
+            showQueueRequestsError('')
+            if (queueRequestsList) {
+                queueRequestsList.innerHTML = '<div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-[0.78rem] text-slate-500">Loading queue requests…</div>'
+            }
+
+            apiFetch("{{ url('/api/queues/guest-requests') }}", { method: 'GET' })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, data: data }
+                    }).catch(function () {
+                        return { ok: response.ok, data: [] }
+                    })
+                })
+                .then(function (result) {
+                    if (!result.ok) {
+                        showQueueRequestsError('Failed to load guest queue requests.')
+                        renderQueueRequests([])
+                        return
+                    }
+                    renderQueueRequests(result.data)
+                })
+                .catch(function () {
+                    showQueueRequestsError('Network error while loading guest queue requests.')
+                    renderQueueRequests([])
+                })
+        }
+
+        function processQueueRequest(appointmentId, action) {
+            if (!appointmentId || !action || typeof apiFetch !== 'function') return
+            apiFetch("{{ url('/api/queues/guest-requests') }}/" + encodeURIComponent(String(appointmentId)), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ action: action })
+            })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, data: data }
+                    }).catch(function () {
+                        return { ok: response.ok, data: null }
+                    })
+                })
+                .then(function (result) {
+                    if (!result.ok) {
+                        showQueueRequestsError((result.data && result.data.message) ? result.data.message : 'Failed to process guest queue request.')
+                        return
+                    }
+
+                    showQueueSuccess((result.data && result.data.message) ? result.data.message : 'Guest queue request processed.')
+                    loadQueueRequests()
+                })
+                .catch(function () {
+                    showQueueRequestsError('Network error while processing guest queue request.')
+                })
         }
 
         function openServiceOverlay(trigger, title, meta, services) {
@@ -867,6 +1037,33 @@
         if (serviceOverlayBackdrop) {
             serviceOverlayBackdrop.addEventListener('click', function (e) {
                 if (e.target === serviceOverlayBackdrop) closeServiceOverlay()
+            })
+        }
+        if (queueRequestsClose) {
+            queueRequestsClose.addEventListener('click', closeQueueRequests)
+        }
+        if (queueRequestsOverlay) {
+            queueRequestsOverlay.addEventListener('click', function (e) {
+                if (e.target === queueRequestsOverlay) closeQueueRequests()
+            })
+        }
+        if (queueRequestsList) {
+            queueRequestsList.addEventListener('click', function (e) {
+                var button = e.target && e.target.closest ? e.target.closest('.reception-queue-request-action') : null
+                if (!button) return
+                var appointmentId = button.getAttribute('data-appointment-id') || ''
+                var action = button.getAttribute('data-action') || ''
+                if (!appointmentId || !action) return
+
+                var promptTitle = action === 'accept' ? 'Accept queue request' : 'Reject queue request'
+                var promptMessage = action === 'accept'
+                    ? 'Are you sure you want to accept this guest queue request and add it to the queue?'
+                    : 'Are you sure you want to reject this guest queue request?'
+
+                confirmAction(promptTitle, promptMessage).then(function (confirmed) {
+                    if (!confirmed) return
+                    processQueueRequest(appointmentId, action)
+                })
             })
         }
         document.querySelectorAll('.reception-service-overlay-trigger').forEach(function (button) {
@@ -1120,6 +1317,7 @@
             if (e.key === 'Escape') {
                 closeQueueConfig()
                 closeServiceOverlay()
+                closeQueueRequests()
             }
         })
 
@@ -1209,7 +1407,8 @@
         var refreshButton = document.getElementById('receptionRefreshQueueButton')
         if (refreshButton) {
             refreshButton.addEventListener('click', function () {
-                window.location.reload()
+                if (queueRequestsOverlay) queueRequestsOverlay.classList.remove('hidden')
+                loadQueueRequests()
             })
         }
 

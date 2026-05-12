@@ -103,7 +103,7 @@
                         <div class="flex items-end self-end">
                             <button id="publicGuestWalkInSubmit" type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700 transition-colors disabled:opacity-60 disabled:hover:bg-cyan-600">
                                 <span id="publicGuestWalkInSpinner" class="hidden w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
-                                <span id="publicGuestWalkInSubmitLabel">Submit</span>
+                                <span id="publicGuestWalkInSubmitLabel">Request queue</span>
                             </button>
                         </div>
                     </form>
@@ -205,7 +205,7 @@
             function setSubmitting(isSubmitting) {
                 if (submitBtn) submitBtn.disabled = !!isSubmitting
                 if (submitSpinner) submitSpinner.classList.toggle('hidden', !isSubmitting)
-                if (submitLabel) submitLabel.textContent = isSubmitting ? 'Submitting…' : 'Submit'
+                if (submitLabel) submitLabel.textContent = isSubmitting ? 'Requesting…' : 'Request queue'
             }
 
             function showError(message) {
@@ -682,7 +682,7 @@
                     if (contact) confirmMsg += 'Contact: ' + contact + '\n';
                     if (reason) confirmMsg += 'Reason: ' + reason + '\n';
                     
-                    confirmMsg += '\nAre you sure you want to register?';
+                    confirmMsg += '\nAre you sure you want to request the queue?';
 
                     window.publicConfirm(confirmMsg).then(function(confirmed) {
                         if (!confirmed) return;
@@ -732,7 +732,7 @@
                                     return
                                 }
 
-                                showSuccess('Walk-in successfuly created and currently on the queue.')
+                                showSuccess('Your queue request has been sent, please wait for a few moment.')
                                 showCreds('')
 
                                 if (firstNameInput) firstNameInput.value = ''

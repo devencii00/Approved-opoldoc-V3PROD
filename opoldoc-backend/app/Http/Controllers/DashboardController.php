@@ -393,9 +393,16 @@ class DashboardController extends Controller
                 ->where('appointment_type', 'walk_in')
                 ->count();
 
-            $pendingQueueRequests = Appointment::where('appointment_type', 'scheduled')
+            $pendingQueueRequests = Appointment::query()
                 ->where('status', 'pending')
                 ->whereDate('created_at', $today)
+                ->where(function ($q) {
+                    $q->where('appointment_type', 'scheduled')
+                        ->orWhere(function ($inner) {
+                            $inner->where('appointment_type', 'walk_in')
+                                ->whereNull('created_by');
+                        });
+                })
                 ->count();
 
             $waitingCount = Queue::whereDate('queue_datetime', $today)

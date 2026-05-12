@@ -208,6 +208,143 @@ class QueueController extends Controller
         ]);
     }
 
+    public function guestRequests(Request $request)
+    {
+        $currentUser = $request->user();
+        if (! $currentUser || ! in_array((string) $currentUser->role, ['admin', 'receptionist'], true)) {
+            abort(403);
+        }
+
+        $today = now()->toDateString();
+
+        $requests = Appointment::query()
+            ->with(['patient', 'doctor', 'services', 'queue'])
+            ->where('appointment_type', 'walk_in')
+            ->whereNull('created_by')
+            ->whereDate('created_at', $today)
+            ->whereIn('status', ['pending', 'cancelled'])
+            ->orderByRaw("CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END ASC")
+            ->orderByDesc('created_at')
+            ->orderByDesc('appointment_id')
+            ->get();
+
+        return response()->json($requests);
+    }
+
+    public function processGuestRequest(Request $request, Appointment $appointment)
+    {
+        $currentUser = $request->user();
+        if (! $currentUser || ! in_array((string) $currentUser->role, ['admin', 'receptionist'], true)) {
+            abort(403);
+        }
+
+        $data = $request->validate([
+            'action' => ['required', 'in:accept,reject'],
+        ]);
+
+        if ((string) $appointment->appointment_type !== 'walk_in' || $appointment->created_by !== null) {
+            return response()->json([
+                'message' => 'Only public guest walk-in requests can be processed here.',
+                'code' => 'INVALID_GUEST_REQUEST',
+            ], 422);
+        }
+
+        if ((string) $appointment->status !== 'pending') {
+            return response()->json([
+                'message' => 'This queue request has already been processed.',
+                'code' => 'GUEST_REQUEST_ALREADY_PROCESSED',
+            ], 422);
+        }
+
+        if ($data['action'] === 'reject') {
+            $appointment->update(['status' => 'cancelled']);
+
+            return response()->json([
+                'message' => 'Guest queue request rejected.',
+                'appointment' => $appointment->refresh()->load(['patient', 'doctor', 'services', 'queue']),
+            ]);
+        }
+
+        $result = DB::transaction(function () use ($appointment) {
+            $appointment->refresh();
+
+            $today = now()->toDateString();
+            $patientId = (int) ($appointment->patient_id ?? 0);
+
+            if ($patientId > 0) {
+                $duplicatePatient = Queue::query()
+                    ->whereDate('queue_datetime', $today)
+                    ->whereIn('status', ['waiting', 'serving'])
+                    ->whereHas('appointment', function ($q) use ($patientId) {
+                        $q->where('patient_id', $patientId);
+                    })
+                    ->exists();
+
+                if ($duplicatePatient) {
+                    return [
+                        'ok' => false,
+                        'message' => 'This patient is already in the queue.',
+                        'code' => 'PATIENT_ALREADY_IN_QUEUE',
+                    ];
+                }
+            }
+
+            $existingQueue = Queue::query()
+                ->where('appointment_id', (int) $appointment->appointment_id)
+                ->whereDate('queue_datetime', $today)
+                ->whereIn('status', ['waiting', 'serving'])
+                ->first();
+
+            if ($existingQueue) {
+                $appointment->update(['status' => 'confirmed']);
+
+                return [
+                    'ok' => true,
+                    'appointment' => $appointment->refresh()->load(['patient', 'doctor', 'services', 'queue']),
+                    'queue' => $existingQueue->load(['appointment.patient', 'appointment.doctor', 'appointment.services']),
+                ];
+            }
+
+            $queueAt = now();
+            $max = Queue::whereDate('queue_datetime', $today)->max('queue_number');
+            $queueNumber = ((int) $max) + 1;
+            $priorityLevel = Queue::sanitizePriorityLevel($appointment->priority_level) ?? 5;
+
+            $appointment->update([
+                'status' => 'confirmed',
+                'appointment_datetime' => $appointment->appointment_datetime ?: $queueAt,
+                'priority_level' => $priorityLevel,
+            ]);
+
+            $queue = Queue::create([
+                'appointment_id' => (int) $appointment->appointment_id,
+                'queue_number' => $queueNumber,
+                'queue_datetime' => $queueAt,
+                'status' => 'waiting',
+                'priority_level' => $priorityLevel,
+            ]);
+
+            return [
+                'ok' => true,
+                'appointment' => $appointment->refresh()->load(['patient', 'doctor', 'services', 'queue']),
+                'queue' => $queue->load(['appointment.patient', 'appointment.doctor', 'appointment.services']),
+            ];
+        });
+
+        if (! ($result['ok'] ?? false)) {
+            return response()->json([
+                'message' => $result['message'] ?? 'Failed to process guest request.',
+                'code' => $result['code'] ?? 'GUEST_REQUEST_PROCESS_FAILED',
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => 'Guest queue request accepted and added to the queue.',
+            'appointment' => $result['appointment'],
+            'queue' => $result['queue'],
+        ]);
+    }
+
     public function store(Request $request)
     {
         $currentUser = $request->user();
