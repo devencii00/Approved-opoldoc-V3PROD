@@ -356,6 +356,7 @@ export default function PatientQueueScreen() {
   const [queueDetailsExpanded, setQueueDetailsExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [pageScrollEnabled, setPageScrollEnabled] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -799,6 +800,8 @@ export default function PatientQueueScreen() {
         contentContainerStyle={styles.pageScrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
+        scrollEnabled={pageScrollEnabled}
       >
         <View style={styles.header}>
           <View style={styles.circleTopRight} />
@@ -916,7 +919,7 @@ export default function PatientQueueScreen() {
 
           <SectionCard
             title="Walk-in Details"
-            subtitle="Mobile walk-ins are created immediately and placed in waiting status once the selected doctor is on active schedule."
+            // subtitle="Mobile walk-ins are created immediately and placed in waiting status once the selected doctor is on active schedule."
             badge="Step 1"
             delay={80}
             collapsed={stepOneCollapsed}
@@ -948,7 +951,19 @@ export default function PatientQueueScreen() {
               <View style={styles.selectedServicesSection}>
                 <Text style={styles.selectedServicesTotal}>{`Current selection total: ${formatCurrency(selectedServicesTotalFee)}`}</Text>
                 {selectedServices.length > 1 ? <Text style={styles.slideHint}>Slide to see more</Text> : null}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.selectedServicesRow}>
+                <ScrollView
+                  horizontal
+                  nestedScrollEnabled
+                  directionalLockEnabled
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.selectedServicesScroller}
+                  contentContainerStyle={styles.selectedServicesRow}
+                  onTouchStart={() => setPageScrollEnabled(false)}
+                  onTouchEnd={() => setPageScrollEnabled(true)}
+                  onTouchCancel={() => setPageScrollEnabled(true)}
+                  onScrollEndDrag={() => setPageScrollEnabled(true)}
+                  onMomentumScrollEnd={() => setPageScrollEnabled(true)}
+                >
                   {selectedServices.map((service) => (
                     <View key={service.id} style={styles.selectedServiceCard}>
                       <Text style={styles.selectedServiceTitle}>{service.name}</Text>
@@ -1516,6 +1531,9 @@ const styles = StyleSheet.create({
   selectedServicesRow: {
     paddingRight: 10,
     gap: 10,
+  },
+  selectedServicesScroller: {
+    marginHorizontal: -2,
   },
   selectedServiceCard: {
     width: 235,

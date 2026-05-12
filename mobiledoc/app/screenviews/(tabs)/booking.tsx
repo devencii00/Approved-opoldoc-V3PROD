@@ -380,6 +380,7 @@ export default function BookingScreen() {
   const [loadingSchedules, setLoadingSchedules] = useState(false);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [booking, setBooking] = useState(false);
+  const [pageScrollEnabled, setPageScrollEnabled] = useState(true);
   const [hasActiveAppointment, setHasActiveAppointment] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -876,6 +877,8 @@ export default function BookingScreen() {
         contentContainerStyle={styles.pageScrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
+        scrollEnabled={pageScrollEnabled}
       >
         <View style={styles.header}>
           <View style={styles.circleTopRight} />
@@ -937,7 +940,19 @@ export default function BookingScreen() {
             {selectedServices.length > 0 ? (
               <View style={styles.selectedServicesSection}>
                 {selectedServices.length > 1 ? <Text style={styles.slideHint}>Slide to see more</Text> : null}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.selectedServicesRow}>
+                <ScrollView
+                  horizontal
+                  nestedScrollEnabled
+                  directionalLockEnabled
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.selectedServicesScroller}
+                  contentContainerStyle={styles.selectedServicesRow}
+                  onTouchStart={() => setPageScrollEnabled(false)}
+                  onTouchEnd={() => setPageScrollEnabled(true)}
+                  onTouchCancel={() => setPageScrollEnabled(true)}
+                  onScrollEndDrag={() => setPageScrollEnabled(true)}
+                  onMomentumScrollEnd={() => setPageScrollEnabled(true)}
+                >
                   {selectedServices.map((service) => (
                     <View key={service.id} style={styles.selectedServiceCard}>
                       <Text style={styles.selectedServiceTitle}>{service.name}</Text>
@@ -1504,6 +1519,9 @@ const styles = StyleSheet.create({
   selectedServicesRow: {
     paddingRight: 10,
     gap: 10,
+  },
+  selectedServicesScroller: {
+    marginHorizontal: -2,
   },
   selectedServiceCard: {
     width: 235,
