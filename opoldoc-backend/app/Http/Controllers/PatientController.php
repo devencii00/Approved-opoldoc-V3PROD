@@ -362,6 +362,7 @@ class PatientController extends Controller
 
         $data = $request->validate([
             'patient_id' => [$isPatient ? 'sometimes' : 'required', 'integer', 'exists:users,user_id'],
+            'appointment_id' => ['nullable', 'integer', 'exists:appointments,appointment_id'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
@@ -395,7 +396,7 @@ class PatientController extends Controller
             120
         );
 
-        return DB::table('vitals')
+        $query = DB::table('vitals')
             ->where('vitals.patient_id', $patientId)
             ->leftJoin('appointments', 'vitals.appointment_id', '=', 'appointments.appointment_id')
             ->leftJoin('users as doctors', 'appointments.doctor_id', '=', 'doctors.user_id')
@@ -406,9 +407,119 @@ class PatientController extends Controller
                 'doctors.firstname as doctor_firstname',
                 'doctors.middlename as doctor_middlename',
                 'doctors.lastname as doctor_lastname',
-            ])
+            ]);
+
+        if (! empty($data['appointment_id'])) {
+            $query->where('vitals.appointment_id', (int) $data['appointment_id']);
+        }
+
+        return $query
             ->orderByDesc('vitals.recorded_at')
             ->orderByDesc('vitals.vital_id')
             ->paginate($perPage);
+    }
+
+    public function storeVital(Request $request)
+    {
+        $currentUser = $request->user();
+        if (! $currentUser || $currentUser->role === 'patient') {
+            abort(403);
+        }
+
+        $data = $request->validate([
+            'appointment_id' => ['required', 'integer', 'exists:appointments,appointment_id'],
+            'height_cm' => ['nullable', 'numeric', 'min:0', 'max:999.99'],
+            'weight_kg' => ['nullable', 'numeric', 'min:0', 'max:999.99'],
+            'blood_pressure' => ['nullable', 'string', 'max:20'],
+            'temperature' => ['nullable', 'numeric', 'min:0', 'max:99.9'],
+            'pulse_rate' => ['nullable', 'integer', 'min:0', 'max:999'],
+        ]);
+
+        $vitalValues = [
+            'height_cm' => array_key_exists('height_cm', $data) ? $data['height_cm'] : null,
+            'weight_kg' => array_key_exists('weight_kg', $data) ? $data['weight_kg'] : null,
+            'blood_pressure' => isset($data['blood_pressure']) ? trim((string) $data['blood_pressure']) : null,
+            'temperature' => array_key_exists('temperature', $data) ? $data['temperature'] : null,
+            'pulse_rate' => array_key_exists('pulse_rate', $data) ? $data['pulse_rate'] : null,
+        ];
+
+        if ($vitalValues['blood_pressure'] === '') {
+            $vitalValues['blood_pressure'] = null;
+        }
+
+        $hasAnyValue = false;
+        foreach ($vitalValues as $value) {
+            if ($value !== null && $value !== '') {
+                $hasAnyValue = true;
+                break;
+            }
+        }
+
+        if (! $hasAnyValue) {
+            return response()->json([
+                'message' => 'Provide at least one vital sign or close the modal to skip.',
+            ], 422);
+        }
+
+        $appointment = DB::table('appointments')
+            ->select('appointment_id', 'patient_id')
+            ->where('appointment_id', (int) $data['appointment_id'])
+            ->first();
+
+        if (! $appointment) {
+            return response()->json([
+                'message' => 'Appointment not found.',
+            ], 404);
+        }
+
+        $payload = array_merge($vitalValues, [
+            'patient_id' => (int) $appointment->patient_id,
+            'appointment_id' => (int) $appointment->appointment_id,
+            'recorded_at' => now(),
+        ]);
+
+        $existing = DB::table('vitals')
+            ->where('appointment_id', (int) $appointment->appointment_id)
+            ->orderByDesc('vital_id')
+            ->first();
+
+        if ($existing) {
+            DB::table('vitals')
+                ->where('vital_id', (int) $existing->vital_id)
+                ->update($payload);
+
+            $vitalId = (int) $existing->vital_id;
+            $action = 'patient_vitals_updated';
+        } else {
+            $vitalId = (int) DB::table('vitals')->insertGetId($payload, 'vital_id');
+            $action = 'patient_vitals_created';
+        }
+
+        LogEntry::write(
+            (int) $currentUser->user_id,
+            $action,
+            'vitals',
+            $vitalId,
+            [
+                'patient_id' => (int) $appointment->patient_id,
+                'appointment_id' => (int) $appointment->appointment_id,
+            ]
+        );
+
+        $vital = DB::table('vitals')
+            ->leftJoin('appointments', 'vitals.appointment_id', '=', 'appointments.appointment_id')
+            ->leftJoin('users as doctors', 'appointments.doctor_id', '=', 'doctors.user_id')
+            ->where('vitals.vital_id', $vitalId)
+            ->select([
+                'vitals.*',
+                'appointments.appointment_datetime',
+                'appointments.doctor_id',
+                'doctors.firstname as doctor_firstname',
+                'doctors.middlename as doctor_middlename',
+                'doctors.lastname as doctor_lastname',
+            ])
+            ->first();
+
+        return response()->json($vital, $existing ? 200 : 201);
     }
 }

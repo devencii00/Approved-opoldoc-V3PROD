@@ -127,13 +127,16 @@
         <div class="lg:col-span-6 bg-white border border-slate-200 rounded-[18px] p-4 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
             <div class="flex items-center justify-between gap-3 mb-3">
                 <div>
-                    <h3 class="text-sm font-semibold text-slate-900">Consult + Prescription</h3>
-                    <p class="text-xs text-slate-500">Save diagnosis and treatment notes to the visit record, then issue medicines.</p>
+                    <h3 class="text-sm font-semibold text-slate-900"></h3>
+                    <p class="text-xs text-slate-500">Consultation & Prescription.</p>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button type="button" id="consultClear" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">
-                        Clear
+                    <button type="button" id="consultVitalsBtn" class="inline-flex items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-[0.78rem] font-semibold text-amber-700 hover:bg-amber-100">
+                       Take vitals
                     </button>
+                    <!-- <button type="button" id="consultClear" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">
+                        Clear
+                    </button> -->
                     <button type="button" id="consultSave" class="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-600 px-3 py-1.5 text-[0.78rem] font-semibold text-white hover:bg-cyan-700 disabled:opacity-70 disabled:hover:bg-cyan-600">
                         <span id="consultSaveSpinner" class="hidden w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
                         <span id="consultSaveLabel">Submit</span>
@@ -151,6 +154,10 @@
                 </div>
             </div>
             <div id="consultSafetyBox" class="hidden mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[0.75rem] text-amber-800 whitespace-pre-line"></div>
+            <div id="consultVitalsSummary" class="mb-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.75rem] text-slate-700">
+                No vitals recorded yet. This step is optional.
+            </div>
+            <div id="consultVitalsFeedback" class="hidden mb-3 rounded-lg border px-3 py-2 text-[0.75rem]"></div>
 
             <div class="grid gap-3 md:grid-cols-2">
                 <div class="md:col-span-2">
@@ -161,7 +168,7 @@
                     <label for="consult_treatment" class="block text-[0.7rem] text-slate-600 mb-1">Treatment notes</label>
                     <textarea id="consult_treatment" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none min-h-[120px]" placeholder="Enter treatment plan, follow-up instructions, and other notes"></textarea>
                 </div>
-                <div class="md:col-span-2 flex items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                <!-- <div class="md:col-span-2 flex items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
                     <div class="text-[0.78rem] text-slate-700">
                         Saving consultation notes keeps the appointment active until payment is recorded
                         and marks the appointment as consulted for reception.
@@ -170,7 +177,7 @@
                         <input type="checkbox" id="consultAcknowledgeConflicts" class="rounded border-slate-300 text-amber-600 focus:ring-amber-200">
                         Override safety warnings
                     </label>
-                </div>
+                </div> -->
             </div>
 
             <div class="mt-4 border-t border-slate-100 pt-4">
@@ -214,7 +221,7 @@
             <div class="flex items-center justify-between gap-3 mb-3">
                 <div>
                     <h3 class="text-sm font-semibold text-slate-900">Patient History</h3>
-                    <p class="text-xs text-slate-500">Recent visits for quick context.</p>
+                    <!-- <p class="text-xs text-slate-500">Recent visits for quick context.</p> -->
                 </div>
                 <select id="consultHistoryFilter" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[0.75rem] text-slate-700 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
                     <option value="all">All</option>
@@ -253,6 +260,57 @@
                         Override
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="consultVitalsModal" class="hidden fixed inset-0 z-50 bg-slate-900/70">
+    <div class="absolute inset-0 flex items-center justify-center px-4 py-6">
+        <div class="w-full max-w-xl rounded-3xl bg-white border border-slate-200 shadow-[0_20px_60px_rgba(15,23,42,0.35)] overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3">
+                <div>
+                    <div class="text-[0.7rem] uppercase tracking-widest text-slate-400">Optional Step</div>
+                    <div class="text-sm font-semibold text-slate-900">Record patient vitals</div>
+                    <div class="text-xs text-slate-500 mt-1">You can save any of these fields now or close this modal to skip.</div>
+                </div>
+                <button type="button" id="consultVitalsClose" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">
+                    Close
+                </button>
+            </div>
+            <div class="px-5 py-4 space-y-4">
+                <div id="consultVitalsModalError" class="hidden rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[0.75rem] text-red-700"></div>
+                <div class="grid gap-3 md:grid-cols-2">
+                    <div>
+                        <label for="consult_height_cm" class="block text-[0.7rem] text-slate-600 mb-1">Height (cm)</label>
+                        <input id="consult_height_cm" type="number" step="0.01" min="0" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Optional">
+                    </div>
+                    <div>
+                        <label for="consult_weight_kg" class="block text-[0.7rem] text-slate-600 mb-1">Weight (kg)</label>
+                        <input id="consult_weight_kg" type="number" step="0.01" min="0" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Optional">
+                    </div>
+                    <div>
+                        <label for="consult_blood_pressure" class="block text-[0.7rem] text-slate-600 mb-1">Blood pressure</label>
+                        <input id="consult_blood_pressure" type="text" maxlength="20" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Optional">
+                    </div>
+                    <div>
+                        <label for="consult_temperature" class="block text-[0.7rem] text-slate-600 mb-1">Temperature</label>
+                        <input id="consult_temperature" type="number" step="0.1" min="0" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Optional">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="consult_pulse_rate" class="block text-[0.7rem] text-slate-600 mb-1">Pulse rate</label>
+                        <input id="consult_pulse_rate" type="number" step="1" min="0" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Optional">
+                    </div>
+                </div>
+            </div>
+            <div class="px-5 py-4 border-t border-slate-100 flex items-center justify-end gap-2">
+                <button type="button" id="consultVitalsSkip" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">
+                    Skip
+                </button>
+                <button type="button" id="consultVitalsSave" class="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-600 px-3 py-2 text-[0.78rem] font-semibold text-white hover:bg-cyan-700">
+                    <span id="consultVitalsSaveSpinner" class="hidden w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                    <span id="consultVitalsSaveLabel">Save vitals</span>
+                </button>
             </div>
         </div>
     </div>
@@ -337,8 +395,11 @@
         var saveSuccess = document.getElementById('consultSaveSuccess')
         var saveSuccessText = document.getElementById('consultSaveSuccessText')
         var safetyBox = document.getElementById('consultSafetyBox')
+        var vitalsSummary = document.getElementById('consultVitalsSummary')
+        var vitalsFeedback = document.getElementById('consultVitalsFeedback')
         var diagnosisEl = document.getElementById('consult_diagnosis')
         var treatmentEl = document.getElementById('consult_treatment')
+        var vitalsBtn = document.getElementById('consultVitalsBtn')
         var clearBtn = document.getElementById('consultClear')
         var saveBtn = document.getElementById('consultSave')
         var saveSpinner = document.getElementById('consultSaveSpinner')
@@ -351,6 +412,18 @@
         var safetyModalBody = document.getElementById('consultSafetyModalBody')
         var safetyModalClose = document.getElementById('consultSafetyModalClose')
         var safetyModalAck = document.getElementById('consultSafetyModalAcknowledge')
+        var vitalsModal = document.getElementById('consultVitalsModal')
+        var vitalsClose = document.getElementById('consultVitalsClose')
+        var vitalsSkip = document.getElementById('consultVitalsSkip')
+        var vitalsSave = document.getElementById('consultVitalsSave')
+        var vitalsSaveSpinner = document.getElementById('consultVitalsSaveSpinner')
+        var vitalsSaveLabel = document.getElementById('consultVitalsSaveLabel')
+        var vitalsModalError = document.getElementById('consultVitalsModalError')
+        var heightEl = document.getElementById('consult_height_cm')
+        var weightEl = document.getElementById('consult_weight_kg')
+        var bloodPressureEl = document.getElementById('consult_blood_pressure')
+        var temperatureEl = document.getElementById('consult_temperature')
+        var pulseRateEl = document.getElementById('consult_pulse_rate')
         var confirmModal = document.getElementById('consultConfirmModal')
         var confirmClose = document.getElementById('consultConfirmClose')
         var confirmCancel = document.getElementById('consultConfirmCancel')
@@ -391,7 +464,9 @@
             medicines: [],
             medicinesById: {},
             history: [],
+            historyVitalsByAppointment: {},
             lastSavedTransactionId: null,
+            vitals: null,
         }
         var successHideTimer = null
 
@@ -440,6 +515,85 @@
             successHideTimer = setTimeout(function () {
                 setVisible(saveSuccess, false)
             }, 5000)
+        }
+
+        function setVitalsFeedback(message, type) {
+            if (!vitalsFeedback) return
+            if (!message) {
+                vitalsFeedback.textContent = ''
+                vitalsFeedback.className = 'hidden mb-3 rounded-lg border px-3 py-2 text-[0.75rem]'
+                return
+            }
+
+            var cls = 'mb-3 rounded-lg border px-3 py-2 text-[0.75rem] '
+            if (type === 'error') cls += 'border-red-200 bg-red-50 text-red-700'
+            else cls += 'border-emerald-200 bg-emerald-50 text-emerald-700'
+            vitalsFeedback.className = cls
+            vitalsFeedback.textContent = message
+        }
+
+        function setVitalsModalError(message) {
+            if (!vitalsModalError) return
+            vitalsModalError.textContent = message || ''
+            setVisible(vitalsModalError, !!message)
+        }
+
+        function setVitalsLoading(isLoading) {
+            if (vitalsSave) vitalsSave.disabled = !!isLoading
+            if (vitalsSaveSpinner) vitalsSaveSpinner.classList.toggle('hidden', !isLoading)
+            if (vitalsSaveLabel) vitalsSaveLabel.textContent = isLoading ? 'Saving...' : 'Save vitals'
+        }
+
+        function modalValue(el) {
+            return el ? String(el.value || '').trim() : ''
+        }
+
+        function normalizeVitalPayload() {
+            var payload = {
+                height_cm: modalValue(heightEl),
+                weight_kg: modalValue(weightEl),
+                blood_pressure: modalValue(bloodPressureEl),
+                temperature: modalValue(temperatureEl),
+                pulse_rate: modalValue(pulseRateEl),
+            }
+
+            Object.keys(payload).forEach(function (key) {
+                if (payload[key] === '') payload[key] = null
+            })
+
+            return payload
+        }
+
+        function applyVitalsToForm(vitals) {
+            if (heightEl) heightEl.value = vitals && vitals.height_cm != null ? vitals.height_cm : ''
+            if (weightEl) weightEl.value = vitals && vitals.weight_kg != null ? vitals.weight_kg : ''
+            if (bloodPressureEl) bloodPressureEl.value = vitals && vitals.blood_pressure != null ? vitals.blood_pressure : ''
+            if (temperatureEl) temperatureEl.value = vitals && vitals.temperature != null ? vitals.temperature : ''
+            if (pulseRateEl) pulseRateEl.value = vitals && vitals.pulse_rate != null ? vitals.pulse_rate : ''
+        }
+
+        function formatVitalNumber(value) {
+            if (value == null || value === '') return ''
+            var num = Number(value)
+            return isNaN(num) ? String(value) : String(num)
+        }
+
+        function renderVitalsSummary() {
+            if (!vitalsSummary) return
+            var vitals = state.vitals
+            if (!vitals) {
+                vitalsSummary.textContent = 'No vitals recorded yet.'
+                return
+            }
+
+            var parts = []
+            if (vitals.height_cm != null && vitals.height_cm !== '') parts.push('Height: ' + formatVitalNumber(vitals.height_cm) + ' cm')
+            if (vitals.weight_kg != null && vitals.weight_kg !== '') parts.push('Weight: ' + formatVitalNumber(vitals.weight_kg) + ' kg')
+            if (vitals.blood_pressure) parts.push('BP: ' + vitals.blood_pressure)
+            if (vitals.temperature != null && vitals.temperature !== '') parts.push('Temp: ' + formatVitalNumber(vitals.temperature))
+            if (vitals.pulse_rate != null && vitals.pulse_rate !== '') parts.push('Pulse: ' + formatVitalNumber(vitals.pulse_rate) + ' bpm')
+
+            vitalsSummary.textContent = parts.length ? parts.join(' • ') : 'No vitals recorded yet. This step is optional.'
         }
 
         function setSubmitLoading(isLoading) {
@@ -494,6 +648,23 @@
 
         function closeConfirmModal() {
             setVisible(confirmModal, false)
+        }
+
+        function openVitalsModal() {
+            if (!state.appointmentId) {
+                saveError.textContent = 'Select an appointment first.'
+                setVisible(saveError, true)
+                return
+            }
+            setVisible(saveError, false)
+            setVitalsModalError('')
+            applyVitalsToForm(state.vitals)
+            setVisible(vitalsModal, true)
+        }
+
+        function closeVitalsModal() {
+            setVisible(vitalsModal, false)
+            setVitalsModalError('')
         }
 
         function api(url, options) {
@@ -563,6 +734,7 @@
             state.lastSavedTransactionId = null
             state.medicalBackground = []
             state.history = []
+            state.vitals = null
             setText(elPatientName, '—')
             setText(elPatientMeta, '—')
             setText(elApptDateTime, '—')
@@ -586,6 +758,9 @@
             setVisible(saveError, false)
             setVisible(saveSuccess, false)
             setVisible(safetyBox, false)
+            setVitalsFeedback('')
+            renderVitalsSummary()
+            applyVitalsToForm(null)
             if (acknowledgeEl) acknowledgeEl.checked = false
             setPrintVisible(false)
             clearSuccessTimer()
@@ -762,6 +937,10 @@
                 var timeStr = dt ? dt.toString().slice(11, 16) : ''
                 var dx = tx.diagnosis ? tx.diagnosis : 'No diagnosis'
                 var notes = tx.treatment_notes ? tx.treatment_notes : ''
+                var appointmentId = tx && tx.appointment_id != null
+                    ? String(tx.appointment_id)
+                    : (tx && tx.appointment && tx.appointment.appointment_id != null ? String(tx.appointment.appointment_id) : '')
+                var visitVitals = appointmentId ? state.historyVitalsByAppointment[appointmentId] : null
                 var rx = tx.prescriptions || []
                 var rxLines = []
                 rx.forEach(function (p) {
@@ -780,6 +959,23 @@
                     : '<div class="mt-2 text-[0.72rem] text-slate-400">No prescriptions</div>'
 
                 var notesHtml = notes ? '<div class="mt-2 text-[0.72rem] text-slate-600">' + notes + '</div>' : ''
+                var vitalsRows = []
+                if (visitVitals && visitVitals.height_cm != null && visitVitals.height_cm !== '') vitalsRows.push('<div><span class="font-semibold text-slate-700">Height:</span> ' + escapeHtml(formatVitalNumber(visitVitals.height_cm)) + ' cm</div>')
+                if (visitVitals && visitVitals.weight_kg != null && visitVitals.weight_kg !== '') vitalsRows.push('<div><span class="font-semibold text-slate-700">Weight:</span> ' + escapeHtml(formatVitalNumber(visitVitals.weight_kg)) + ' kg</div>')
+                if (visitVitals && visitVitals.blood_pressure) vitalsRows.push('<div><span class="font-semibold text-slate-700">Blood pressure:</span> ' + escapeHtml(visitVitals.blood_pressure) + '</div>')
+                if (visitVitals && visitVitals.temperature != null && visitVitals.temperature !== '') vitalsRows.push('<div><span class="font-semibold text-slate-700">Temperature:</span> ' + escapeHtml(formatVitalNumber(visitVitals.temperature)) + '</div>')
+                if (visitVitals && visitVitals.pulse_rate != null && visitVitals.pulse_rate !== '') vitalsRows.push('<div><span class="font-semibold text-slate-700">Pulse rate:</span> ' + escapeHtml(formatVitalNumber(visitVitals.pulse_rate)) + ' bpm</div>')
+                var vitalsButtonLabel = vitalsRows.length ? 'Show vitals' : 'No vitals recorded'
+                var vitalsButtonDisabled = vitalsRows.length ? '' : ' disabled'
+                var vitalsButtonClass = vitalsRows.length
+                    ? 'mt-2 inline-flex items-center justify-center rounded-lg border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[0.72rem] font-semibold text-cyan-700 hover:bg-cyan-100'
+                    : 'mt-2 inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[0.72rem] font-semibold text-slate-400 cursor-not-allowed'
+                var vitalsHtml = vitalsRows.length
+                    ? '<div class="mt-2">' +
+                        '<button type="button" class="' + vitalsButtonClass + '" data-toggle-history-vitals="' + escapeHtml(String(tx.transaction_id || '')) + '" data-expand-label="Show vitals" data-collapse-label="Retract vitals">' + vitalsButtonLabel + '</button>' +
+                        '<div class="hidden mt-2 rounded-lg border border-cyan-100 bg-white px-3 py-2 text-[0.72rem] text-slate-600 space-y-1" data-history-vitals-body="' + escapeHtml(String(tx.transaction_id || '')) + '">' + vitalsRows.join('') + '</div>' +
+                    '</div>'
+                    : '<div class="mt-2"><button type="button" class="' + vitalsButtonClass + '"' + vitalsButtonDisabled + '>' + vitalsButtonLabel + '</button></div>'
 
                 return '' +
                     '<div class="rounded-xl border border-slate-100 bg-slate-50 px-3 py-3">' +
@@ -792,6 +988,7 @@
                         '</div>' +
                         '<div class="mt-2 text-[0.78rem] text-slate-700"><span class="font-semibold">Dx:</span> ' + dx + '</div>' +
                         notesHtml +
+                        vitalsHtml +
                         rxHtml +
                     '</div>'
             }).join('')
@@ -912,10 +1109,55 @@
             })
         }
 
+        function loadVitals(patientId, appointmentId) {
+            state.vitals = null
+            renderVitalsSummary()
+            applyVitalsToForm(null)
+            if (!patientId || !appointmentId) {
+                return Promise.resolve()
+            }
+
+            return api('{{ url('/api/vitals') }}?patient_id=' + encodeURIComponent(String(patientId)) + '&appointment_id=' + encodeURIComponent(String(appointmentId)) + '&per_page=1')
+                .then(function (resp) {
+                    var rows = getPaginatedData(resp)
+                    state.vitals = rows.length ? rows[0] : null
+                    applyVitalsToForm(state.vitals)
+                    renderVitalsSummary()
+                }).catch(function () {
+                    state.vitals = null
+                    renderVitalsSummary()
+                })
+        }
+
+        function loadHistoryVitals(patientId) {
+            state.historyVitalsByAppointment = {}
+            if (!patientId) {
+                return Promise.resolve()
+            }
+
+            return api('{{ url('/api/vitals') }}?patient_id=' + encodeURIComponent(String(patientId)) + '&per_page=200')
+                .then(function (resp) {
+                    var rows = getPaginatedData(resp)
+                    var byAppointment = {}
+                    rows.forEach(function (row) {
+                        if (!row || row.appointment_id == null) return
+                        var key = String(row.appointment_id)
+                        if (!byAppointment[key]) byAppointment[key] = row
+                    })
+                    state.historyVitalsByAppointment = byAppointment
+                }).catch(function () {
+                    state.historyVitalsByAppointment = {}
+                })
+        }
+
         function loadHistory(patientId) {
             setVisible(historyError, false)
             setVisible(historyLoading, true)
-            return api('{{ url('/api/visits') }}?patient_id=' + patientId + '&per_page=50').then(function (resp) {
+            return Promise.all([
+                api('{{ url('/api/visits') }}?patient_id=' + patientId + '&per_page=50'),
+                loadHistoryVitals(patientId),
+            ]).then(function (results) {
+                var resp = results[0]
                 state.history = getPaginatedData(resp)
                 setText(elTotalVisits, String(state.history.length))
                 var last = state.history.length ? state.history[0] : null
@@ -954,6 +1196,53 @@
                         })
                     }
                 }
+            })
+        }
+
+        function saveVitals() {
+            setVitalsModalError('')
+            setVitalsFeedback('')
+
+            if (!state.appointmentId) {
+                setVitalsModalError('Select an appointment first.')
+                return Promise.resolve(false)
+            }
+
+            var payload = normalizeVitalPayload()
+            var hasAnyValue = Object.keys(payload).some(function (key) {
+                return payload[key] != null && String(payload[key]).trim() !== ''
+            })
+
+            if (!hasAnyValue) {
+                setVitalsModalError('Provide at least one vital sign or close the modal to skip.')
+                return Promise.resolve(false)
+            }
+
+            payload.appointment_id = state.appointmentId
+            setVitalsLoading(true)
+
+            return api('{{ url('/api/vitals') }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            }).then(function (vital) {
+                state.vitals = vital || null
+                applyVitalsToForm(state.vitals)
+                renderVitalsSummary()
+                closeVitalsModal()
+                setVitalsFeedback('Vitals saved successfully.', 'success')
+                return true
+            }).catch(function (err) {
+                var message = err && err.body ? err.body : 'Unable to save vitals.'
+                try {
+                    var parsed = JSON.parse(message)
+                    if (parsed && parsed.message) message = parsed.message
+                } catch (e) {}
+                setVitalsModalError(message)
+                setVitalsFeedback(message, 'error')
+                return false
+            }).finally(function () {
+                setVitalsLoading(false)
             })
         }
 
@@ -1079,6 +1368,7 @@
                 return Promise.all([
                     loadMedicalBackground(state.patientId),
                     loadHistory(state.patientId),
+                    loadVitals(state.patientId, state.appointmentId),
                     loadExistingDraft(),
                 ])
             }).then(function () {
@@ -1092,9 +1382,44 @@
         if (historyFilter) {
             historyFilter.addEventListener('change', renderHistory)
         }
+        if (historyTimeline) {
+            historyTimeline.addEventListener('click', function (e) {
+                var btn = e.target && e.target.closest ? e.target.closest('[data-toggle-history-vitals]') : null
+                if (!btn || btn.disabled) return
+                var id = btn.getAttribute('data-toggle-history-vitals')
+                var body = historyTimeline.querySelector('[data-history-vitals-body="' + id + '"]')
+                if (!body) return
+                var isHidden = body.classList.contains('hidden')
+                body.classList.toggle('hidden', !isHidden)
+                btn.textContent = isHidden
+                    ? (btn.getAttribute('data-collapse-label') || 'Retract vitals')
+                    : (btn.getAttribute('data-expand-label') || 'Show vitals')
+            })
+        }
 
         if (appointmentSelect) {
             appointmentSelect.addEventListener('change', handleAppointmentChange)
+        }
+
+        if (vitalsBtn) {
+            vitalsBtn.addEventListener('click', openVitalsModal)
+        }
+        if (vitalsClose) {
+            vitalsClose.addEventListener('click', closeVitalsModal)
+        }
+        if (vitalsSkip) {
+            vitalsSkip.addEventListener('click', closeVitalsModal)
+        }
+        if (vitalsModal) {
+            vitalsModal.addEventListener('click', function (e) {
+                if (e.target === vitalsModal) closeVitalsModal()
+            })
+        }
+        if (vitalsSave) {
+            vitalsSave.addEventListener('click', function () {
+                if (vitalsSave.disabled) return
+                saveVitals()
+            })
         }
 
         if (safetyModalClose) {
@@ -1142,6 +1467,7 @@
                 ensureRow()
                 setVisible(saveSuccess, false)
                 setVisible(saveError, false)
+                setVitalsFeedback('')
                 renderSafety()
                 setPrintVisible(false)
                 clearSuccessTimer()

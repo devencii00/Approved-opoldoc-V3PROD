@@ -180,6 +180,10 @@ class TransactionController extends Controller
             $data['payment_mode'] = 'cash';
         }
 
+        if (array_key_exists('transaction_datetime', $data) && ! $data['transaction_datetime']) {
+            unset($data['transaction_datetime']);
+        }
+
         if (($data['payment_status'] ?? 'pending') === 'paid' && (! isset($data['transaction_datetime']) || ! $data['transaction_datetime'])) {
             $data['transaction_datetime'] = now();
         }
@@ -287,6 +291,9 @@ class TransactionController extends Controller
         if (array_key_exists('payment_status', $data) && $data['payment_status'] === 'paid') {
             if (! array_key_exists('payment_mode', $data) && ! $transaction->payment_mode) {
                 $data['payment_mode'] = 'cash';
+            }
+            if (array_key_exists('transaction_datetime', $data) && ! $data['transaction_datetime']) {
+                unset($data['transaction_datetime']);
             }
             if (! array_key_exists('transaction_datetime', $data) && ! $transaction->transaction_datetime) {
                 $data['transaction_datetime'] = now();

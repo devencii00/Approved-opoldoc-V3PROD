@@ -342,6 +342,17 @@
             return 'PHP ' + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
         }
 
+        function currentSqlDatetime() {
+            var now = new Date()
+            var yyyy = now.getFullYear()
+            var mm = String(now.getMonth() + 1).padStart(2, '0')
+            var dd = String(now.getDate()).padStart(2, '0')
+            var hh = String(now.getHours()).padStart(2, '0')
+            var mi = String(now.getMinutes()).padStart(2, '0')
+            var ss = String(now.getSeconds()).padStart(2, '0')
+            return yyyy + '-' + mm + '-' + dd + ' ' + hh + ':' + mi + ':' + ss
+        }
+
         function appointmentPatientName(appt) {
             var p = appt && appt.patient ? appt.patient : null
             if (!p) return 'Patient'
@@ -824,6 +835,7 @@
                 var discountType = discountTypeSelect && showDiscount ? String(discountTypeSelect.value || 'none') : 'none'
                 var discount = showDiscount ? discountAmount(selectedAppointment) : 0
                 var net = Math.max(0, gross - discount)
+                var transactionDatetime = currentSqlDatetime()
 
                 var details = {
                     'Appointment ID': String(appointmentId),
@@ -835,6 +847,7 @@
                     'Net Amount': money(net),
                     'Payment Mode': 'cash',
                     'Payment Status': 'paid',
+                    'Transaction Date': transactionDatetime,
                 }
 
                 setPaymentSubmitting(true)
@@ -853,7 +866,8 @@
                                 amount: gross,
                                 discount_type: discountType,
                                 payment_mode: 'cash',
-                                payment_status: 'paid'
+                                payment_status: 'paid',
+                                transaction_datetime: transactionDatetime
                             })
                         })
                             .then(function (response) {
