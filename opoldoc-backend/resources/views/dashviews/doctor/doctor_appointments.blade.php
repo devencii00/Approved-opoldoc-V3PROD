@@ -40,7 +40,7 @@
         </div>
     </div>
 
-    <div class="overflow-auto max-h-[28rem] show-scrollbar">
+    <div class="overflow-x-auto overflow-y-auto scrollbar-hidden mb-4 h-[300px]">
         <table class="min-w-full text-left text-xs text-slate-600">
             <thead>
                 <tr class="border-b border-slate-100 text-[0.68rem] uppercase tracking-widest text-slate-400">

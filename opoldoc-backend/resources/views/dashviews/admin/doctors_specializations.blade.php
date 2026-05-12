@@ -26,7 +26,7 @@
         </div>
     </div>
 
-    <div class="overflow-x-auto scrollbar-hidden">
+<div class="overflow-x-auto overflow-y-auto scrollbar-hidden h-[320px]">
         <table class="min-w-full text-left text-xs text-slate-600">
             <thead>
                 <tr class="border-b border-slate-100 text-[0.68rem] uppercase tracking-widest text-slate-400">

@@ -332,8 +332,19 @@ export default function PatientMedicalBackgroundScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: T.cyan700 },
-  header: { backgroundColor: T.cyan700, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 30 },
-  headerInner: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
+  header: { backgroundColor:
+     T.cyan700, 
+     paddingHorizontal: 20, 
+     paddingTop: 50,
+      paddingBottom: 30 },
+  
+  
+  headerInner: { 
+    flexDirection: 'row',
+     alignItems: 'flex-start',
+      justifyContent: 'space-between',
+       gap: 12 },
+
   headerTitle: {
     fontFamily: 'serif',
     fontSize: 30,

@@ -56,7 +56,7 @@
         </div>
     </div>
 
-    <div class="overflow-x-auto scrollbar-hidden">
+<div class="overflow-x-auto overflow-y-auto scrollbar-hidden mb-4 h-[300px]">
         <table class="min-w-full text-left text-xs text-slate-600">
             <thead>
                 <tr class="border-b border-slate-100 text-[0.68rem] uppercase tracking-widest text-slate-400">
@@ -141,9 +141,11 @@
         <div id="adminVerifRejectReasonWrap" class="hidden mt-3">
             <label for="adminVerifRejectReason" class="block text-[0.7rem] text-slate-600 mb-1">Reject reason</label>
             <select id="adminVerifRejectReason" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
-                <option value="Blurry document">Blurry document</option>
+                <option value="Blurry document">Blurry Document</option>
                 <option value="Invalid Document">Invalid Document</option>
                 <option value="Expired Document">Expired Document</option>
+                <option value="Mismatch Information">Mismatch Information</option>
+                <option value="Cropped Document">Cropped Document</option>
             </select>
         </div>
         <div class="mt-4 flex items-center justify-end gap-2">

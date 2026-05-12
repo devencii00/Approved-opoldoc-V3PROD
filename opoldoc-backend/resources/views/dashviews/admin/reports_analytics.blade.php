@@ -71,7 +71,7 @@
     </div>
 
     <div class="grid gap-4 grid-cols-1 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <div class="border border-slate-100 rounded-2xl overflow-hidden bg-white shadow-sm h-fit">
+        <div class="border border-slate-100 rounded-2xl overflow-hidden bg-white shadow-sm h-[660px]">
             <div class="flex w-full bg-white border-b border-slate-100">
                 <button id="adminReportsTabTransactions" type="button" class="flex-1 px-4 py-3 text-xs font-semibold border-r border-slate-100 bg-slate-900 text-white transition-colors">
                     Transactions

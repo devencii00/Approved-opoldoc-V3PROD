@@ -126,7 +126,7 @@
 
         <div class="w-full" style="display:grid;">
             <div class="rounded-2xl border border-slate-200 overflow-hidden">
-                <div class="overflow-x-auto overflow-y-auto max-h-[28rem] show-scrollbar">
+               <div class="overflow-x-auto overflow-y-auto scrollbar-hidden mb-4 h-[300px]">
                     <table class="text-xs" style="min-width:980px;width:100%;table-layout:auto;">
                         <thead class="bg-slate-50 text-slate-600 sticky top-0">
                             <tr>
