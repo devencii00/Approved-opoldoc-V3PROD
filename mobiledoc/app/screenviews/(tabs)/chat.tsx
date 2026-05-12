@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -96,33 +97,6 @@ function AnimatedCard({ children, delay = 0, style }: AnimatedCardProps) {
   );
 }
 
-type InfoCardProps = {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  label: string;
-  value: string;
-  sub?: string;
-  delay?: number;
-};
-
-function InfoCard({ icon, label, value, sub, delay = 0 }: InfoCardProps) {
-  return (
-    <AnimatedCard delay={delay} style={styles.infoCard}>
-      <View style={styles.infoCardInner}>
-        <View style={styles.infoCardTop}>
-          <View style={styles.infoIconCircle}>
-            <Ionicons name={icon} size={18} color={T.cyan700} />
-          </View>
-          <Text style={styles.infoLabel}>{label}</Text>
-        </View>
-        <View style={styles.infoCardBottom}>
-          <Text style={styles.infoValue}>{value}</Text>
-          <Text style={styles.infoSub}>{sub || '—'}</Text>
-        </View>
-      </View>
-    </AnimatedCard>
-  );
-}
-
 type SectionCardProps = {
   title: string;
   badge?: string;
@@ -147,16 +121,6 @@ function SectionCard({ title, badge, children, delay = 0, style }: SectionCardPr
   );
 }
 
-function formatConversationName(user?: ConversationUser | null, fallbackId?: number) {
-  const parts = [user?.firstname, user?.middlename, user?.lastname]
-    .map((part) => String(part ?? '').trim())
-    .filter(Boolean);
-  if (parts.length > 0) {
-    return parts.join(' ');
-  }
-  return fallbackId ? `Patient #${fallbackId}` : 'Patient';
-}
-
 function formatTimeLabel(value?: string) {
   if (!value) return 'Just now';
   const dt = new Date(value);
@@ -171,7 +135,10 @@ function formatTimeLabel(value?: string) {
 
 export default function ChatScreen() {
   const router = useRouter();
+  const isFocused = useIsFocused();
   const messageScrollRef = useRef<ScrollView | null>(null);
+  const loadingConversationsRef = useRef(false);
+  const loadingMessagesRef = useRef(false);
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
   const [messages, setMessages] = useState<MessageItem[]>([]);
@@ -187,12 +154,15 @@ export default function ChatScreen() {
   );
 
   async function loadConversations(selectId?: number | null) {
+    if (loadingConversationsRef.current) return;
+
     const token = (globalThis as any)?.apiToken as string | undefined;
     if (!token) {
       setError('Please log in again.');
       return;
     }
 
+    loadingConversationsRef.current = true;
     setLoadingConversations(true);
     try {
       const response = await fetch(`${API_BASE_URL}/conversations?per_page=50`, {
@@ -235,7 +205,7 @@ export default function ChatScreen() {
         }
       }
 
-      setConversations(list);
+      setConversations(list.length > 0 ? [list[0]] : []);
       setSelectedConversationId((current) => {
         if (selectId && list.some((item) => item.conversation_id === selectId)) return selectId;
         if (current && list.some((item) => item.conversation_id === current)) return current;
@@ -245,17 +215,21 @@ export default function ChatScreen() {
     } catch {
       setError('Network error. Please try again.');
     } finally {
+      loadingConversationsRef.current = false;
       setLoadingConversations(false);
     }
   }
 
   async function loadMessages(conversationId: number) {
+    if (loadingMessagesRef.current) return;
+
     const token = (globalThis as any)?.apiToken as string | undefined;
     if (!token) {
       setError('Please log in again.');
       return;
     }
 
+    loadingMessagesRef.current = true;
     setLoadingMessages(true);
     try {
       const response = await fetch(`${API_BASE_URL}/conversations/${conversationId}/messages?per_page=100`, {
@@ -281,6 +255,7 @@ export default function ChatScreen() {
     } catch {
       setError('Network error. Please try again.');
     } finally {
+      loadingMessagesRef.current = false;
       setLoadingMessages(false);
     }
   }
@@ -328,10 +303,13 @@ export default function ChatScreen() {
   }
 
   useEffect(() => {
+    if (!isFocused) return;
     loadConversations();
-  }, []);
+  }, [isFocused]);
 
   useEffect(() => {
+    if (!isFocused) return;
+
     if (!selectedConversationId) {
       setMessages([]);
       return;
@@ -340,12 +318,12 @@ export default function ChatScreen() {
     loadMessages(selectedConversationId);
     const intervalId = setInterval(() => {
       loadMessages(selectedConversationId);
-    }, 8000);
+    }, 15000);
 
     return () => {
       clearInterval(intervalId);
     };
-  }, [selectedConversationId]);
+  }, [isFocused, selectedConversationId]);
 
   useEffect(() => {
     requestAnimationFrame(() => {
@@ -353,9 +331,7 @@ export default function ChatScreen() {
     });
   }, [messages]);
 
-  const selectedName = selectedConversation
-    ? formatConversationName(selectedConversation.user, selectedConversation.user_id)
-    : 'No conversation selected';
+  const selectedName = 'Receptionist';
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -386,77 +362,19 @@ export default function ChatScreen() {
         <View style={styles.contentSurface}>
           {error ? <Text style={styles.inlineError}>{error}</Text> : null}
 
-          <View style={styles.infoRow}>
-            <InfoCard
-              icon="chatbubble-ellipses-outline"
-              label="Conversations"
-              value={String(conversations.length)}
-              sub={loadingConversations ? 'Loading chat threads' : 'Available chat threads'}
-              delay={30}
-            />
-            <InfoCard
-              icon="person-outline"
-              label="Selected thread"
-              value={selectedConversation ? selectedName : '—'}
-              sub={selectedConversation ? `Conversation #${selectedConversation.conversation_id}` : 'Open or create a thread'}
-              delay={60}
-            />
-            <InfoCard
-              icon="mail-outline"
-              label="Messages"
-              value={String(messages.length)}
-              sub={loadingMessages ? 'Syncing messages' : 'Messages in current thread'}
-              delay={90}
-            />
-          </View>
-
-          <SectionCard title="Conversations" badge="Inbox" delay={120}>
-            {loadingConversations && conversations.length === 0 ? (
-              <Text style={styles.mutedText}>Loading conversations…</Text>
-            ) : conversations.length === 0 ? (
-              <Text style={styles.mutedText}>No conversations available yet.</Text>
-            ) : (
-              conversations.map((conversation) => {
-                const isActive = conversation.conversation_id === selectedConversationId;
-                return (
-                  <Pressable
-                    key={conversation.conversation_id}
-                    onPress={() => setSelectedConversationId(conversation.conversation_id)}
-                    style={({ pressed }) => [
-                      styles.conversationRow,
-                      isActive && styles.conversationRowActive,
-                      pressed && { opacity: 0.85 },
-                    ]}
-                  >
-                    <View style={styles.rowIconWrap}>
-                      <Ionicons name="person-outline" size={18} color={T.cyan700} />
-                    </View>
-                    <View style={styles.rowMain}>
-                      <Text style={styles.rowTitle}>{formatConversationName(conversation.user, conversation.user_id)}</Text>
-                      <Text style={styles.rowSubtitle}>{`Conversation #${conversation.conversation_id}`}</Text>
-                    </View>
-                    <View style={styles.countPill}>
-                      <Text style={styles.countPillText}>{String(conversation.messages_count ?? 0)}</Text>
-                    </View>
-                  </Pressable>
-                );
-              })
-            )}
-          </SectionCard>
-
-          <SectionCard title="Chat" badge="Messages" delay={160} style={{ marginBottom: 24 }}>
+          <SectionCard title="Receptionist Chat" badge="Messages" delay={120} style={{ marginBottom: 24 }}>
             {selectedConversation ? (
               <>
                 <View style={styles.chatHeader}>
                   <Text style={styles.chatTitle}>{selectedName}</Text>
-                  <Text style={styles.chatMeta}>{`Conversation #${selectedConversation.conversation_id}`}</Text>
+                  <Text style={styles.chatMeta}>Centralized receptionist conversation for your patient account</Text>
                 </View>
 
                 <ScrollView ref={messageScrollRef as any} style={styles.messageScroll} contentContainerStyle={styles.messageContent}>
                   {loadingMessages && messages.length === 0 ? (
                     <Text style={styles.mutedText}>Loading messages…</Text>
                   ) : messages.length === 0 ? (
-                    <Text style={styles.mutedText}>No messages yet. Start the conversation below.</Text>
+                    <Text style={styles.mutedText}>No messages yet. Start your conversation with the receptionist below.</Text>
                   ) : (
                     messages.map((message) => (
                       <View
@@ -502,7 +420,9 @@ export default function ChatScreen() {
                 </View>
               </>
             ) : (
-              <Text style={styles.mutedText}>Select a conversation to view and send messages.</Text>
+              <Text style={styles.mutedText}>
+                {loadingConversations ? 'Opening your receptionist conversation…' : 'Unable to open the receptionist conversation right now.'}
+              </Text>
             )}
           </SectionCard>
         </View>
@@ -620,72 +540,12 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingTop: 20,
     paddingHorizontal: 14,
-    paddingBottom: 84,
+    paddingBottom: 2,
   },
   inlineError: {
     fontSize: 12,
     color: T.red700,
     marginBottom: 10,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 18,
-    alignItems: 'stretch',
-  },
-  infoCard: {
-    flex: 1,
-  },
-  infoCardInner: {
-    flex: 1,
-    backgroundColor: T.white,
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: T.slate200,
-    shadowColor: T.slate900,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    minHeight: 142,
-  },
-  infoCardTop: {
-    width: '100%',
-  },
-  infoCardBottom: {
-    width: '100%',
-  },
-  infoIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: 'rgba(6,182,212,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  infoLabel: {
-    fontSize: 9,
-    fontWeight: '600',
-    color: T.slate400,
-    letterSpacing: 0.2,
-    marginBottom: 4,
-    lineHeight: 12,
-  },
-  infoValue: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: T.cyan700,
-    lineHeight: 15,
-    marginBottom: 2,
-  },
-  infoSub: {
-    fontSize: 9,
-    color: T.slate500,
-    lineHeight: 13,
   },
   sectionCard: {
     backgroundColor: T.white,
@@ -731,55 +591,6 @@ const styles = StyleSheet.create({
   sectionBody: {
     paddingBottom: 4,
   },
-  conversationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: T.slate100,
-  },
-  conversationRowActive: {
-    backgroundColor: T.slate50,
-  },
-  rowIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: T.slate100,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  rowMain: {
-    flex: 1,
-  },
-  rowTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: T.slate800,
-    marginBottom: 2,
-  },
-  rowSubtitle: {
-    fontSize: 10,
-    color: T.slate500,
-    lineHeight: 14,
-  },
-  countPill: {
-    minWidth: 28,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: 'rgba(6,182,212,0.10)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  countPillText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: T.cyan700,
-  },
   chatHeader: {
     paddingHorizontal: 16,
     paddingTop: 14,
@@ -799,7 +610,7 @@ const styles = StyleSheet.create({
   },
   messageScroll: {
     maxHeight: 420,
-    minHeight: 280,
+    minHeight: 370,
     backgroundColor: T.white,
   },
   messageContent: {

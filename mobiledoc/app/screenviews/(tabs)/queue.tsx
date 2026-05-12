@@ -15,6 +15,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -43,6 +44,7 @@ const T = {
 };
 
 const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000/api').replace(/\/+$/, '');
+const APP_BASE_URL = API_BASE_URL.replace(/\/api$/, '');
 const WALK_IN_BLOCKED_SERVICE_CATEGORIES = ['obsterician - gynecologist', 'obstetrician - gynecologist', 'general surgeon'] as const;
 const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 
@@ -79,8 +81,13 @@ type QueueStatus = {
   queueNumber: string;
   status: 'waiting' | 'serving' | 'done' | 'cancelled';
   doctor: string;
+  doctorId: string;
   position: number | null;
   estimatedWaitMinutes: number | null;
+  services: ServiceOption[];
+  totalFee: number;
+  servingQueueNumber: string | null;
+  nextQueueNumber: string | null;
 };
 
 type DropdownOption = {
@@ -301,6 +308,11 @@ function formatDurationLabel(value: number | null): string {
   return `${value} mins`;
 }
 
+function formatCurrency(value: number): string {
+  if (Number.isNaN(value)) return 'P 0.00';
+  return `P ${value.toFixed(2)}`;
+}
+
 function minutesFromTime(value: string): number {
   const parts = String(value).split(':');
   return (Number(parts[0] ?? 0) * 60) + Number(parts[1] ?? 0);
@@ -325,6 +337,9 @@ function isDoctorAvailableForWalkIn(doctor: DoctorOption): boolean {
 
 export default function PatientQueueScreen() {
   const router = useRouter();
+  const isFocused = useIsFocused();
+  const loadingQueueStatusRef = useRef(false);
+  const loadingQueueLineRef = useRef(false);
 
   const [services, setServices] = useState<ServiceOption[]>([]);
   const [doctors, setDoctors] = useState<DoctorOption[]>([]);
@@ -338,6 +353,7 @@ export default function PatientQueueScreen() {
   const [doctorSheetOpen, setDoctorSheetOpen] = useState(false);
 
   const [queueStatus, setQueueStatus] = useState<QueueStatus | null>(null);
+  const [queueDetailsExpanded, setQueueDetailsExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState('');
@@ -347,6 +363,10 @@ export default function PatientQueueScreen() {
   const selectedServices = useMemo(
     () => services.filter((service) => selectedServiceIds.includes(service.id)),
     [selectedServiceIds, services]
+  );
+  const selectedServicesTotalFee = useMemo(
+    () => selectedServices.reduce((sum, service) => sum + (typeof service.price === 'number' ? service.price : 0), 0),
+    [selectedServices]
   );
   const selectedCategory = selectedServices[0]?.category ?? '';
 
@@ -404,6 +424,9 @@ export default function PatientQueueScreen() {
   });
 
   const loadQueueStatus = useCallback(async (token: string) => {
+    if (loadingQueueStatusRef.current) return;
+
+    loadingQueueStatusRef.current = true;
     try {
       const response = await fetch(`${API_BASE_URL}/queues?per_page=10`, {
         headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
@@ -421,8 +444,37 @@ export default function PatientQueueScreen() {
             queueId: String(activeQueue.queue_id ?? ''),
             queueNumber: activeQueue.queue_number != null ? String(activeQueue.queue_number) : '',
             status: activeQueue.status === 'serving' ? 'serving' : 'waiting',
+            doctorId: activeQueue?.appointment?.doctor_id != null ? String(activeQueue.appointment.doctor_id) : '',
             position: typeof activeQueue.position === 'number' ? activeQueue.position : null,
             estimatedWaitMinutes: typeof activeQueue.estimated_wait_minutes === 'number' ? activeQueue.estimated_wait_minutes : null,
+            services: Array.isArray(activeQueue?.appointment?.services)
+              ? activeQueue.appointment.services
+                  .map((service: any) => {
+                    const serviceName = typeof service?.service_name === 'string' ? service.service_name : '';
+                    const category = extractServiceCategory(serviceName);
+                    return {
+                      id: String(service?.service_id ?? ''),
+                      name: serviceName,
+                      category,
+                      description: typeof service?.description === 'string' ? service.description : '',
+                      price: typeof service?.price === 'number' ? service.price : service?.price != null ? Number(service.price) : null,
+                      durationMinutes: typeof service?.duration_minutes === 'number'
+                        ? service.duration_minutes
+                        : service?.duration_minutes != null
+                          ? Number(service.duration_minutes)
+                          : null,
+                    };
+                  })
+                  .filter((service: ServiceOption) => service.id.length > 0)
+              : [],
+            totalFee: Array.isArray(activeQueue?.appointment?.services)
+              ? activeQueue.appointment.services.reduce((sum: number, service: any) => {
+                  const price = typeof service?.price === 'number' ? service.price : service?.price != null ? Number(service.price) : 0;
+                  return sum + (Number.isNaN(price) ? 0 : price);
+                }, 0)
+              : 0,
+            servingQueueNumber: null,
+            nextQueueNumber: null,
             doctor: (() => {
               const doctorFirst = activeQueue?.appointment?.doctor?.firstname ? String(activeQueue.appointment.doctor.firstname) : '';
               const doctorLast = activeQueue?.appointment?.doctor?.lastname ? String(activeQueue.appointment.doctor.lastname) : '';
@@ -435,10 +487,45 @@ export default function PatientQueueScreen() {
       setQueueStatus(mappedQueue);
     } catch {
       setQueueStatus(null);
+    } finally {
+      loadingQueueStatusRef.current = false;
+    }
+  }, []);
+
+  const loadQueueLine = useCallback(async (doctorId: string, queueId: string) => {
+    if (!doctorId || !queueId || loadingQueueLineRef.current) return;
+
+    loadingQueueLineRef.current = true;
+    try {
+      const response = await fetch(`${APP_BASE_URL}/queue-display/data?doctor_id=${encodeURIComponent(doctorId)}`, {
+        headers: { Accept: 'application/json' },
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        return;
+      }
+
+      const nowServing = Array.isArray(data?.now_serving) ? data.now_serving[0] : null;
+      const nextItem = Array.isArray(data?.next) ? data.next[0] : null;
+
+      setQueueStatus((current) => {
+        if (!current || current.queueId !== queueId) return current;
+        return {
+          ...current,
+          servingQueueNumber: nowServing?.queue_number != null ? String(nowServing.queue_number) : null,
+          nextQueueNumber: nextItem?.queue_number != null ? String(nextItem.queue_number) : null,
+        };
+      });
+    } catch {
+      // Ignore display board fetch errors and keep the queue card usable.
+    } finally {
+      loadingQueueLineRef.current = false;
     }
   }, []);
 
   useEffect(() => {
+    if (!isFocused) return;
+
     let cancelled = false;
     let intervalId: ReturnType<typeof setInterval> | undefined;
 
@@ -560,7 +647,36 @@ export default function PatientQueueScreen() {
       cancelled = true;
       if (intervalId) clearInterval(intervalId);
     };
-  }, [loadQueueStatus, router]);
+  }, [isFocused, loadQueueStatus, router]);
+
+  useEffect(() => {
+    if (!isFocused) return;
+
+    const doctorId = queueStatus?.doctorId ?? '';
+    const queueId = queueStatus?.queueId ?? '';
+
+    if (!doctorId || !queueId) {
+      return;
+    }
+
+    let cancelled = false;
+    let intervalId: ReturnType<typeof setInterval> | undefined;
+
+    async function syncQueueLine() {
+      if (cancelled) return;
+      await loadQueueLine(doctorId, queueId);
+    }
+
+    void syncQueueLine();
+    intervalId = setInterval(() => {
+      void syncQueueLine();
+    }, 10000);
+
+    return () => {
+      cancelled = true;
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isFocused, loadQueueLine, queueStatus?.doctorId, queueStatus?.queueId]);
 
   function toggleService(serviceId: string) {
     const service = services.find((item) => item.id === serviceId);
@@ -658,15 +774,21 @@ export default function PatientQueueScreen() {
         queueId: String(data?.queue_id ?? ''),
         queueNumber: data?.queue_number != null ? String(data.queue_number) : '',
         status: data?.status === 'serving' ? 'serving' : 'waiting',
+        doctorId: appointment?.doctor_id != null ? String(appointment.doctor_id) : selectedDoctorId,
         doctor: doctorName === 'Dr.' ? 'Doctor' : doctorName,
         position: typeof data?.position === 'number' ? data.position : null,
         estimatedWaitMinutes: typeof data?.estimated_wait_minutes === 'number' ? data.estimated_wait_minutes : null,
+        services: selectedServices,
+        totalFee: selectedServicesTotalFee,
+        servingQueueNumber: null,
+        nextQueueNumber: null,
       });
+      setQueueDetailsExpanded(false);
       setSelectedServiceIds([]);
       setSelectedDoctorId('');
       setReason('');
       setStepOneCollapsed(false);
-      setSuccess('You have joined the queue.');
+      setSuccess('You have joined the queue with status waiting.');
     } catch {
       setError('Network error. Please try again.');
     } finally {
@@ -719,27 +841,95 @@ export default function PatientQueueScreen() {
           ) : null}
 
           <View style={styles.infoRow}>
-        
-
             <AnimatedCard delay={60} style={styles.infoCard}>
               <View style={styles.infoCardInner}>
-                <View style={styles.infoIconCircle}>
-                  {loading ? <ActivityIndicator size="small" color={T.cyan700} /> : <Ionicons name="people-outline" size={18} color={T.cyan700} />}
+                <View style={styles.infoCardTopRow}>
+                  <View style={styles.infoIconCircle}>
+                    {loading ? <ActivityIndicator size="small" color={T.cyan700} /> : <Ionicons name="people-outline" size={18} color={T.cyan700} />}
+                  </View>
+                  <View style={styles.infoCardTopCopy}>
+                    <Text style={styles.infoLabel}>Queue line</Text>
+                    <Text style={styles.queueHeadline}>{queueStatus ? `#${queueStatus.queueNumber || '—'}` : 'Not in the queue'}</Text>
+                  </View>
                 </View>
-                <Text style={styles.infoLabel}>Queue</Text>
-                <Text style={styles.infoValue}>{queueStatus ? `#${queueStatus.queueNumber || '—'}` : 'Join Queue'}</Text>
-                <Text style={styles.infoSub}>
-                  {queueStatus
-                    ? `${queueStatus.doctor} · ${queueStatus.status === 'serving' ? 'Now serving' : 'Waiting'}`
-                    : 'No active queue entry'}
-                </Text>
+
+                <ScrollView
+                  style={styles.infoCardScroll}
+                  contentContainerStyle={styles.infoCardScrollContent}
+                  showsVerticalScrollIndicator={false}
+                  nestedScrollEnabled
+                >
+                  {queueStatus ? (
+                    <>
+                      <View style={styles.queueMetricRow}>
+                        <Text style={styles.queueMetricLabel}>Serving queue</Text>
+                        <Text style={styles.queueMetricValue}>
+                          {queueStatus.servingQueueNumber ? `#${queueStatus.servingQueueNumber}` : 'No active serving queue'}
+                        </Text>
+                      </View>
+                      <View style={styles.queueMetricRow}>
+                        <Text style={styles.queueMetricLabel}>Next in line</Text>
+                        <Text style={styles.queueMetricValue}>
+                          {queueStatus.nextQueueNumber ? `#${queueStatus.nextQueueNumber}` : 'Waiting for line update'}
+                        </Text>
+                      </View>
+                      <View style={styles.queueMetricRow}>
+                        <Text style={styles.queueMetricLabel}>Your position</Text>
+                        <Text style={styles.queueMetricValue}>
+                          {queueStatus.position != null ? String(queueStatus.position) : 'Updating'}
+                        </Text>
+                      </View>
+                      <View style={styles.queueMetricRow}>
+                        <Text style={styles.queueMetricLabel}>Status</Text>
+                        <Text style={styles.queueMetricValue}>{queueStatus.status === 'serving' ? 'Serving' : 'Waiting'}</Text>
+                      </View>
+                      <Text style={styles.infoSub}>
+                        {`${queueStatus.doctor}${queueStatus.estimatedWaitMinutes != null ? ` · Est. wait ${queueStatus.estimatedWaitMinutes} mins` : ''}`}
+                      </Text>
+
+                      <Pressable
+                        onPress={() => setQueueDetailsExpanded((current) => !current)}
+                        style={({ pressed }) => [styles.queueDetailsToggle, pressed && { opacity: 0.85 }]}
+                      >
+                        <Text style={styles.queueDetailsToggleText}>Services & total fee</Text>
+                        <Ionicons
+                          name={queueDetailsExpanded ? 'chevron-up' : 'chevron-down'}
+                          size={16}
+                          color={T.cyan700}
+                        />
+                      </Pressable>
+
+                      {queueDetailsExpanded ? (
+                        <View style={styles.queueDetailsPanel}>
+                          {queueStatus.services.map((service) => (
+                            <View key={service.id} style={styles.queueServiceRow}>
+                              <View style={{ flex: 1 }}>
+                                <Text style={styles.queueServiceTitle}>{service.name}</Text>
+                                <Text style={styles.queueServiceMeta}>{formatDurationLabel(service.durationMinutes)}</Text>
+                              </View>
+                              <Text style={styles.queueServicePrice}>{formatPriceLabel(service.price)}</Text>
+                            </View>
+                          ))}
+                          <View style={styles.queueTotalRow}>
+                            <Text style={styles.queueTotalLabel}>Total fee</Text>
+                            <Text style={styles.queueTotalValue}>{formatCurrency(queueStatus.totalFee)}</Text>
+                          </View>
+                        </View>
+                      ) : null}
+                    </>
+                  ) : (
+                    <Text style={styles.infoSub}>
+                      Join the walk-in queue to see your position.
+                    </Text>
+                  )}
+                </ScrollView>
               </View>
             </AnimatedCard>
           </View>
 
           <SectionCard
             title="Walk-in Details"
-            subtitle="Walk-ins are always marked as appointment type walk-in and follow current schedule availability."
+            subtitle="Mobile walk-ins are created immediately and placed in waiting status once the selected doctor is on active schedule."
             badge="Step 1"
             delay={80}
             collapsed={stepOneCollapsed}
@@ -769,6 +959,7 @@ export default function PatientQueueScreen() {
 
             {selectedServices.length > 0 ? (
               <View style={styles.selectedServicesSection}>
+                <Text style={styles.selectedServicesTotal}>{`Current selection total: ${formatCurrency(selectedServicesTotalFee)}`}</Text>
                 {selectedServices.length > 1 ? <Text style={styles.slideHint}>Slide to see more</Text> : null}
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.selectedServicesRow}>
                   {selectedServices.map((service) => (
@@ -1039,6 +1230,22 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
     minHeight: 136,
+    maxHeight: 260,
+  },
+  infoCardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
+  infoCardTopCopy: {
+    flex: 1,
+  },
+  infoCardScroll: {
+    flex: 1,
+  },
+  infoCardScrollContent: {
+    paddingBottom: 2,
   },
   infoIconCircle: {
     width: 36,
@@ -1063,6 +1270,102 @@ const styles = StyleSheet.create({
     color: T.cyan700,
     lineHeight: 16,
     marginBottom: 3,
+  },
+  queueHeadline: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: T.cyan700,
+    lineHeight: 20,
+  },
+  queueMetricRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 6,
+  },
+  queueMetricLabel: {
+    fontSize: 11,
+    color: T.slate500,
+    lineHeight: 15,
+  },
+  queueMetricValue: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: T.slate800,
+    lineHeight: 15,
+    textAlign: 'right',
+    flexShrink: 1,
+  },
+  queueDetailsToggle: {
+    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: T.slate200,
+    backgroundColor: T.slate50,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  queueDetailsToggleText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: T.cyan700,
+  },
+  queueDetailsPanel: {
+    marginTop: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: T.slate200,
+    backgroundColor: T.slate50,
+    padding: 12,
+  },
+  queueServiceRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginBottom: 10,
+  },
+  queueServiceTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: T.slate800,
+    marginBottom: 2,
+  },
+  queueServiceMeta: {
+    fontSize: 10,
+    color: T.slate500,
+    lineHeight: 14,
+  },
+  queueServicePrice: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: T.cyan700,
+  },
+  queueTotalRow: {
+    marginTop: 2,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: T.slate200,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  queueTotalLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: T.slate600,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  queueTotalValue: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: T.cyan700,
   },
   infoSub: {
     fontSize: 9,
@@ -1209,6 +1512,12 @@ const styles = StyleSheet.create({
   },
   selectedServicesSection: {
     marginTop: 10,
+  },
+  selectedServicesTotal: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: T.cyan700,
+    marginBottom: 6,
   },
   slideHint: {
     alignSelf: 'flex-end',

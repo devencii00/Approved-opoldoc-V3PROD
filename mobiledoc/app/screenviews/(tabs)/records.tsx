@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -13,6 +14,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -47,6 +49,7 @@ type AnimatedCardProps = {
 
 type VisitHistoryItem = {
   id: string;
+  dateKey: string;
   date: string;
   doctor: string;
   reason: string;
@@ -68,6 +71,7 @@ type PrescriptionMedicineItem = {
 
 type PrescriptionHistoryItem = {
   id: string;
+  dateKey: string;
   date: string;
   doctor: string;
   summary: string;
@@ -80,6 +84,7 @@ type PrescriptionHistoryItem = {
 
 type VitalHistoryItem = {
   id: string;
+  dateKey: string;
   recordedAt: string;
   appointmentDate: string;
   doctor: string;
@@ -138,6 +143,21 @@ function formatDateOnly(value: any): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'Date unavailable';
   return date.toLocaleDateString();
+}
+
+function toDateKey(value: any): string {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatDateKeyLabel(value: string): string {
+  if (!value) return 'Date unavailable';
+  return formatDateOnly(value);
 }
 
 function formatDoctorName(raw: any): string {
@@ -227,6 +247,8 @@ export default function PatientRecordsScreen() {
   const [prescriptions, setPrescriptions] = useState<PrescriptionHistoryItem[]>([]);
   const [vitals, setVitals] = useState<VitalHistoryItem[]>([]);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const [selectedDateKey, setSelectedDateKey] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -285,6 +307,7 @@ export default function PatientRecordsScreen() {
 
           return {
             id: String(row?.transaction_id ?? ''),
+            dateKey: toDateKey(row?.visit_datetime ?? row?.transaction_datetime ?? row?.appointment?.appointment_datetime),
             date: formatDateTime(row?.visit_datetime ?? row?.transaction_datetime ?? row?.appointment?.appointment_datetime),
             doctor,
             reason: normalizeText(row?.appointment?.reason_for_visit) || 'Clinic visit',
@@ -308,6 +331,7 @@ export default function PatientRecordsScreen() {
 
           return {
             id: String(row?.prescription_id ?? ''),
+            dateKey: toDateKey(row?.prescribed_datetime ?? row?.transaction?.visit_datetime ?? row?.transaction?.transaction_datetime),
             date: formatDateTime(row?.prescribed_datetime ?? row?.transaction?.visit_datetime ?? row?.transaction?.transaction_datetime),
             doctor: row?.doctor ? formatDoctorName(row.doctor) : 'Doctor',
             summary: medicines[0]?.name ?? 'Prescription',
@@ -328,6 +352,7 @@ export default function PatientRecordsScreen() {
 
           return {
             id: String(row?.vital_id ?? ''),
+            dateKey: toDateKey(row?.recorded_at ?? row?.appointment_datetime),
             recordedAt: formatDateTime(row?.recorded_at),
             appointmentDate: row?.appointment_datetime ? formatDateTime(row.appointment_datetime) : 'No linked appointment',
             doctor: doctorFull === 'Dr.' ? 'Doctor' : doctorFull,
@@ -361,22 +386,51 @@ export default function PatientRecordsScreen() {
     };
   }, []);
 
+  const filteredVisits = useMemo(
+    () => (selectedDateKey ? visits.filter((item) => item.dateKey === selectedDateKey) : visits),
+    [selectedDateKey, visits]
+  );
+  const filteredPrescriptions = useMemo(
+    () => (selectedDateKey ? prescriptions.filter((item) => item.dateKey === selectedDateKey) : prescriptions),
+    [prescriptions, selectedDateKey]
+  );
+  const filteredVitals = useMemo(
+    () => (selectedDateKey ? vitals.filter((item) => item.dateKey === selectedDateKey) : vitals),
+    [selectedDateKey, vitals]
+  );
+
   const activeItemsCount = useMemo(() => {
-    if (activeTab === 'visits') return visits.length;
-    if (activeTab === 'prescriptions') return prescriptions.length;
-    return vitals.length;
-  }, [activeTab, prescriptions.length, visits.length, vitals.length]);
+    if (activeTab === 'visits') return filteredVisits.length;
+    if (activeTab === 'prescriptions') return filteredPrescriptions.length;
+    return filteredVitals.length;
+  }, [activeTab, filteredPrescriptions.length, filteredVisits.length, filteredVitals.length]);
+
+  const availableDateKeys = useMemo(() => {
+    const source = activeTab === 'visits'
+      ? visits
+      : activeTab === 'prescriptions'
+        ? prescriptions
+        : vitals;
+
+    return Array.from(
+      new Set(
+        source
+          .map((item) => item.dateKey)
+          .filter((value) => value.length > 0)
+      )
+    ).sort((a, b) => b.localeCompare(a));
+  }, [activeTab, prescriptions, visits, vitals]);
 
   function toggleDetails(key: string) {
     setExpandedKey((current) => current === key ? null : key);
   }
 
   function renderVisits() {
-    if (visits.length === 0) {
-      return <Text style={styles.emptyText}>No visit history found.</Text>;
+    if (filteredVisits.length === 0) {
+      return <Text style={styles.emptyText}>No visit history found for the selected date.</Text>;
     }
 
-    return visits.map((item) => {
+    return filteredVisits.map((item) => {
       const expanded = expandedKey === `visit-${item.id}`;
       return (
         <View key={item.id} style={styles.listCard}>
@@ -408,11 +462,11 @@ export default function PatientRecordsScreen() {
   }
 
   function renderPrescriptions() {
-    if (prescriptions.length === 0) {
-      return <Text style={styles.emptyText}>No prescription history found.</Text>;
+    if (filteredPrescriptions.length === 0) {
+      return <Text style={styles.emptyText}>No prescription history found for the selected date.</Text>;
     }
 
-    return prescriptions.map((item) => {
+    return filteredPrescriptions.map((item) => {
       const expanded = expandedKey === `prescription-${item.id}`;
       return (
         <View key={item.id} style={styles.listCard}>
@@ -452,11 +506,11 @@ export default function PatientRecordsScreen() {
   }
 
   function renderVitals() {
-    if (vitals.length === 0) {
-      return <Text style={styles.emptyText}>No vitals history found.</Text>;
+    if (filteredVitals.length === 0) {
+      return <Text style={styles.emptyText}>No vitals history found for the selected date.</Text>;
     }
 
-    return vitals.map((item) => {
+    return filteredVitals.map((item) => {
       const expanded = expandedKey === `vital-${item.id}`;
       return (
         <View key={item.id} style={styles.listCard}>
@@ -553,6 +607,92 @@ export default function PatientRecordsScreen() {
             />
           </View>
 
+          <AnimatedCard delay={70} style={styles.filterToolbar}>
+            <View style={styles.filterToolbarHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.filterTitle}>Record date filter</Text>
+                <Text style={styles.filterSubtitle}>
+                  Applies to visits, prescriptions, and vitals without setting up each display separately.
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.filterButtonRow}>
+              <Pressable
+                onPress={() => setSelectedDateKey('')}
+                style={({ pressed }) => [
+                  styles.filterButton,
+                  !selectedDateKey && styles.filterButtonActive,
+                  pressed && { opacity: 0.85 },
+                ]}
+              >
+                <Text style={[styles.filterButtonText, !selectedDateKey && styles.filterButtonTextActive]}>All dates</Text>
+              </Pressable>
+
+              {Platform.OS === 'web' ? (
+                <View style={styles.filterButton}>
+                  {React.createElement('input', {
+                    type: 'date',
+                    value: selectedDateKey || '',
+                    onChange: (event: any) => setSelectedDateKey(event?.target?.value ?? ''),
+                    style: {
+                      width: '100%',
+                      borderWidth: 0,
+                      outlineStyle: 'none',
+                      backgroundColor: 'transparent',
+                      fontSize: 11,
+                      fontWeight: '700',
+                      color: T.cyan700,
+                    },
+                  })}
+                </View>
+              ) : (
+                <Pressable
+                  onPress={() => setShowDatePicker(true)}
+                  style={({ pressed }) => [styles.filterButton, pressed && { opacity: 0.85 }]}
+                >
+                  <Text style={styles.filterButtonText}>{selectedDateKey ? 'Change date' : 'Pick date'}</Text>
+                </Pressable>
+              )}
+            </View>
+
+            {selectedDateKey ? (
+              <View style={styles.selectedDateRow}>
+                <Text style={styles.selectedDateText}>{`Showing ${formatDateKeyLabel(selectedDateKey)}`}</Text>
+                <Pressable onPress={() => setSelectedDateKey('')} style={({ pressed }) => [styles.clearDateButton, pressed && { opacity: 0.85 }]}>
+                  <Text style={styles.clearDateButtonText}>Clear</Text>
+                </Pressable>
+              </View>
+            ) : null}
+
+            {availableDateKeys.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.quickDateRow}
+              >
+                {availableDateKeys.slice(0, 8).map((dateKey) => {
+                  const active = selectedDateKey === dateKey;
+                  return (
+                    <Pressable
+                      key={dateKey}
+                      onPress={() => setSelectedDateKey(dateKey)}
+                      style={({ pressed }) => [
+                        styles.quickDateChip,
+                        active && styles.quickDateChipActive,
+                        pressed && { opacity: 0.85 },
+                      ]}
+                    >
+                      <Text style={[styles.quickDateChipText, active && styles.quickDateChipTextActive]}>
+                        {formatDateKeyLabel(dateKey)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            ) : null}
+          </AnimatedCard>
+
           <AnimatedCard delay={80} style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
               <View style={{ flex: 1 }}>
@@ -575,6 +715,26 @@ export default function PatientRecordsScreen() {
           </AnimatedCard>
         </View>
       </ScrollView>
+
+      {Platform.OS !== 'web' && showDatePicker ? (
+        <DateTimePicker
+          value={selectedDateKey ? new Date(selectedDateKey) : new Date()}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={(event, date) => {
+            if (Platform.OS !== 'ios') {
+              setShowDatePicker(false);
+            }
+            if (event.type === 'dismissed' || !date) {
+              return;
+            }
+            setSelectedDateKey(toDateKey(date));
+            if (Platform.OS === 'ios') {
+              setShowDatePicker(false);
+            }
+          }}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -686,6 +846,110 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: T.red700,
     marginBottom: 10,
+  },
+  filterToolbar: {
+    backgroundColor: T.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: T.slate200,
+    padding: 14,
+    marginBottom: 14,
+    shadowColor: T.slate900,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  filterToolbarHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 10,
+  },
+  filterTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: T.slate800,
+  },
+  filterSubtitle: {
+    marginTop: 3,
+    fontSize: 11,
+    lineHeight: 15,
+    color: T.slate500,
+  },
+  filterButtonRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 10,
+  },
+  filterButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: T.slate200,
+    backgroundColor: T.white,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  filterButtonActive: {
+    backgroundColor: T.cyan700,
+    borderColor: T.cyan700,
+  },
+  filterButtonText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: T.cyan700,
+  },
+  filterButtonTextActive: {
+    color: T.white,
+  },
+  selectedDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 10,
+  },
+  selectedDateText: {
+    flex: 1,
+    fontSize: 11,
+    color: T.slate700,
+    lineHeight: 15,
+  },
+  clearDateButton: {
+    borderRadius: 999,
+    backgroundColor: T.cyan100,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  clearDateButtonText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: T.cyan700,
+  },
+  quickDateRow: {
+    paddingRight: 8,
+    gap: 8,
+  },
+  quickDateChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: T.slate200,
+    backgroundColor: T.slate50,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  quickDateChipActive: {
+    backgroundColor: T.cyan100,
+    borderColor: T.cyan700,
+  },
+  quickDateChipText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: T.slate700,
+  },
+  quickDateChipTextActive: {
+    color: T.cyan700,
   },
   tabsRow: {
     flexDirection: 'row',

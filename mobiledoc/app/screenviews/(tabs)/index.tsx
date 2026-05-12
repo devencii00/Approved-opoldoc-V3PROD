@@ -11,6 +11,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -42,6 +43,30 @@ const T = {
 
 const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000/api').replace(/\/+$/, '');
 
+function formatDashboardDate(value: any): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Date unavailable';
+  return date.toLocaleDateString([], {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function formatDashboardTime(value: any): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Time unavailable';
+  return date.toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+  }).replace(':00 ', '').replace(' ', '');
+}
+
+function formatCurrency(value: number): string {
+  if (Number.isNaN(value)) return 'P 0.00';
+  return `P ${value.toFixed(2)}`;
+}
+
 type DashboardAppointment = {
   id: string;
   date: string;
@@ -49,6 +74,9 @@ type DashboardAppointment = {
   doctor: string;
   type: string;
   status: string;
+  statusRaw: string;
+  serviceTotal: number;
+  sortAt: number;
 };
 
 type DashboardPrescription = {
@@ -78,6 +106,11 @@ type DashboardQueueStatus = {
   position: number | null;
   estimatedWaitMinutes: number | null;
   doctor: string;
+};
+
+type PendingBillingCard = {
+  value: string;
+  sub: string;
 };
 
 type AnimatedCardProps = {
@@ -244,20 +277,28 @@ function NotifRow({ title, body }: { title: string; body: string }) {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function PatientDashboardScreen() {
   const router = useRouter();
+  const isFocused = useIsFocused();
   const [upcomingAppointments, setUpcomingAppointments] = useState<DashboardAppointment[]>([]);
   const [recentPrescriptions, setRecentPrescriptions] = useState<DashboardPrescription[]>([]);
   const [recentVisits, setRecentVisits] = useState<DashboardVisit[]>([]);
   const [notifications, setNotifications] = useState<DashboardNotification[]>([]);
   const [queueStatus, setQueueStatus] = useState<DashboardQueueStatus | null>(null);
+  const [pendingBilling, setPendingBilling] = useState<PendingBillingCard>({
+    value: '_ _',
+    sub: 'All consulted bills are already paid',
+  });
   const [error, setError] = useState('');
-
-  // Dummy pending payment for demo (replace with real API call)
-  const pendingPayment = 'P 720.00';
+  const loadingQueueRef = useRef(false);
 
   useEffect(() => {
+    if (!isFocused) return;
+
     let cancelled = false;
 
     async function loadQueue(token: string) {
+      if (loadingQueueRef.current) return;
+
+      loadingQueueRef.current = true;
       try {
         const queuesRes = await fetch(`${API_BASE_URL}/queues?per_page=10`, {
           headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
@@ -284,36 +325,67 @@ export default function PatientDashboardScreen() {
           : null;
         if (!cancelled) setQueueStatus(mappedQueue);
       } catch { if (!cancelled) setQueueStatus(null); }
+      finally { loadingQueueRef.current = false; }
     }
 
     async function loadDashboard(token: string) {
       try {
-        const [appointmentsRes, prescriptionsRes, visitsRes, notificationsRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/appointments?upcoming_only=1&per_page=5`, { headers: { Accept: 'application/json', Authorization: `Bearer ${token}` } }),
+        const [appointmentsRes, prescriptionsRes, visitsRes, notificationsRes, transactionsRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/appointments?per_page=100&order=latest`, { headers: { Accept: 'application/json', Authorization: `Bearer ${token}` } }),
           fetch(`${API_BASE_URL}/prescriptions?per_page=5`, { headers: { Accept: 'application/json', Authorization: `Bearer ${token}` } }),
           fetch(`${API_BASE_URL}/visits?per_page=5`, { headers: { Accept: 'application/json', Authorization: `Bearer ${token}` } }),
           fetch(`${API_BASE_URL}/notifications?per_page=5`, { headers: { Accept: 'application/json', Authorization: `Bearer ${token}` } }),
+          fetch(`${API_BASE_URL}/transactions?per_page=100&order=latest`, { headers: { Accept: 'application/json', Authorization: `Bearer ${token}` } }),
         ]);
-        const [appointmentsData, prescriptionsData, visitsData, notificationsData] = await Promise.all([
+        const [appointmentsData, prescriptionsData, visitsData, notificationsData, transactionsData] = await Promise.all([
           appointmentsRes.json().catch(() => ({})),
           prescriptionsRes.json().catch(() => ({})),
           visitsRes.json().catch(() => ({})),
           notificationsRes.json().catch(() => ({})),
+          transactionsRes.json().catch(() => ({})),
         ]);
-        if (!appointmentsRes.ok || !prescriptionsRes.ok || !visitsRes.ok || !notificationsRes.ok) {
-          const msg = appointmentsData?.message || prescriptionsData?.message || visitsData?.message || notificationsData?.message;
+        if (!appointmentsRes.ok || !prescriptionsRes.ok || !visitsRes.ok || !notificationsRes.ok || !transactionsRes.ok) {
+          const msg = appointmentsData?.message || prescriptionsData?.message || visitsData?.message || notificationsData?.message || transactionsData?.message;
           setError(typeof msg === 'string' && msg.length > 0 ? msg : 'Unable to load dashboard.');
           return;
         }
 
         const apptsRaw = Array.isArray(appointmentsData?.data) ? appointmentsData.data : [];
-        const apptsMapped: DashboardAppointment[] = apptsRaw.filter((a: any) => a?.appointment_datetime).map((a: any) => {
-          const dt = new Date(a.appointment_datetime);
-          const f = a?.doctor?.firstname ? String(a.doctor.firstname) : '';
-          const l = a?.doctor?.lastname ? String(a.doctor.lastname) : '';
-          const n = `Dr. ${[f, l].filter(Boolean).join(' ')}`.trim();
-          return { id: String(a.appointment_id), date: dt.toLocaleDateString(), time: dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), doctor: n === 'Dr.' ? 'Doctor' : n, type: a?.appointment_type === 'scheduled' ? 'Scheduled' : 'Walk-in', status: typeof a?.status === 'string' ? a.status : '' };
-        });
+        const apptsMapped: DashboardAppointment[] = apptsRaw
+          .filter((a: any) => a?.appointment_datetime)
+          .map((a: any) => {
+            const dt = new Date(a.appointment_datetime);
+            const f = a?.doctor?.firstname ? String(a.doctor.firstname) : '';
+            const l = a?.doctor?.lastname ? String(a.doctor.lastname) : '';
+            const n = `Dr. ${[f, l].filter(Boolean).join(' ')}`.trim();
+            const statusRaw = typeof a?.status === 'string' ? a.status.toLowerCase() : '';
+            const serviceTotal = Array.isArray(a?.services)
+              ? a.services.reduce((sum: number, service: any) => {
+                  const price = typeof service?.price === 'number' ? service.price : service?.price != null ? Number(service.price) : 0;
+                  return sum + (Number.isNaN(price) ? 0 : price);
+                }, 0)
+              : 0;
+
+            return {
+              id: String(a.appointment_id),
+              date: formatDashboardDate(a.appointment_datetime),
+              time: formatDashboardTime(a.appointment_datetime),
+              doctor: n === 'Dr.' ? 'Doctor' : n,
+              type: a?.appointment_type === 'scheduled' ? 'Scheduled' : 'Walk-in',
+              status: typeof a?.status === 'string' ? a.status : '',
+              statusRaw,
+              serviceTotal,
+              sortAt: Number.isNaN(dt.getTime()) ? 0 : dt.getTime(),
+            };
+          });
+
+        const nowTime = Date.now();
+        const upcomingMapped = [...apptsMapped]
+          .filter((appointment) => (
+            appointment.sortAt >= nowTime &&
+            (appointment.statusRaw === 'pending' || appointment.statusRaw === 'confirmed')
+          ))
+          .sort((a, b) => a.sortAt - b.sortAt);
 
         const presRaw = Array.isArray(prescriptionsData?.data) ? prescriptionsData.data : [];
         const presMapped: DashboardPrescription[] = presRaw.map((p: any) => {
@@ -341,11 +413,44 @@ export default function PatientDashboardScreen() {
           return { id: String(n.notification_id), title: `${type.charAt(0).toUpperCase()}${type.slice(1)}`, body: typeof n?.message === 'string' ? n.message : '' };
         });
 
+        const transactionsRaw = Array.isArray(transactionsData?.data) ? transactionsData.data : [];
+        const transactionByAppointmentId = new Map<string, any>();
+        transactionsRaw.forEach((transaction: any) => {
+          const appointmentId = transaction?.appointment_id != null
+            ? String(transaction.appointment_id)
+            : transaction?.appointment?.appointment_id != null
+              ? String(transaction.appointment.appointment_id)
+              : '';
+          if (!appointmentId || transactionByAppointmentId.has(appointmentId)) {
+            return;
+          }
+          transactionByAppointmentId.set(appointmentId, transaction);
+        });
+
+        const pendingBillingAppointment = [...apptsMapped]
+          .filter((appointment) => appointment.statusRaw === 'consulted')
+          .find((appointment) => {
+            const transaction = transactionByAppointmentId.get(appointment.id);
+            const paymentStatus = typeof transaction?.payment_status === 'string' ? transaction.payment_status.toLowerCase() : '';
+            return paymentStatus !== 'paid';
+          });
+
+        const pendingBillingCard: PendingBillingCard = pendingBillingAppointment
+          ? {
+              value: formatCurrency(pendingBillingAppointment.serviceTotal),
+              sub: `${pendingBillingAppointment.doctor} · ${pendingBillingAppointment.date} · ${pendingBillingAppointment.time}`,
+            }
+          : {
+              value: '_ _',
+              sub: 'All consulted bills are already paid',
+            };
+
         if (!cancelled) {
-          setUpcomingAppointments(apptsMapped);
+          setUpcomingAppointments(upcomingMapped);
           setRecentPrescriptions(presMapped);
           setRecentVisits(visitsMapped);
           setNotifications(notifsMapped);
+          setPendingBilling(pendingBillingCard);
           setError('');
         }
       } catch { if (!cancelled) setError('Network error. Please try again.'); }
@@ -358,7 +463,7 @@ export default function PatientDashboardScreen() {
     loadQueue(token);
     const intervalId = setInterval(() => { loadQueue(token); }, 15000);
     return () => { cancelled = true; clearInterval(intervalId); };
-  }, []);
+  }, [isFocused]);
 
   const nextAppt = upcomingAppointments[0];
 
@@ -431,17 +536,17 @@ export default function PatientDashboardScreen() {
             />
             <InfoCard
               icon="calendar-clear-outline"
-              label="Upcoming appointments"
-              value={nextAppt ? nextAppt.date : '—'}
-              sub={nextAppt ? `${nextAppt.time} · ${nextAppt.doctor}` : `${upcomingAppointments.length} scheduled`}
+              label="Appointments"
+              value={nextAppt ? nextAppt.doctor : '_ _'}
+              sub={nextAppt ? `${nextAppt.date} - ${nextAppt.time}` : 'No active pending or confirmed schedule'}
               delay={60}
               onPress={() => router.push('/screenviews/appointments' as any)}
             />
             <InfoCard
               icon="card-outline"
               label="Pending payment"
-              value={pendingPayment}
-              sub="Please pay to the front desk"
+              value={pendingBilling.value}
+              sub={pendingBilling.sub}
               delay={90}
             />
           </View>

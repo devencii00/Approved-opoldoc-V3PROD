@@ -12,6 +12,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 // @ts-ignore
@@ -118,6 +119,14 @@ function formatDateInput(value: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+function parseDateInput(value: string): Date {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, (month || 1) - 1, day || 1);
+  }
+  return new Date();
+}
+
 function formatFullName(user: ProfileUser | null): string {
   if (!user) return 'Patient';
   const fullName = [user.firstname, user.middlename, user.lastname]
@@ -218,6 +227,7 @@ export default function ProfileScreen() {
   const [success, setSuccess] = useState('');
   const [form, setForm] = useState<EditableProfileForm>(buildEditableForm((globalThis as any)?.currentUser ?? null));
   const [verificationTypeLabel, setVerificationTypeLabel] = useState('Not specified');
+  const [showBirthdatePicker, setShowBirthdatePicker] = useState(false);
 
   const profileName = useMemo(() => formatFullName(user), [user]);
   const profileDobLabel = useMemo(() => {
@@ -300,8 +310,9 @@ export default function ProfileScreen() {
             : [];
 
         const approved = list.find((item) => item?.status === 'approved');
-        const latest = approved ?? list[0];
-        const nextLabel = formatVerificationType((latest?.type as VerificationType | undefined) ?? '');
+        const nextLabel = approved
+          ? formatVerificationType((approved.type as VerificationType | undefined) ?? '')
+          : 'Not specified';
         if (!cancelled) setVerificationTypeLabel(nextLabel);
       } catch {
         if (!cancelled) setVerificationTypeLabel('Not specified');
@@ -638,13 +649,37 @@ export default function ProfileScreen() {
                         {/* <Ionicons name="calendar-outline" size={18} color={T.slate600} /> */}
                       </View>
                     ) : (
-                      <TextInput
-                        value={form.birthdate}
-                        onChangeText={(value) => updateForm('birthdate', value)}
-                        placeholder="YYYY-MM-DD"
-                        placeholderTextColor="#9ca3af"
-                        style={styles.input}
-                      />
+                      <>
+                        <Pressable
+                          onPress={() => setShowBirthdatePicker(true)}
+                          style={({ pressed }) => [styles.selectInput, pressed && { opacity: 0.85 }]}
+                        >
+                          <Text style={form.birthdate ? styles.selectInputValue : styles.selectInputPlaceholder}>
+                            {form.birthdate || 'YYYY-MM-DD'}
+                          </Text>
+                          <Ionicons name="calendar-outline" size={18} color={T.slate600} />
+                        </Pressable>
+                        {showBirthdatePicker ? (
+                          <DateTimePicker
+                            value={parseDateInput(form.birthdate)}
+                            mode="date"
+                            maximumDate={new Date()}
+                            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                            onChange={(event, date) => {
+                              if (Platform.OS !== 'ios') {
+                                setShowBirthdatePicker(false);
+                              }
+                              if (event.type === 'dismissed' || !date) {
+                                return;
+                              }
+                              updateForm('birthdate', formatDateInput(date));
+                              if (Platform.OS === 'ios') {
+                                setShowBirthdatePicker(false);
+                              }
+                            }}
+                          />
+                        ) : null}
+                      </>
                     )}
                   </View>
                   <View style={styles.fieldGroup}>
@@ -706,12 +741,7 @@ export default function ProfileScreen() {
                       <Text style={styles.primaryButtonText}>{savingInfo ? 'Saving...' : 'Save changes'}</Text>
                     </Pressable>
                   </View>
-                  <Pressable
-                    onPress={() => router.push('/screenviews/verify' as any)}
-                    style={({ pressed }) => [styles.secondaryWideButton, pressed && { opacity: 0.85 }]}
-                  >
-                    <Text style={styles.secondaryWideButtonText}>Verify patient type</Text>
-                  </Pressable>
+               
                   {error ? <Text style={styles.inlineError}>{error}</Text> : null}
                   {success ? <Text style={styles.inlineSuccess}>{success}</Text> : null}
                 </View>

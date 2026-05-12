@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   View,
@@ -92,33 +92,6 @@ function AnimatedCard({ children, delay = 0, style }: AnimatedCardProps) {
   );
 }
 
-type InfoCardProps = {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  label: string;
-  value: string;
-  sub?: string;
-  delay?: number;
-};
-
-function InfoCard({ icon, label, value, sub, delay = 0 }: InfoCardProps) {
-  return (
-    <AnimatedCard delay={delay} style={styles.infoCard}>
-      <View style={styles.infoCardInner}>
-        <View style={styles.infoCardTop}>
-          <View style={styles.infoIconCircle}>
-            <Ionicons name={icon} size={18} color={T.cyan700} />
-          </View>
-          <Text style={styles.infoLabel}>{label}</Text>
-        </View>
-        <View style={styles.infoCardBottom}>
-          <Text style={styles.infoValue}>{value}</Text>
-          <Text style={styles.infoSub}>{sub || '—'}</Text>
-        </View>
-      </View>
-    </AnimatedCard>
-  );
-}
-
 type SectionCardProps = {
   title: string;
   badge?: string;
@@ -209,8 +182,8 @@ function EmptyState() {
       <View style={styles.emptyIconWrap}>
         <Ionicons name="calendar-outline" size={22} color={T.cyan700} />
       </View>
-      <Text style={styles.emptyTitle}>No upcoming appointments</Text>
-      <Text style={styles.emptyText}>Your next booked visit will appear here once the clinic confirms it.</Text>
+      <Text style={styles.emptyTitle}>No active upcoming appointments</Text>
+      <Text style={styles.emptyText}>Only appointments with pending or confirmed status appear here.</Text>
     </View>
   );
 }
@@ -250,7 +223,11 @@ export default function PatientAppointmentsScreen() {
 
         const raw = Array.isArray(data?.data) ? data.data : [];
         const mapped: AppointmentListItem[] = raw
-          .filter((appointment: any) => appointment?.appointment_datetime)
+          .filter((appointment: any) => {
+            if (!appointment?.appointment_datetime) return false;
+            const statusRaw = typeof appointment?.status === 'string' ? appointment.status.toLowerCase() : '';
+            return statusRaw === 'pending' || statusRaw === 'confirmed';
+          })
           .map((appointment: any) => {
             const dt = new Date(appointment.appointment_datetime);
             const doctorFirst = appointment?.doctor?.firstname ? String(appointment.doctor.firstname) : '';
@@ -261,14 +238,8 @@ export default function PatientAppointmentsScreen() {
             let status = 'Pending';
             let statusTone: AppointmentStatusTone = 'warning';
             if (statusRaw === 'confirmed') {
-              status = 'Scheduled';
+              status = 'Confirmed';
               statusTone = 'info';
-            } else if (statusRaw === 'completed' || statusRaw === 'consulted') {
-              status = statusRaw === 'consulted' ? 'Consulted' : 'Completed';
-              statusTone = 'success';
-            } else if (statusRaw === 'cancelled' || statusRaw === 'no_show') {
-              status = statusRaw === 'no_show' ? 'No Show' : 'Cancelled';
-              statusTone = 'danger';
             }
 
             const services = Array.isArray(appointment?.services)
@@ -315,18 +286,6 @@ export default function PatientAppointmentsScreen() {
   }, []);
 
   const nextAppointment = items[0] ?? null;
-  const stats = useMemo(() => {
-    const scheduled = items.filter((item) => item.status === 'Scheduled' || item.status === 'Pending').length;
-    const queueLinked = items.filter((item) => item.queueNumber != null).length;
-    return {
-      total: String(items.length),
-      scheduled: `${scheduled} active`,
-      nextDate: nextAppointment ? nextAppointment.date : '—',
-      nextSub: nextAppointment ? `${nextAppointment.time} · ${nextAppointment.doctor}` : 'No visit scheduled',
-      queueValue: queueLinked > 0 ? String(queueLinked) : '—',
-      queueSub: queueLinked > 0 ? 'Appointments with queue record' : 'No queue number assigned',
-    };
-  }, [items, nextAppointment]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -349,7 +308,7 @@ export default function PatientAppointmentsScreen() {
             </View>
 
               <Text style={styles.headerTitle}>Appointments</Text>
-              <Text style={styles.headerGreeting}>View your upcoming appointments & history.</Text>
+              <Text style={styles.headerGreeting}>View your upcoming appointments.</Text>
             </View>
             <Pressable
               style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.85 }]}
@@ -363,37 +322,13 @@ export default function PatientAppointmentsScreen() {
         <View style={styles.contentSurface}>
           {error ? <Text style={styles.inlineError}>{error}</Text> : null}
 
-          <View style={styles.infoRow}>
-            <InfoCard
-              icon="calendar-clear-outline"
-              label="Upcoming appointments"
-              value={stats.total}
-              sub={stats.scheduled}
-              delay={30}
-            />
-            <InfoCard
-              icon="time-outline"
-              label="Next visit"
-              value={stats.nextDate}
-              sub={stats.nextSub}
-              delay={60}
-            />
-            <InfoCard
-              icon="people-outline"
-              label="Queue-linked visits"
-              value={stats.queueValue}
-              sub={stats.queueSub}
-              delay={90}
-            />
-          </View>
-
-          {nextAppointment ? (
+          {nextAppointment && items.length > 0 ? (
             <SectionCard title="Next Appointment" badge="Next" delay={120}>
               <AppointmentDetailsCard item={nextAppointment} />
             </SectionCard>
           ) : null}
 
-          <SectionCard title="Upcoming Appointments" badge="Schedule" delay={160} style={{ marginBottom: 24 }}>
+          <SectionCard title="Upcoming Appointments" badge="Scheduled" delay={160} style={{ marginBottom: 24 }}>
             {items.length === 0 ? <EmptyState /> : items.map((item) => <AppointmentDetailsCard key={item.id} item={item} />)}
           </SectionCard>
         </View>
@@ -516,66 +451,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: T.red700,
     marginBottom: 10,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 18,
-    alignItems: 'stretch',
-  },
-  infoCard: {
-    flex: 1,
-  },
-  infoCardInner: {
-    flex: 1,
-    backgroundColor: T.white,
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: T.slate200,
-    shadowColor: T.slate900,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    minHeight: 142,
-  },
-  infoCardTop: {
-    width: '100%',
-  },
-  infoCardBottom: {
-    width: '100%',
-  },
-  infoIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: 'rgba(6,182,212,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  infoLabel: {
-    fontSize: 9,
-    fontWeight: '600',
-    color: T.slate400,
-    letterSpacing: 0.2,
-    marginBottom: 4,
-    lineHeight: 12,
-  },
-  infoValue: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: T.cyan700,
-    lineHeight: 15,
-    marginBottom: 2,
-  },
-  infoSub: {
-    fontSize: 9,
-    color: T.slate500,
-    lineHeight: 13,
   },
   sectionCard: {
     backgroundColor: T.white,

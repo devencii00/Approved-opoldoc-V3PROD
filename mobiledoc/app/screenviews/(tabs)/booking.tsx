@@ -916,42 +916,6 @@ export default function BookingScreen() {
             </Pressable>
           ) : null}
 
-          <View style={styles.infoRow}>
-            <AnimatedCard delay={20} style={styles.infoCard}>
-              <View style={styles.infoCardInner}>
-                <View style={styles.infoIconCircle}>
-                  <Ionicons name="medkit-outline" size={18} color={T.cyan700} />
-                </View>
-                <Text style={styles.infoLabel}>Services selected</Text>
-                <Text style={styles.infoValue}>{selectedServiceIds.length > 0 ? String(selectedServiceIds.length) : '0'}</Text>
-                <Text style={styles.infoSub}>{selectedCategory || 'Choose service first'}</Text>
-              </View>
-            </AnimatedCard>
-
-            <AnimatedCard delay={40} style={styles.infoCard}>
-              <View style={styles.infoCardInner}>
-                <View style={styles.infoIconCircle}>
-                  <Ionicons name="person-outline" size={18} color={T.cyan700} />
-                </View>
-                <Text style={styles.infoLabel}>Doctor</Text>
-                <Text style={styles.infoValue}>{selectedDoctor ? 'Ready' : 'Select'}</Text>
-                <Text style={styles.infoSub}>{selectedDoctor?.name ?? 'Filtered by service'}</Text>
-              </View>
-            </AnimatedCard>
-
-            <AnimatedCard delay={60} style={styles.infoCard}>
-              <View style={styles.infoCardInner}>
-                <View style={styles.infoIconCircle}>
-                  <Ionicons name="time-outline" size={18} color={T.cyan700} />
-                </View>
-                <Text style={styles.infoLabel}>Schedule</Text>
-                <Text style={styles.infoValue}>{selectedTimeSlot ? 'Locked' : 'Pending'}</Text>
-                <Text style={styles.infoSub}>
-                  {selectedTimeSlot ? `${formatDateLabel(selectedDateKey)} · ${selectedTimeSlot.label}` : 'Choose date and time'}
-                </Text>
-              </View>
-            </AnimatedCard>
-          </View>
 
           <SectionCard
             title="Appointment Details"
