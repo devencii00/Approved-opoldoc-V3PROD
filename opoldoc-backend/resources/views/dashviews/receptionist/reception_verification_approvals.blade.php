@@ -86,16 +86,17 @@
     <div id="adminVerifDocPanel" class="absolute top-0 right-0 h-full w-full max-w-[46rem] bg-white border-l border-slate-200 shadow-[-16px_0_40px_rgba(15,23,42,0.2)] transform translate-x-full transition-transform duration-300 ease-out flex flex-col">
         <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
             <div class="min-w-0">
-                <div class="text-sm font-semibold text-slate-900" id="adminVerifDocPanelTitle">Verification Document</div>
+                <div class="text-sm font-semibold text-slate-900" id="adminVerifDocPanelTitle">Patient Verification</div>
                 <div class="text-[0.72rem] text-slate-500 mt-0.5" id="adminVerifDocPanelSubtitle"></div>
             </div>
             <button id="adminVerifDocPanelClose" type="button" class="inline-flex items-center justify-center w-9 h-9 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50">
                 <x-lucide-x class="w-[18px] h-[18px]" />
             </button>
         </div>
+        <div class="flex-1 overflow-y-auto">
         <div class="p-4 border-b border-slate-100">
             <div class="text-[0.72rem] font-semibold text-slate-600 mb-2 uppercase tracking-wide">Patient Details</div>
-            <div id="adminVerifPatientCard" class="rounded-xl border border-slate-200 bg-slate-50 p-4 mb-4">
+            <div id="adminVerifPatientCard" class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 mb-4">
                 <div class="text-[0.78rem] text-slate-500">Select a verification record.</div>
             </div>
             <div class="text-[0.72rem] font-semibold text-slate-600 mb-2 uppercase tracking-wide">Latest Uploaded Document</div>
@@ -103,10 +104,10 @@
                 Select a verification record.
             </div>
         </div>
-        <div class="p-4 min-h-0 flex-1 overflow-hidden">
+        <div class="p-4">
             <div class="text-[0.72rem] font-semibold text-slate-600 mb-2 uppercase tracking-wide">Verification History</div>
-            <div class="rounded-xl border border-slate-200 overflow-hidden h-full">
-                <div class="overflow-auto h-full">
+            <div class="rounded-xl border border-slate-200 overflow-hidden">
+                <div class="overflow-auto max-h-[24rem]">
                     <table class="w-full text-xs">
                         <thead class="bg-slate-50 text-slate-500 sticky top-0">
                             <tr>
@@ -124,6 +125,7 @@
                     </table>
                 </div>
             </div>
+        </div>
         </div>
     </div>
 </div>
@@ -273,6 +275,12 @@
             return padNumber(date.getMonth() + 1) + '-' + padNumber(date.getDate()) + '-' + date.getFullYear()
         }
 
+        function formatBirthdateDayFirst(value) {
+            var date = normalizeDateValue(value)
+            if (!date) return '—'
+            return padNumber(date.getDate()) + '-' + padNumber(date.getMonth() + 1) + '-' + date.getFullYear()
+        }
+
         function calculateAge(value) {
             var date = normalizeDateValue(value)
             if (!date) return null
@@ -294,7 +302,7 @@
                 year: 'numeric'
             })
             var age = calculateAge(value)
-            return age === null ? formatted : formatted + ' • Age ' + age
+            return age === null ? formatted : formatted + ' - Age ' + age
         }
 
         function patientFieldValue(value, fallback) {
@@ -311,24 +319,12 @@
             }
 
             patientCard.innerHTML =
-                '<div class="grid grid-cols-1 md:grid-cols-2 gap-3">' +
-                    '<div class="rounded-lg border border-slate-200 bg-white px-3 py-2.5">' +
-                        '<div class="text-[0.68rem] uppercase tracking-wide text-slate-400">Name</div>' +
-                        '<div class="mt-1 text-[0.84rem] font-semibold text-slate-900">' + escapeHtml(getPatientLabel(verification)) + '</div>' +
-                    '</div>' +
-                    '<div class="rounded-lg border border-slate-200 bg-white px-3 py-2.5">' +
-                        '<div class="text-[0.68rem] uppercase tracking-wide text-slate-400">Date of Birth</div>' +
-                        '<div class="mt-1 text-[0.84rem] font-semibold text-slate-900">' + escapeHtml(formatBirthdateMain(patient.birthdate)) + '</div>' +
-                        '<div class="mt-1 text-[0.68rem] text-slate-500">' + escapeHtml(formatBirthdateSubtitle(patient.birthdate)) + '</div>' +
-                    '</div>' +
-                    '<div class="rounded-lg border border-slate-200 bg-white px-3 py-2.5">' +
-                        '<div class="text-[0.68rem] uppercase tracking-wide text-slate-400">Sex</div>' +
-                        '<div class="mt-1 text-[0.84rem] font-semibold text-slate-900">' + escapeHtml(patientFieldValue(patient.sex)) + '</div>' +
-                    '</div>' +
-                    '<div class="rounded-lg border border-slate-200 bg-white px-3 py-2.5 md:col-span-2">' +
-                        '<div class="text-[0.68rem] uppercase tracking-wide text-slate-400">Address</div>' +
-                        '<div class="mt-1 text-[0.84rem] font-semibold text-slate-900 break-words">' + escapeHtml(patientFieldValue(patient.address, 'No address submitted.')) + '</div>' +
-                    '</div>' +
+                '<div class="space-y-2 text-[0.8rem] text-slate-700">' +
+                    '<div><span class="font-semibold text-slate-900">Name:</span> ' + escapeHtml(getPatientLabel(verification)) + '</div>' +
+                    '<div><span class="font-semibold text-slate-900">Date of Birth:</span> ' + escapeHtml(formatBirthdateMain(patient.birthdate)) + '</div>' +
+                    '<div class="text-[0.72rem] text-slate-500">' + escapeHtml(formatBirthdateSubtitle(patient.birthdate)) + '</div>' +
+                    '<div><span class="font-semibold text-slate-900">Sex:</span> ' + escapeHtml(patientFieldValue(patient.sex)) + '</div>' +
+                    '<div><span class="font-semibold text-slate-900">Address:</span> <span class="break-words">' + escapeHtml(patientFieldValue(patient.address, 'No address submitted.')) + '</span></div>' +
                 '</div>'
         }
 
@@ -622,8 +618,8 @@
 
         function openDocumentPanelFor(verification) {
             if (!verification) return
-            if (docPanelTitle) docPanelTitle.textContent = 'Verification #' + verification.verification_id
-            if (docPanelSubtitle) docPanelSubtitle.textContent = getPatientLabel(verification) + ' • ' + statusText(verification.status) + ' • ' + (verification.type || '—')
+            // if (docPanelTitle) docPanelTitle.textContent = 'Verification #' + verification.verification_id
+            if (docPanelSubtitle) docPanelSubtitle.textContent = getPatientLabel(verification) + ' | ' + statusText(verification.status) + ' | ' + (verification.type || '—')   
             renderPatientSummary(verification)
             setMainDocumentPreview(verification)
             openDocPanel()
@@ -695,9 +691,13 @@
                     return
                 }
                 var isReject = status === 'rejected'
+                var patient = verification && verification.patient ? verification.patient : null
                 actionDetails.innerHTML = '<ul class="space-y-1">' +
-                    '<li><strong class="font-semibold text-slate-800">Verification ID:</strong> #' + escapeHtml(verification.verification_id) + '</li>' +
+                    // '<li><strong class="font-semibold text-slate-800">Verification ID:</strong> #' + escapeHtml(verification.verification_id) + '</li>' +
                     '<li><strong class="font-semibold text-slate-800">Patient:</strong> ' + escapeHtml(getPatientLabel(verification)) + '</li>' +
+                    '<li><strong class="font-semibold text-slate-800">DOB:</strong> ' + escapeHtml(formatBirthdateDayFirst(patient ? patient.birthdate : null)) + '</li>' +
+                    '<li><strong class="font-semibold text-slate-800">Sex:</strong> ' + escapeHtml(patientFieldValue(patient ? patient.sex : '', '—')) + '</li>' +
+                    '<li><strong class="font-semibold text-slate-800">Address:</strong> ' + escapeHtml(patientFieldValue(patient ? patient.address : '', 'No address submitted.')) + '</li>' +
                     '<li><strong class="font-semibold text-slate-800">Type:</strong> ' + escapeHtml(verification.type || '—') + '</li>' +
                     '<li><strong class="font-semibold text-slate-800">Current Status:</strong> ' + escapeHtml(statusText(verification.status)) + '</li>' +
                 '</ul>'
@@ -833,8 +833,8 @@
                         showError('Unable to load the selected history document.')
                         return
                     }
-                    if (docPanelTitle) docPanelTitle.textContent = 'Verification #' + selected.verification_id
-                    if (docPanelSubtitle) docPanelSubtitle.textContent = getPatientLabel(selected) + ' • ' + statusText(selected.status) + ' • ' + (selected.type || '—')
+                    // if (docPanelTitle) docPanelTitle.textContent = 'Verification #' + selected.verification_id
+                    if (docPanelSubtitle) docPanelSubtitle.textContent = getPatientLabel(selected) + ' | ' + statusText(selected.status) + ' | ' + (selected.type || '—')
                     renderPatientSummary(selected)
                     void setMainDocumentPreview(selected)
                 })
