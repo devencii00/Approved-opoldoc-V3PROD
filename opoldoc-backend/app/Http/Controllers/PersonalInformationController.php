@@ -62,6 +62,17 @@ class PersonalInformationController extends Controller
             'contact_number' => ['sometimes', 'nullable', 'string'],
         ]);
 
+        if (
+            $currentUser &&
+            $currentUser->role === 'patient' &&
+            ! $currentUser->is_first_login &&
+            (int) $personal_information->user_id === (int) $currentUser->user_id
+        ) {
+            $data = array_intersect_key($data, [
+                'contact_number' => true,
+            ]);
+        }
+
         $personal_information->update($data);
 
         return $personal_information->refresh();

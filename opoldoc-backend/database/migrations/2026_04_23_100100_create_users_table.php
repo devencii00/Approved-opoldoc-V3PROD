@@ -48,6 +48,7 @@ return new class extends Migration
             $table->enum('relationship', ['mother', 'father', 'guardian'])->nullable();
 
             $table->boolean('is_first_login')->default(true);
+            $table->boolean('must_change_credentials')->default(false);
             $table->string('password_reset_token')->nullable();
             $table->dateTime('password_reset_expires_at')->nullable();
 

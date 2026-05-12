@@ -54,6 +54,11 @@ class UserController extends Controller
             $data['status'] = 'active';
         }
 
+        if (($data['role'] ?? null) === 'patient') {
+            $data['is_first_login'] = true;
+            $data['must_change_credentials'] = true;
+        }
+
         $user = User::create($data);
 
         LogEntry::write(
@@ -91,7 +96,11 @@ class UserController extends Controller
             $emailRules[] = 'regex:/@example\\.com$/i';
         }
 
-        $requiresPasswordForFirstLogin = $user->is_first_login
+        $mustChangeForUser = $user->role === 'patient'
+            ? (bool) ($user->must_change_credentials ?? false)
+            : (bool) $user->is_first_login;
+
+        $requiresPasswordForFirstLogin = $mustChangeForUser
             && $request->has('must_change_credentials')
             && $request->boolean('must_change_credentials') === false;
 
@@ -116,6 +125,7 @@ class UserController extends Controller
             'address' => ['sometimes', 'nullable', 'string'],
             'contact_number' => ['sometimes', 'nullable', 'string', 'regex:/^(\\+63\\d{10}|0\\d{10})$/'],
             'account_activated' => ['sometimes', 'boolean'],
+            'is_first_login' => ['sometimes', 'boolean'],
             'license_number' => ['sometimes', 'nullable', 'string'],
             'specialization' => ['sometimes', 'nullable', 'string'],
             'hire_date' => ['sometimes', 'nullable', 'date'],
@@ -130,7 +140,15 @@ class UserController extends Controller
         ]);
 
         if ($currentUser && $currentUser->role === 'patient') {
-            unset($data['role'], $data['status'], $data['account_activated'], $data['license_number'], $data['specialization'], $data['hire_date']);
+            unset(
+                $data['role'],
+                $data['status'],
+                $data['account_activated'],
+                $data['is_first_login'],
+                $data['license_number'],
+                $data['specialization'],
+                $data['hire_date']
+            );
         }
 
         if (array_key_exists('password', $data)) {
@@ -139,10 +157,9 @@ class UserController extends Controller
         }
 
         if (array_key_exists('must_change_credentials', $data)) {
-            if ($data['must_change_credentials'] === false) {
+            if ($data['must_change_credentials'] === false && $user->role !== 'patient') {
                 $user->is_first_login = false;
             }
-            unset($data['must_change_credentials']);
         }
 
         foreach (['firstname', 'middlename', 'lastname'] as $key) {
@@ -205,7 +222,8 @@ class UserController extends Controller
             'status' => 'active',
             'is_dependent' => false,
             'account_activated' => true,
-            'is_first_login' => false,
+            'is_first_login' => true,
+            'must_change_credentials' => false,
             'firstname' => $data['firstname'] ?? null,
             'lastname' => $data['lastname'] ?? null,
         ]);
@@ -249,6 +267,9 @@ class UserController extends Controller
         $data['password_hash'] = Hash::make($plainPassword);
         $data['status'] = $data['status'] ?? 'active';
         $data['is_first_login'] = true;
+        if (($data['role'] ?? null) === 'patient') {
+            $data['must_change_credentials'] = true;
+        }
 
         $user = \Illuminate\Support\Facades\DB::transaction(function () use ($data, $plainPassword, $request) {
             $user = User::create($data);
@@ -490,8 +511,12 @@ class UserController extends Controller
         }
 
         $currentUser->password_hash = Hash::make((string) $data['password']);
-        if ($currentUser->is_first_login) {
-            $currentUser->is_first_login = false;
+        if ($currentUser->role === 'patient') {
+            $currentUser->must_change_credentials = false;
+        } else {
+            if ($currentUser->is_first_login) {
+                $currentUser->is_first_login = false;
+            }
         }
         $currentUser->save();
 

@@ -42,6 +42,7 @@
             <label for="admin_verif_type_filter" class="block text-[0.7rem] text-slate-600 mb-1">Type</label>
             <select id="admin_verif_type_filter" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
                 <option value="">All</option>
+                <option value="none">None</option>
                 <option value="senior">Senior</option>
                 <option value="pwd">PWD</option>
                 <option value="pregnant">Pregnant</option>

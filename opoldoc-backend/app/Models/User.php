@@ -46,6 +46,7 @@ class User extends Authenticatable
         'account_activated',
         'relationship',
         'is_first_login',
+        'must_change_credentials',
         'password_reset_token',
         'password_reset_expires_at',
     ];
@@ -61,11 +62,13 @@ class User extends Authenticatable
         'is_dependent' => 'bool',
         'account_activated' => 'bool',
         'is_first_login' => 'bool',
+        'must_change_credentials' => 'bool',
         'password_reset_expires_at' => 'datetime',
     ];
 
     protected $appends = [
         'must_change_credentials',
+        'has_pending_verification',
         'current_role',
         'signature_url',
         'prof_path_url',
@@ -186,7 +189,30 @@ class User extends Authenticatable
 
     public function getMustChangeCredentialsAttribute(): bool
     {
+        if ($this->role !== 'patient') {
+            return (bool) $this->is_first_login;
+        }
+
+        if (array_key_exists('must_change_credentials', $this->attributes)) {
+            return (bool) $this->attributes['must_change_credentials'];
+        }
+
         return (bool) $this->is_first_login;
+    }
+
+    public function getHasPendingVerificationAttribute(): bool
+    {
+        if ($this->role !== 'patient') {
+            return false;
+        }
+
+        if (! $this->exists || ! $this->user_id) {
+            return false;
+        }
+
+        return $this->patientVerifications()
+            ->where('status', 'pending')
+            ->exists();
     }
 
     public function getCurrentRoleAttribute(): array

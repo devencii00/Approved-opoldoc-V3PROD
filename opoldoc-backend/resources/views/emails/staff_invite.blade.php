@@ -12,7 +12,10 @@
                 <div style="font-size:14px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;">
                     Opol Doctors Medical Clinic
                 </div>
-                <div style="margin-top:8px;font-size:20px;font-weight:800;color:#0f172a;">
+              <div style="margin-top:8px;font-size:20px;font-weight:800;color:#0891b2;">
+  Your Text Here
+</div>
+
                     Your account details
                 </div>
                 <div style="margin-top:6px;font-size:13px;color:#475569;">

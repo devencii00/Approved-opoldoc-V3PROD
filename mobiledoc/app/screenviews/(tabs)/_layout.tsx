@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
-import { Tabs } from 'expo-router';
+ import { Redirect, Tabs, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000/api').replace(/\/+$/, '');
@@ -75,6 +75,10 @@ const tabStyles = StyleSheet.create({
 });
 
 export default function TabsLayout() {
+  const user = (globalThis as any)?.currentUser as any | undefined;
+  const isOnboarding = Boolean((globalThis as any)?.currentUser?.is_first_login);
+  const hasPendingVerification = Boolean((globalThis as any)?.currentUser?.has_pending_verification);
+  const pathname = usePathname();
   const [chatOpen, setChatOpen] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState('');
@@ -186,6 +190,25 @@ export default function TabsLayout() {
     requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
   }, [messages, chatOpen]);
 
+  if (user?.must_change_credentials) {
+    return <Redirect href="/screenviews/aut-landing/first-login" />;
+  }
+
+  if (isOnboarding) {
+    const onboardingAllowedPaths = new Set([
+      '/screenviews/medical-bg',
+      '/screenviews/verify',
+    ]);
+
+    if (hasPendingVerification) {
+      return <Redirect href="/screenviews/aut-landing/pending-approval" />;
+    }
+
+    if (!onboardingAllowedPaths.has(pathname)) {
+      return <Redirect href="/screenviews/aut-landing/fillup-info" />;
+    }
+  }
+
   return (
     <View style={styles.root}>
       <Tabs
@@ -194,11 +217,13 @@ export default function TabsLayout() {
           tabBarActiveTintColor: '#0891b2',
           tabBarInactiveTintColor: '#94a3b8',
           tabBarShowLabel: false, 
-          tabBarStyle: {
-            backgroundColor: '#ffffff',
-            borderTopWidth: 0,
-            height: 64,
-          },
+          tabBarStyle: isOnboarding
+            ? { display: 'none' }
+            : {
+                backgroundColor: '#ffffff',
+                borderTopWidth: 0,
+                height: 64,
+              },
           tabBarItemStyle: {
             height: 64,
             paddingVertical: 0,

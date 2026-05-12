@@ -614,17 +614,6 @@ class QueueController extends Controller
             ], 422);
         }
 
-        $hasMedicalBackground = MedicalBackground::query()
-            ->where('patient_id', $targetPatientId)
-            ->exists();
-
-        if (! $hasMedicalBackground) {
-            return response()->json([
-                'message' => 'Medical background is required before joining the queue.',
-                'code' => 'MEDICAL_BACKGROUND_REQUIRED',
-            ], 428);
-        }
-
         $serviceIds = array_values(array_unique(array_map('intval', $data['service_ids'] ?? [])));
         if (! count($serviceIds)) {
             return response()->json([

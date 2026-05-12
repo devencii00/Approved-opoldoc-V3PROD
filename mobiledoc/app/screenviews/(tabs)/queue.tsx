@@ -358,7 +358,6 @@ export default function PatientQueueScreen() {
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [needsMedicalBackground, setNeedsMedicalBackground] = useState(false);
 
   const selectedServices = useMemo(
     () => services.filter((service) => selectedServiceIds.includes(service.id)),
@@ -718,7 +717,6 @@ export default function PatientQueueScreen() {
   async function handleJoinQueue() {
     setError('');
     setSuccess('');
-    setNeedsMedicalBackground(false);
 
     if (selectedServiceIds.length === 0) {
       setError('Please choose at least one service.');
@@ -757,9 +755,6 @@ export default function PatientQueueScreen() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        if (response.status === 428 || data?.code === 'MEDICAL_BACKGROUND_REQUIRED') {
-          setNeedsMedicalBackground(true);
-        }
         const message = typeof data?.message === 'string' && data.message.length > 0 ? data.message : 'Unable to join the queue.';
         setError(message);
         return;
@@ -831,14 +826,6 @@ export default function PatientQueueScreen() {
         <View style={styles.contentSurface}>
           {error ? <Text style={styles.inlineError}>{error}</Text> : null}
           {success ? <Text style={styles.inlineSuccess}>{success}</Text> : null}
-          {needsMedicalBackground ? (
-            <Pressable
-              onPress={() => router.push('/screenviews/medical-bg' as any)}
-              style={({ pressed }) => [styles.warningButton, pressed && { opacity: 0.85 }]}
-            >
-              <Text style={styles.warningButtonText}>Add medical background now</Text>
-            </Pressable>
-          ) : null}
 
           <View style={styles.infoRow}>
             <AnimatedCard delay={60} style={styles.infoCard}>

@@ -51,6 +51,7 @@ function categoryLabel(category: MedicalBackgroundCategory): string {
 
 export default function PatientMedicalBackgroundScreen() {
   const router = useRouter();
+  const isOnboarding = Boolean((globalThis as any)?.currentUser?.is_first_login);
   const [items, setItems] = useState<MedicalBackgroundItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -204,11 +205,13 @@ export default function PatientMedicalBackgroundScreen() {
                 <Text style={[styles.eyebrowText, { color: 'rgba(255,255,255,0.8)' }]}>Patient Portal</Text>
               </View>
               <Text style={styles.headerTitle}>Medical background</Text>
-              <Text style={styles.headerSub}>Add allergies and conditions before booking.</Text>
+              <Text style={styles.headerSub}>
+                {isOnboarding ? 'Step 2 of 3 · Add allergies and conditions (optional).' : 'Add allergies and conditions anytime.'}
+              </Text>
             </View>
             <Pressable
                          style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.85 }]}
-                          onPress={() => router.navigate('/screenviews/profile' as any)}
+                          onPress={() => router.navigate(isOnboarding ? '/screenviews/aut-landing/fillup-info' : '/screenviews/profile' as any)}
                        >
                          <Text style={styles.headerBtnText}>Back</Text>
                        </Pressable>
@@ -225,8 +228,8 @@ export default function PatientMedicalBackgroundScreen() {
               <View style={styles.eyebrowDot} />
               <Text style={styles.eyebrowText}>Add</Text>
             </View>
-            <Text style={styles.cardTitle}></Text>
-            <Text style={styles.cardSubtitle}>You can add multiple entries.</Text>
+            <Text style={styles.cardTitle}>Medical background</Text>
+            <Text style={styles.cardSubtitle}>You can add allergies or conditions now, or leave this blank and continue.</Text>
           </View>
 
           <View style={styles.cardBody}>
@@ -344,6 +347,15 @@ export default function PatientMedicalBackgroundScreen() {
             ))}
           </View>
         </View>
+
+        {isOnboarding ? (
+          <Pressable
+            onPress={() => router.push('/screenviews/verify' as any)}
+            style={({ pressed }) => [styles.primaryButton, pressed && { opacity: 0.85 }]}
+          >
+            <Text style={styles.primaryButtonText}>Next</Text>
+          </Pressable>
+        ) : null}
 
         {/* <Pressable
           onPress={() => router.back()}

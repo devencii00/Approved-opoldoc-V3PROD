@@ -7,7 +7,6 @@ import {
   ScrollView,
   StatusBar,
   SafeAreaView,
-  TextInput,
   ActivityIndicator,
   Animated,
   Platform,
@@ -48,7 +47,7 @@ const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:
 
 type VerificationRequest = {
   verification_id: number;
-  type: 'senior' | 'pwd' | 'pregnant';
+  type: 'none' | 'senior' | 'pwd' | 'pregnant';
   status: 'pending' | 'approved' | 'rejected';
   document_path: string | null;
   remarks: string | null;
@@ -90,13 +89,15 @@ function AnimatedCard({ children, delay = 0, style }: { children: React.ReactNod
 
 export default function PatientVerificationScreen() {
   const router = useRouter();
+  const isOnboarding = Boolean((globalThis as any)?.currentUser?.is_first_login);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [verificationType, setVerificationType] = useState<'senior' | 'pwd' | 'pregnant' | null>(null);
+  const [verificationType, setVerificationType] = useState<'none' | 'senior' | 'pwd' | 'pregnant'>('none');
   const [verificationDoc, setVerificationDoc] = useState<PickedDoc | null>(null);
   const [verificationItems, setVerificationItems] = useState<VerificationRequest[]>([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [typeMenuOpen, setTypeMenuOpen] = useState(false);
 
   const latestRejected = useMemo(() => {
     return verificationItems.find(v => v.status === 'rejected');
@@ -177,10 +178,6 @@ export default function PatientVerificationScreen() {
       setError('You already have a pending verification request.');
       return;
     }
-    if (!verificationType) {
-      setError('Please select a patient type.');
-      return;
-    }
     if (!verificationDoc) {
       setError('Please upload a document first.');
       return;
@@ -197,15 +194,21 @@ export default function PatientVerificationScreen() {
         return;
       }
 
+      const pickedDoc = verificationDoc;
+      if (!pickedDoc) {
+        setError('Please upload a document first.');
+        return;
+      }
+
       const formData = new FormData();
       formData.append('type', verificationType);
-      if (Platform.OS === 'web' && verificationDoc.file) {
-        formData.append('document', verificationDoc.file, verificationDoc.name);
+      if (Platform.OS === 'web' && pickedDoc.file) {
+        formData.append('document', pickedDoc.file, pickedDoc.name);
       } else {
         formData.append('document', {
-          uri: verificationDoc.uri,
-          name: verificationDoc.name,
-          type: verificationDoc.mimeType,
+          uri: pickedDoc.uri,
+          name: pickedDoc.name,
+          type: pickedDoc.mimeType,
         } as any);
       }
 
@@ -227,7 +230,8 @@ export default function PatientVerificationScreen() {
 
       setSuccess('Verification request submitted.');
       setVerificationDoc(null);
-      setVerificationType(null);
+      setVerificationType('none');
+      setTypeMenuOpen(false);
 
       // Refresh list
       const refreshed = await fetch(`${API_BASE_URL}/patient-verifications?per_page=10`, {
@@ -235,6 +239,16 @@ export default function PatientVerificationScreen() {
       });
       const refreshedData = await refreshed.json().catch(() => ({}));
       setVerificationItems(Array.isArray(refreshedData?.data) ? refreshedData.data : []);
+
+      const nextUser = {
+        ...(globalThis as any)?.currentUser,
+        has_pending_verification: true,
+      };
+      await persistCurrentUser(nextUser);
+
+      if (isOnboarding) {
+        router.replace('/screenviews/aut-landing/pending-approval' as any);
+      }
     } catch {
       setError('Network error. Please try again.');
     } finally {
@@ -260,11 +274,13 @@ export default function PatientVerificationScreen() {
                 <Text style={[styles.eyebrowText, { color: 'rgba(255,255,255,0.8)' }]}>Patient Portal</Text>
               </View>
               <Text style={styles.headerTitle}>Verification</Text>
-                    <Text style={styles.headerGreeting}>Review your visit history, prescriptions, and vitals.</Text>
+                    <Text style={styles.headerGreeting}>
+                      {isOnboarding ? 'Step 3 of 3 · Verify your identity and optionally request a patient type.' : 'Verify your identity or request a patient type.'}
+                    </Text>
             </View>
              <Pressable
                           style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.85 }]}
-                           onPress={() => router.navigate('/screenviews/profile' as any)}
+                           onPress={() => router.navigate(isOnboarding ? '/screenviews/medical-bg' : '/screenviews/profile' as any)}
                         >
                           <Text style={styles.headerBtnText}>Back</Text>
                         </Pressable>
@@ -297,29 +313,49 @@ export default function PatientVerificationScreen() {
               <Text style={styles.sectionTitle}>Select Patient Type</Text>
             </View>
             <View style={styles.sectionBody}>
-              <View style={styles.chipRow}>
-                {(['senior', 'pwd', 'pregnant'] as const).map((t) => (
-                  <Pressable
-                    key={t}
-                    onPress={() => setVerificationType(t)}
-                    style={({ pressed }) => [
-                      styles.chip,
-                      verificationType === t && styles.chipActive,
-                      pressed && { opacity: 0.85 },
-                    ]}
-                  >
-                    <Ionicons 
-                      name={t === 'senior' ? 'person' : t === 'pwd' ? 'body' : 'woman'} 
-                      size={18} 
-                      color={verificationType === t ? T.cyan700 : T.slate500} 
-                    />
-                    <Text style={[styles.chipText, verificationType === t && styles.chipTextActive]}>
-                      {t === 'pwd' ? 'PWD' : t === 'senior' ? 'Senior Citizen' : 'Pregnant'}
-                    </Text>
-                    {verificationType === t && <Ionicons name="checkmark-circle" size={16} color={T.cyan700} />}
-                  </Pressable>
-                ))}
-              </View>
+              <Text style={styles.fieldHint}>`None` means identity verification only. A document is still required.</Text>
+              <Pressable
+                onPress={() => setTypeMenuOpen((current) => !current)}
+                style={({ pressed }) => [
+                  styles.dropdownTrigger,
+                  typeMenuOpen && styles.dropdownTriggerActive,
+                  pressed && { opacity: 0.9 },
+                ]}
+              >
+                <Text style={styles.dropdownTriggerText}>
+                  {verificationType === 'none'
+                    ? 'None'
+                    : verificationType === 'pwd'
+                      ? 'PWD'
+                      : verificationType === 'senior'
+                        ? 'Senior'
+                        : 'Pregnant'}
+                </Text>
+                <Ionicons name={typeMenuOpen ? 'chevron-up-outline' : 'chevron-down-outline'} size={18} color={T.slate600} />
+              </Pressable>
+              {typeMenuOpen ? (
+                <View style={styles.dropdownMenu}>
+                  {(['none', 'pwd', 'pregnant', 'senior'] as const).map((t) => (
+                    <Pressable
+                      key={t}
+                      onPress={() => {
+                        setVerificationType(t);
+                        setTypeMenuOpen(false);
+                      }}
+                      style={({ pressed }) => [
+                        styles.dropdownItem,
+                        verificationType === t && styles.dropdownItemActive,
+                        pressed && { opacity: 0.9 },
+                      ]}
+                    >
+                      <Text style={[styles.dropdownItemText, verificationType === t && styles.dropdownItemTextActive]}>
+                        {t === 'none' ? 'None' : t === 'pwd' ? 'PWD' : t === 'senior' ? 'Senior' : 'Pregnant'}
+                      </Text>
+                      {verificationType === t ? <Ionicons name="checkmark-outline" size={18} color={T.cyan700} /> : null}
+                    </Pressable>
+                  ))}
+                </View>
+              ) : null}
             </View>
           </AnimatedCard>
 
@@ -328,11 +364,11 @@ export default function PatientVerificationScreen() {
               <View style={styles.sectionBadge}>
                 <Text style={styles.sectionBadgeText}>Step 2</Text>
               </View>
-              <Text style={styles.sectionTitle}></Text>
+              <Text style={styles.sectionTitle}>Upload Verification Document</Text>
             </View>
             <View style={styles.sectionBody}>
               <Text style={styles.uploadHint}>
-                Please upload a clear image or document copy of your ID or medical certificate.
+                Upload a clear ID or supporting document. This is required even when patient type is set to `None`.
               </Text>
               <Pressable
                 onPress={handlePickDoc}
@@ -342,10 +378,10 @@ export default function PatientVerificationScreen() {
                   pressed && { opacity: 0.85 }
                 ]}
               >
-                <Ionicons 
-                  name={verificationDoc ? "document-attach" : "cloud-upload-outline"} 
-                  size={32} 
-                  color={verificationDoc ? T.cyan700 : T.slate400} 
+                <Ionicons
+                  name={verificationDoc ? 'document-attach' : 'cloud-upload-outline'}
+                  size={32}
+                  color={verificationDoc ? T.cyan700 : T.slate400}
                 />
                 <Text style={[styles.uploadBoxText, verificationDoc && styles.uploadBoxTextActive]}>
                   {verificationDoc ? verificationDoc.name : 'Tap to select document'}
@@ -370,7 +406,7 @@ export default function PatientVerificationScreen() {
               ) : (
                 <>
                   <Text style={styles.submitBtnText}>
-                    {hasPendingVerification ? 'Pending verification' : 'Submit Verification'}
+                    {hasPendingVerification ? 'Pending verification' : isOnboarding ? 'Submit' : 'Submit verification'}
                   </Text>
                   <Ionicons
                     name={hasPendingVerification ? 'hourglass-outline' : 'send'}
@@ -409,7 +445,7 @@ export default function PatientVerificationScreen() {
                     </View>
                     <View style={styles.historyMain}>
                       <Text style={styles.historyTitle}>
-                        {v.type === 'pwd' ? 'PWD' : v.type === 'senior' ? 'Senior Citizen' : 'Pregnant'}
+                        {v.type === 'none' ? 'None' : v.type === 'pwd' ? 'PWD' : v.type === 'senior' ? 'Senior Citizen' : 'Pregnant'}
                       </Text>
                       <Text style={styles.historyStatus}>{v.status.toUpperCase()}</Text>
                     </View>
@@ -573,24 +609,49 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontSize: 14, fontWeight: '700', color: T.slate800 },
   sectionBody: { padding: 16 },
-  chipRow: { gap: 10 },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+  fieldHint: { fontSize: 12, color: T.slate500, marginBottom: 12, lineHeight: 18 },
+  dropdownTrigger: {
+    minHeight: 48,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: T.slate200,
     backgroundColor: T.slate50,
     paddingHorizontal: 14,
     paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
   },
-  chipActive: {
+  dropdownTriggerActive: {
     borderColor: 'rgba(6,182,212,0.3)',
     backgroundColor: 'rgba(6,182,212,0.08)',
   },
-  chipText: { fontSize: 13, fontWeight: '600', color: T.slate600, flex: 1 },
-  chipTextActive: { color: T.cyan700, fontWeight: '700' },
+  dropdownTriggerText: { fontSize: 13, fontWeight: '600', color: T.slate700, flex: 1 },
+  dropdownMenu: {
+    marginTop: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: T.slate200,
+    backgroundColor: T.white,
+    overflow: 'hidden',
+  },
+  dropdownItem: {
+    minHeight: 44,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: T.slate100,
+  },
+  dropdownItemActive: {
+    backgroundColor: 'rgba(6,182,212,0.08)',
+  },
+  dropdownItemText: { fontSize: 13, color: T.slate700, flex: 1 },
+  dropdownItemTextActive: { color: T.cyan700, fontWeight: '700' },
   uploadHint: { fontSize: 12, color: T.slate500, marginBottom: 12, lineHeight: 18 },
   uploadBox: {
     height: 140,

@@ -381,7 +381,6 @@ export default function BookingScreen() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [booking, setBooking] = useState(false);
   const [hasActiveAppointment, setHasActiveAppointment] = useState(false);
-  const [needsMedicalBackground, setNeedsMedicalBackground] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -786,7 +785,6 @@ export default function BookingScreen() {
   async function handleBookAppointment() {
     setError('');
     setSuccess('');
-    setNeedsMedicalBackground(false);
 
     if (hasActiveAppointment) {
       setError('You already have an active appointment.');
@@ -843,9 +841,6 @@ export default function BookingScreen() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        if (response.status === 428 || data?.code === 'MEDICAL_BACKGROUND_REQUIRED') {
-          setNeedsMedicalBackground(true);
-        }
         const message = typeof data?.message === 'string' && data.message.length > 0 ? data.message : 'Unable to book appointment.';
         setError(message);
         if (data?.code === 'ACTIVE_APPOINTMENT_EXISTS') {
@@ -907,14 +902,6 @@ export default function BookingScreen() {
         <View style={styles.contentSurface}>
           {error ? <Text style={styles.inlineError}>{error}</Text> : null}
           {success ? <Text style={styles.inlineSuccess}>{success}</Text> : null}
-          {needsMedicalBackground ? (
-            <Pressable
-              onPress={() => router.push('/screenviews/medical-bg' as any)}
-              style={({ pressed }) => [styles.warningButton, pressed && { opacity: 0.85 }]}
-            >
-              <Text style={styles.warningButtonText}>Add medical background now</Text>
-            </Pressable>
-          ) : null}
 
 
           <SectionCard

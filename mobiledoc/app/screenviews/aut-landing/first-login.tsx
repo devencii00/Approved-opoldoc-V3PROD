@@ -112,7 +112,11 @@ export default function FirstLoginScreen() {
       }
 
       await persistCurrentUser(data);
-      router.replace('/screenviews/(tabs)');
+      if ((data as any)?.is_first_login) {
+        router.replace('/screenviews/aut-landing/fillup-info' as any);
+        return;
+      }
+      router.replace('/screenviews/(tabs)' as any);
     } catch {
       setError('Network error. Please try again.');
     } finally {

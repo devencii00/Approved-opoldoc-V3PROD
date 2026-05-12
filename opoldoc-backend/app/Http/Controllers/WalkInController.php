@@ -109,6 +109,7 @@ class WalkInController extends Controller
                 'address' => $data['address'] ?? null,
                 'contact_number' => $data['contact_number'] ?? null,
                 'is_first_login' => true,
+                'must_change_credentials' => true,
                 'account_activated' => true,
             ]);
 

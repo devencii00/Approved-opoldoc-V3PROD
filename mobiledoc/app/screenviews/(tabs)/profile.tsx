@@ -12,13 +12,11 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-// @ts-ignore
+
 import * as DocumentPicker from 'expo-document-picker';
 import { clearPersistedAuthSession, persistCurrentUser } from '@/lib/auth-storage';
-import { Platform } from 'react-native';
 const T = {
   cyan500: '#06b6d4',
   cyan600: '#0891b2',
@@ -49,6 +47,7 @@ type ProfileUser = {
   birthdate: string | null;
   email: string | null;
   sex: string | null;
+  address: string | null;
   contact_number: string | null;
   prof_path_url: string | null;
 };
@@ -60,15 +59,10 @@ type PickedImage = {
 };
 
 type EditableProfileForm = {
-  firstname: string;
-  middlename: string;
-  lastname: string;
-  birthdate: string;
-  sex: '' | 'Male' | 'Female';
   contact_number: string;
 };
 
-type VerificationType = 'senior' | 'pwd' | 'pregnant';
+type VerificationType = 'none' | 'senior' | 'pwd' | 'pregnant';
 
 type VerificationItem = {
   verification_id: number;
@@ -80,51 +74,16 @@ function normalizeText(value: any): string {
   return typeof value === 'string' ? value.trim() : '';
 }
 
-function isValidPersonName(value: string): boolean {
-  const v = String(value || '').trim();
-  if (v === '') {
-    return true;
-  }
-
-  try {
-    return /^[\p{L}\p{M}][\p{L}\p{M}\s.'\-\u00B7]*$/u.test(v);
-  } catch {
-    return /^[A-Za-z][A-Za-z\s.'-]*$/.test(v);
-  }
-}
-
-function normalizePersonName(value: string): string {
-  let s = String(value || '').trim();
-  if (!s) return '';
-  s = s.replace(/\s+/g, ' ');
-  s = s.replace(/\s*([.'\-\u00B7])\s*/g, '$1');
-  return s;
-}
-
 function isValidPHContact11Digits(value: string): boolean {
   return /^09\d{9}$/.test(String(value || ''));
 }
 
 function formatVerificationType(value: VerificationType | ''): string {
+  if (value === 'none') return 'None';
   if (value === 'pwd') return 'PWD';
   if (value === 'senior') return 'Senior';
   if (value === 'pregnant') return 'Pregnant';
   return 'Not specified';
-}
-
-function formatDateInput(value: Date): string {
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, '0');
-  const day = String(value.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function parseDateInput(value: string): Date {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    const [year, month, day] = value.split('-').map(Number);
-    return new Date(year, (month || 1) - 1, day || 1);
-  }
-  return new Date();
 }
 
 function formatFullName(user: ProfileUser | null): string {
@@ -194,22 +153,14 @@ function mapApiUserToProfileUser(data: any): ProfileUser {
     birthdate: birthdate,
     email: data?.email != null ? String(data.email) : null,
     sex: data?.sex != null ? String(data.sex) : null,
+    address: data?.address != null ? String(data.address) : null,
     contact_number: data?.contact_number != null ? String(data.contact_number) : null,
     prof_path_url: data?.prof_path_url != null ? String(data.prof_path_url) : null,
   };
 }
 
 function buildEditableForm(user: ProfileUser | null): EditableProfileForm {
-  const normalizedSex = normalizeText(user?.sex).toLowerCase();
-  const sexValue: EditableProfileForm['sex'] =
-    normalizedSex === 'male' ? 'Male' : normalizedSex === 'female' ? 'Female' : '';
-
   return {
-    firstname: normalizeText(user?.firstname),
-    middlename: normalizeText(user?.middlename),
-    lastname: normalizeText(user?.lastname),
-    birthdate: normalizeText(user?.birthdate),
-    sex: sexValue,
     contact_number: normalizeText(user?.contact_number),
   };
 }
@@ -227,7 +178,6 @@ export default function ProfileScreen() {
   const [success, setSuccess] = useState('');
   const [form, setForm] = useState<EditableProfileForm>(buildEditableForm((globalThis as any)?.currentUser ?? null));
   const [verificationTypeLabel, setVerificationTypeLabel] = useState('Not specified');
-  const [showBirthdatePicker, setShowBirthdatePicker] = useState(false);
 
   const profileName = useMemo(() => formatFullName(user), [user]);
   const profileDobLabel = useMemo(() => {
@@ -427,33 +377,9 @@ export default function ProfileScreen() {
       return;
     }
 
-    const normalizedFirstName = normalizePersonName(form.firstname);
-    const normalizedMiddleName = normalizePersonName(form.middlename);
-    const normalizedLastName = normalizePersonName(form.lastname);
-    const trimmedBirthdate = form.birthdate.trim();
     const trimmedContact = form.contact_number.trim();
 
-    if (!normalizedFirstName || !normalizedLastName) {
-      setError('First name and last name are required.');
-      return;
-    }
-    if (
-      !isValidPersonName(normalizedFirstName) ||
-      (normalizedMiddleName !== '' && !isValidPersonName(normalizedMiddleName)) ||
-      !isValidPersonName(normalizedLastName)
-    ) {
-      setError('Name fields must contain letters only (accents allowed), plus hyphens, apostrophes, periods, and middle dots.');
-      return;
-    }
-    if (trimmedBirthdate && !/^\d{4}-\d{2}-\d{2}$/.test(trimmedBirthdate)) {
-      setError('Birthdate must use YYYY-MM-DD format.');
-      return;
-    }
-    if (form.sex !== 'Male' && form.sex !== 'Female') {
-      setError('Sex must be either Male or Female.');
-      return;
-    }
-    if (trimmedContact && !isValidPHContact11Digits(trimmedContact)) {
+    if (!trimmedContact || !isValidPHContact11Digits(trimmedContact)) {
       setError('Contact number must be 11 digits and start with 09.');
       return;
     }
@@ -470,12 +396,7 @@ export default function ProfileScreen() {
       }
 
       const payload = {
-        firstname: normalizedFirstName || null,
-        middlename: normalizedMiddleName || null,
-        lastname: normalizedLastName || null,
-        birthdate: trimmedBirthdate || null,
-        sex: form.sex.trim() || null,
-        contact_number: trimmedContact || null,
+        contact_number: trimmedContact,
       };
 
       const response = await fetch(`${API_BASE_URL}/personal-information/${user.user_id}`, {
@@ -585,7 +506,7 @@ export default function ProfileScreen() {
             </View>
             <View style={styles.cardHeaderText}>
               <Text style={styles.cardTitle}>Personal info</Text>
-              <Text style={styles.cardText}>View and update the personal details saved on your account.</Text>
+              <Text style={styles.cardText}>Personal details are locked after approval. Only contact number can be updated.</Text>
             </View>
           </View>
 
@@ -598,107 +519,29 @@ export default function ProfileScreen() {
             <>
               {editingInfo ? (
                 <View style={styles.infoList}>
-                  <View style={styles.fieldGroup}>
-                    <Text style={styles.infoLabel}>First name</Text>
-                    <TextInput
-                      value={form.firstname}
-                      onChangeText={(value) => updateForm('firstname', value)}
-                      placeholder="First name"
-                      placeholderTextColor="#9ca3af"
-                      style={styles.input}
-                    />
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Name</Text>
+                    <Text style={styles.infoValue}>{profileName}</Text>
                   </View>
-                  <View style={styles.fieldGroup}>
-                    <Text style={styles.infoLabel}>Middle name</Text>
-                    <TextInput
-                      value={form.middlename}
-                      onChangeText={(value) => updateForm('middlename', value)}
-                      placeholder="Middle name"
-                      placeholderTextColor="#9ca3af"
-                      style={styles.input}
-                    />
-                  </View>
-                  <View style={styles.fieldGroup}>
-                    <Text style={styles.infoLabel}>Last name</Text>
-                    <TextInput
-                      value={form.lastname}
-                      onChangeText={(value) => updateForm('lastname', value)}
-                      placeholder="Last name"
-                      placeholderTextColor="#9ca3af"
-                      style={styles.input}
-                    />
-                  </View>
-                  <View style={styles.fieldGroup}>
+                  <View style={styles.infoRow}>
                     <Text style={styles.infoLabel}>Date of birth</Text>
-                    {Platform.OS === 'web' ? (
-                      <View style={styles.selectInput}>
-                        {React.createElement('input', {
-                          type: 'date',
-                          value: form.birthdate || '',
-                          max: formatDateInput(new Date()),
-                          onChange: (event: any) => updateForm('birthdate', event?.target?.value ?? ''),
-                          style: {
-                            flex: 1,
-                            borderWidth: 0,
-                            outlineStyle: 'none',
-                            backgroundColor: 'transparent',
-                            fontSize: 13,
-                            color: T.slate800,
-                          },
-                        })}
-                        {/* <Ionicons name="calendar-outline" size={18} color={T.slate600} /> */}
-                      </View>
-                    ) : (
-                      <>
-                        <Pressable
-                          onPress={() => setShowBirthdatePicker(true)}
-                          style={({ pressed }) => [styles.selectInput, pressed && { opacity: 0.85 }]}
-                        >
-                          <Text style={form.birthdate ? styles.selectInputValue : styles.selectInputPlaceholder}>
-                            {form.birthdate || 'YYYY-MM-DD'}
-                          </Text>
-                          <Ionicons name="calendar-outline" size={18} color={T.slate600} />
-                        </Pressable>
-                        {showBirthdatePicker ? (
-                          <DateTimePicker
-                            value={parseDateInput(form.birthdate)}
-                            mode="date"
-                            maximumDate={new Date()}
-                            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                            onChange={(event, date) => {
-                              if (Platform.OS !== 'ios') {
-                                setShowBirthdatePicker(false);
-                              }
-                              if (event.type === 'dismissed' || !date) {
-                                return;
-                              }
-                              updateForm('birthdate', formatDateInput(date));
-                              if (Platform.OS === 'ios') {
-                                setShowBirthdatePicker(false);
-                              }
-                            }}
-                          />
-                        ) : null}
-                      </>
-                    )}
+                    <Text style={styles.infoValue}>{profileDobLabel}</Text>
                   </View>
-                  <View style={styles.fieldGroup}>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Email</Text>
+                    <Text style={styles.infoValue}>{normalizeText(user?.email) || 'Not provided'}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
                     <Text style={styles.infoLabel}>Sex</Text>
-                    <View style={styles.sexOptionsRow}>
-                      {(['Male', 'Female'] as const).map((option) => (
-                        <Pressable
-                          key={option}
-                          onPress={() => updateForm('sex', option)}
-                          style={({ pressed }) => [
-                            styles.sexOptionChip,
-                            form.sex === option && styles.sexOptionChipActive,
-                            pressed && { opacity: 0.85 },
-                          ]}
-                        >
-                          <Text style={[styles.sexOptionText, form.sex === option && styles.sexOptionTextActive]}>{option}</Text>
-                        </Pressable>
-                      ))}
-                    </View>
+                    <Text style={styles.infoValue}>{normalizeText(user?.sex) || 'Not provided'}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Address</Text>
+                    <Text style={styles.infoValue}>{normalizeText(user?.address) || 'Not provided'}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Type</Text>
+                    <Text style={styles.infoValue}>{verificationTypeLabel}</Text>
                   </View>
                   <View style={styles.fieldGroup}>
                     <Text style={styles.infoLabel}>Contact number</Text>
@@ -712,14 +555,6 @@ export default function ProfileScreen() {
                       style={styles.input}
                     />
                     <Text style={styles.helperText}>Use 11 digits in 09XXXXXXXXX format.</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Type</Text>
-                    <Text style={styles.infoValue}>{verificationTypeLabel}</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Email</Text>
-                    <Text style={styles.infoValue}>{normalizeText(user?.email) || 'Not provided'}</Text>
                   </View>
                   <View style={styles.actionRow}>
                     <Pressable
@@ -764,6 +599,10 @@ export default function ProfileScreen() {
                     <Text style={styles.infoValue}>{normalizeText(user?.sex) || 'Not provided'}</Text>
                   </View>
                   <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Address</Text>
+                    <Text style={styles.infoValue}>{normalizeText(user?.address) || 'Not provided'}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
                     <Text style={styles.infoLabel}>Contact number</Text>
                     <Text style={styles.infoValue}>{normalizeText(user?.contact_number) || 'Not provided'}</Text>
                   </View>
@@ -781,7 +620,7 @@ export default function ProfileScreen() {
                     onPress={handleStartEditing}
                     style={({ pressed }) => [styles.primaryButton, pressed && { opacity: 0.85 }]}
                   >
-                    <Text style={styles.primaryButtonText}>Edit personal info</Text>
+                    <Text style={styles.primaryButtonText}>Edit contact number</Text>
                   </Pressable>
                 </View>
               )}
@@ -810,7 +649,7 @@ export default function ProfileScreen() {
                     onPress={() => router.push('/screenviews/verify' as any)}
                     style={({ pressed }) => [styles.verifyButton, pressed && { opacity: 0.85 }]}
                   >
-                    <Text style={styles.verifyButtonText}>Verify patient type</Text>
+                    <Text style={styles.verifyButtonText}>Request patient type verification</Text>
                   </Pressable>
         </View>
 

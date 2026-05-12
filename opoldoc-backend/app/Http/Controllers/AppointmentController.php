@@ -540,20 +540,6 @@ class AppointmentController extends Controller
             }
         }
 
-        if ($data['appointment_type'] === 'scheduled' && $isPatient) {
-            $patientId = (int) ($data['patient_id'] ?? 0);
-            $hasMedicalBackground = $patientId > 0
-                ? MedicalBackground::query()->where('patient_id', $patientId)->exists()
-                : false;
-
-            if (! $hasMedicalBackground) {
-                return response()->json([
-                    'message' => 'Medical background is required before booking an appointment.',
-                    'code' => 'MEDICAL_BACKGROUND_REQUIRED',
-                ], 428);
-            }
-        }
-
         $data['created_by'] = $request->user()->user_id ?? null;
 
         if ($isReceptionist) {

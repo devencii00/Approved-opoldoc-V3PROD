@@ -47,7 +47,7 @@ class PatientVerificationController extends Controller
 
         $data = $request->validate([
             'patient_id' => [$isPatient ? 'sometimes' : 'required', 'exists:users,user_id'],
-            'type' => ['required', 'in:senior,pwd,pregnant'],
+            'type' => ['required', 'in:none,senior,pwd,pregnant'],
             'status' => ['nullable', 'in:pending,approved,rejected'],
             'document' => ['nullable', 'file', 'max:10240', 'mimes:jpg,jpeg,png,pdf,doc,docx'],
             'document_path' => ['nullable', 'string'],
@@ -66,13 +66,18 @@ class PatientVerificationController extends Controller
 
         $pendingExists = PatientVerification::query()
             ->where('patient_id', $data['patient_id'])
-            ->where('type', $data['type'])
             ->where('status', 'pending')
             ->exists();
 
         if ($pendingExists) {
             return response()->json([
-                'message' => 'A pending verification request of this type already exists.',
+                'message' => 'A pending verification request already exists for this patient.',
+            ], 422);
+        }
+
+        if ($isPatient && ! $request->hasFile('document')) {
+            return response()->json([
+                'message' => 'Verification document is required.',
             ], 422);
         }
 
@@ -140,6 +145,14 @@ class PatientVerificationController extends Controller
                 ]),
                 'created_at' => now(),
             ]);
+        }
+
+        if (array_key_exists('status', $data)) {
+            $patient = $patientVerification->patient;
+            if ($patient && $patient->role === 'patient' && $data['status'] === 'approved' && $patient->is_first_login) {
+                $patient->is_first_login = false;
+                $patient->save();
+            }
         }
 
         return $patientVerification->refresh()->load(['patient', 'verifier']);

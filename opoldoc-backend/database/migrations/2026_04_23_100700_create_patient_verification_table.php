@@ -23,10 +23,9 @@ return new class extends Migration
          
             $table->enum('type', ['senior', 'pwd', 'pregnant'])->nullable();
 
-          
-            $table->enum('status', ['pending', 'approved', 'rejected'])
-                ->default('pending');
-
+         $table->enum('status', ['pending', 'approved', 'rejected'])
+      ->default('pending')
+      ->nullable();
             
             $table->string('document_path')->nullable();
           

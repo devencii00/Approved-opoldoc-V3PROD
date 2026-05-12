@@ -67,6 +67,42 @@ export default function CreateAccountScreen() {
     ).start();
   }, []);
 
+  async function resolvePatientRoute(token: string, user: any) {
+    if (user?.must_change_credentials) {
+      router.replace('/screenviews/aut-landing/first-login' as any);
+      return;
+    }
+
+    if (user?.is_first_login) {
+      let hasPendingVerification = false;
+      try {
+        const verificationResponse = await fetch(`${API_BASE_URL}/patient-verifications?status=pending&per_page=1`, {
+          headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+        });
+        const verificationData = await verificationResponse.json().catch(() => ({}));
+        const verificationItems = Array.isArray((verificationData as any)?.data)
+          ? (verificationData as any).data
+          : Array.isArray(verificationData)
+            ? verificationData
+            : [];
+        hasPendingVerification = verificationResponse.ok && verificationItems.length > 0;
+      } catch {
+        hasPendingVerification = false;
+      }
+
+      await persistAuthSession(token, { ...user, has_pending_verification: hasPendingVerification });
+      router.replace(
+        hasPendingVerification
+          ? '/screenviews/aut-landing/pending-approval'
+          : '/screenviews/aut-landing/fillup-info'
+      );
+      return;
+    }
+
+    await persistAuthSession(token, { ...user, has_pending_verification: false });
+    router.replace('/screenviews/(tabs)' as any);
+  }
+
   async function handleRegister() {
     const normalizedEmail = String(email || '').trim().toLowerCase();
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -158,12 +194,7 @@ export default function CreateAccountScreen() {
       await new Promise((resolve) => setTimeout(resolve, 900));
 
   
-      if (loginData?.user?.is_first_login) {
-        router.replace('/screenviews/aut-landing/first-login' as any);
-        return;
-      }
-
-      router.replace('/screenviews/(tabs)');
+      await resolvePatientRoute(String(loginData?.token ?? ''), loginData?.user ?? null);
     } catch {
       setError('Network error. Please try again.');
     } finally {
