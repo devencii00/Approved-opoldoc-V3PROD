@@ -15,6 +15,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { persistAuthSession } from '@/lib/auth-storage';
 
 const { height } = Dimensions.get('window');
@@ -27,6 +28,7 @@ export default function LoginScreen() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -221,14 +223,23 @@ export default function LoginScreen() {
             style={styles.input}
           />
 
-          <TextInput
-            placeholder="Password"
-            placeholderTextColor="rgba(255,255,255,0.5)"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-            style={styles.input}
-          />
+          <View style={styles.inputWrap}>
+            <TextInput
+              placeholder="Password"
+              placeholderTextColor="rgba(255,255,255,0.5)"
+              secureTextEntry={!showPassword}
+              value={password}
+              onChangeText={setPassword}
+              style={styles.inputField}
+            />
+            <Pressable
+              onPress={() => setShowPassword((value) => !value)}
+              style={styles.inputToggle}
+              hitSlop={8}
+            >
+              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="rgba(255,255,255,0.78)" />
+            </Pressable>
+          </View>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
         </Animated.View>
@@ -370,6 +381,26 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.12)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.25)',
+  },
+  inputWrap: {
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  inputField: {
+    borderRadius: 14,
+    padding: 14,
+    paddingRight: 48,
+    color: '#fff',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  inputToggle: {
+    position: 'absolute',
+    right: 14,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   error: {
     color: '#fecaca',
