@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
+use App\Models\Notification;
 use App\Models\Queue;
 use App\Models\Service;
 use App\Models\User;
@@ -177,6 +178,12 @@ class WalkInController extends Controller
                 'queue' => $queue ? $queue->load(['appointment.patient', 'appointment.doctor']) : null,
             ];
         });
+
+        if ($createQueue) {
+            Notification::notifyReceptionists('[Walk-in Registered] A new patient was registered.', 'appointment');
+        } else {
+            Notification::notifyReceptionists('A guest patient submitted a queue request.', 'appointment');
+        }
 
         return response()->json($result, 201);
     }

@@ -7,6 +7,7 @@ use App\Models\Conversation;
 use App\Models\DoctorSchedule;
 use App\Models\MedicalBackground;
 use App\Models\Message;
+use App\Models\Notification;
 use App\Models\Queue;
 use App\Models\Service;
 use App\Models\Transaction;
@@ -942,24 +943,31 @@ class QueueController extends Controller
             $conversation = Conversation::ensureForPatient((int) $appointment->patient_id);
 
             $messageText = null;
+            $notificationTitle = 'Queue Update';
+            $notificationBody = null;
             if ($statusChanged) {
                 if ($queue->status === 'waiting') {
-                    $messageText = 'Queue update: You are now waiting in the queue.';
+                    $notificationBody = 'You are now waiting in the queue.';
                 } elseif ($queue->status === 'serving') {
-                    $messageText = 'Queue update: You are now being served.';
+                    $notificationBody = 'You are next in queue.';
                 } elseif ($queue->status === 'consulted') {
-                    $messageText = 'Queue update: Your consultation is done and payment is pending.';
+                    $notificationBody = 'Your consultation is done and payment is pending.';
                 } elseif ($queue->status === 'done') {
-                    $messageText = 'Queue update: Your queue entry is marked as done.';
+                    $notificationBody = 'Your queue entry is marked as done.';
                 } elseif ($queue->status === 'cancelled') {
-                    $messageText = 'Queue update: Your queue entry was cancelled.';
+                    $notificationBody = 'Your queue entry was cancelled.';
                 } elseif ($queue->status === 'no_show') {
-                    $messageText = 'Queue update: You have been marked as no-show.';
+                    $notificationTitle = 'Queue Missed';
+                    $notificationBody = 'You missed your queue number.';
                 }
             }
 
-            if (! $messageText && $queueNumberChanged) {
-                $messageText = 'Queue update: Your queue number is now '.$queue->queue_number.'.';
+            if (! $notificationBody && $queueNumberChanged) {
+                $notificationBody = 'Your queue number is now '.$queue->queue_number.'.';
+            }
+
+            if ($notificationBody) {
+                $messageText = 'Queue update: '.$notificationBody;
             }
 
             if ($messageText) {
@@ -968,6 +976,12 @@ class QueueController extends Controller
                     'sender' => 'bot',
                     'message_text' => $messageText,
                 ]);
+
+                Notification::notifyUsers(
+                    [(int) $appointment->patient_id],
+                    '['.$notificationTitle.'] '.$notificationBody,
+                    'appointment'
+                );
             }
         }
 

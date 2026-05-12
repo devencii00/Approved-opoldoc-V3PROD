@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\LogEntry;
+use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -91,6 +92,10 @@ class AuthController extends Controller
                 RateLimiter::hit($slowKey, 5);
             }
 
+            if ($after === 3) {
+                Notification::notifyAdmins('[Failed Login Attempts] Multiple failed login attempts detected.');
+            }
+
             LogEntry::write(
                 $user ? (int) $user->user_id : null,
                 'auth_login_attempt',
@@ -115,6 +120,10 @@ class AuthController extends Controller
             $after2 = RateLimiter::attempts($rateKey);
             if ($after2 >= 3 && $after2 < 9) {
                 RateLimiter::hit($slowKey, 5);
+            }
+
+            if ($after2 === 3) {
+                Notification::notifyAdmins('[Failed Login Attempts] Multiple failed login attempts detected.');
             }
 
             LogEntry::write(

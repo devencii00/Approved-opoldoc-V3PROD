@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Conversation;
 use App\Models\Message;
+use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Http\Request;
 
@@ -134,6 +135,10 @@ class MessagingController extends Controller
             'sender' => $sender,
             'message_text' => $data['message_text'],
         ]);
+
+        if ($currentUser->role === 'patient') {
+            Notification::notifyReceptionists('A patient has sent a message.', 'system');
+        }
 
         return response()->json($message, 201);
     }

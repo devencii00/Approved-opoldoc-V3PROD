@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Appointment;
 use App\Models\LogEntry;
+use App\Models\Notification;
 use App\Models\Queue;
 use App\Models\Transaction;
 use Carbon\Carbon;
@@ -200,6 +201,7 @@ class TransactionController extends Controller
 
         $transaction = Transaction::where('appointment_id', $data['appointment_id'])->first();
         if ($transaction) {
+            $originalPaymentStatus = (string) ($transaction->payment_status ?? '');
             $updateData = $data;
             unset($updateData['appointment_id']);
             if ($receiptPath) {
@@ -211,6 +213,8 @@ class TransactionController extends Controller
             $transaction->update($updateData);
             $this->markLinkedAppointmentConsulted((int) $transaction->appointment_id, $updateData);
             $this->markLinkedAppointmentCompleted((int) $transaction->appointment_id);
+            $this->notifyReceptionistsForPaymentStatus($originalPaymentStatus, (string) ($transaction->payment_status ?? ''));
+            $this->notifyPatientForPaymentStatus($transaction, $originalPaymentStatus, (string) ($transaction->payment_status ?? ''));
 
             LogEntry::write(
                 optional($request->user())->user_id ? (int) $request->user()->user_id : null,
@@ -233,6 +237,8 @@ class TransactionController extends Controller
         $transaction = Transaction::create($data);
         $this->markLinkedAppointmentConsulted((int) $transaction->appointment_id, $data);
         $this->markLinkedAppointmentCompleted((int) $transaction->appointment_id);
+        $this->notifyReceptionistsForPaymentStatus(null, (string) ($transaction->payment_status ?? ''));
+        $this->notifyPatientForPaymentStatus($transaction, null, (string) ($transaction->payment_status ?? ''));
 
         LogEntry::write(
             optional($request->user())->user_id ? (int) $request->user()->user_id : null,
@@ -309,9 +315,13 @@ class TransactionController extends Controller
         }
         unset($data['receipt']);
 
+        $originalPaymentStatus = (string) ($transaction->payment_status ?? '');
+
         $transaction->update($data);
         $this->markLinkedAppointmentConsulted((int) $transaction->appointment_id, $data);
         $this->markLinkedAppointmentCompleted((int) $transaction->appointment_id);
+        $this->notifyReceptionistsForPaymentStatus($originalPaymentStatus, (string) ($transaction->payment_status ?? ''));
+        $this->notifyPatientForPaymentStatus($transaction, $originalPaymentStatus, (string) ($transaction->payment_status ?? ''));
 
         LogEntry::write(
             optional($request->user())->user_id ? (int) $request->user()->user_id : null,
@@ -363,6 +373,45 @@ class TransactionController extends Controller
         } while (Transaction::query()->where('reference_number', $reference)->exists());
 
         return $reference;
+    }
+
+    private function notifyReceptionistsForPaymentStatus(?string $before, ?string $after): void
+    {
+        $previous = strtolower(trim((string) $before));
+        $current = strtolower(trim((string) $after));
+
+        if ($current === '' || $current === $previous) {
+            return;
+        }
+
+        $message = match ($current) {
+            'pending' => '[Payment Pending] A transaction is awaiting payment.',
+            'paid' => '[Payment Completed] A payment was successfully completed.',
+            'failed' => '[Payment Failed] A payment transaction failed.',
+            default => null,
+        };
+
+        if ($message !== null) {
+            Notification::notifyReceptionists($message, 'payment');
+        }
+    }
+
+    private function notifyPatientForPaymentStatus(Transaction $transaction, ?string $before, ?string $after): void
+    {
+        $previous = strtolower(trim((string) $before));
+        $current = strtolower(trim((string) $after));
+
+        if ($current === '' || $current === $previous || $current !== 'paid') {
+            return;
+        }
+
+        $transaction->loadMissing('appointment');
+        $patientId = (int) ($transaction->appointment?->patient_id ?? 0);
+        if ($patientId < 1) {
+            return;
+        }
+
+        Notification::notifyUsers([$patientId], '[Payment Received] Your payment was completed.', 'payment');
     }
 
     private function markLinkedAppointmentCompleted(int $appointmentId): void

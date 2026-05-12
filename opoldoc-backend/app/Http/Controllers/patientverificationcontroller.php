@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\LogEntry;
+use App\Models\Notification;
 use App\Models\PatientVerification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -93,6 +94,11 @@ class PatientVerificationController extends Controller
 
         $verification = PatientVerification::create($data);
 
+        if ($isPatient) {
+            Notification::notifyAdmins('[New Verification] A patient submitted a verification request.');
+            Notification::notifyReceptionists('A patient submitted a verification request.', 'system');
+        }
+
         return response()->json($verification->load(['patient', 'verifier']), 201);
     }
 
@@ -154,6 +160,8 @@ class PatientVerificationController extends Controller
                 $patient->save();
             }
         }
+
+        $this->notifyPatientForVerificationStatus($patientVerification, $originalStatus, (string) ($patientVerification->status ?? ''));
 
         return $patientVerification->refresh()->load(['patient', 'verifier']);
     }
@@ -247,5 +255,26 @@ class PatientVerificationController extends Controller
         }
 
         return response()->file(Storage::disk('public')->path($normalized));
+    }
+
+    private function notifyPatientForVerificationStatus(PatientVerification $patientVerification, ?string $before, ?string $after): void
+    {
+        $previous = strtolower(trim((string) $before));
+        $current = strtolower(trim((string) $after));
+        $patientId = (int) ($patientVerification->patient_id ?? 0);
+
+        if ($patientId < 1 || $current === '' || $current === $previous) {
+            return;
+        }
+
+        $message = match ($current) {
+            'approved' => '[Verification Approved] Your verification request was approved.',
+            'rejected' => '[Verification Rejected] Your verification request was rejected.',
+            default => null,
+        };
+
+        if ($message !== null) {
+            Notification::notifyUsers([$patientId], $message, 'system');
+        }
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Mail\StaffInviteMail;
 use App\Models\LogEntry;
+use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -343,6 +344,8 @@ class PatientController extends Controller
             'password' => ['required', 'string', 'min:8'],
         ]);
 
+        $wasActivated = (bool) $dependent->account_activated;
+
         $dependent->update([
             'email' => $data['email'],
             'password_hash' => Hash::make($data['password']),
@@ -351,6 +354,10 @@ class PatientController extends Controller
             'is_first_login' => true,
             'must_change_credentials' => true,
         ]);
+
+        if (! $wasActivated && (bool) $dependent->account_activated) {
+            Notification::notifyAdmins('[Account Activated] A user activated their account.');
+        }
 
         return $dependent->refresh();
     }

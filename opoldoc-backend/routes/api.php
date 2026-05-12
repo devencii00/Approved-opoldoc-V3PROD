@@ -26,6 +26,8 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [UserController::class, 'register']);
 Route::post('/password/forgot', [AuthController::class, 'requestPasswordReset']);
 Route::post('/password/reset', [AuthController::class, 'resetPassword']);
+Route::get('/chatbot/config', [ChatbotController::class, 'config']);
+Route::get('/chatbot/options', [ChatbotController::class, 'options']);
 
 Route::post('/public/guest-walk-in/{token}', [PublicGuestWalkInController::class, 'submit']);
 Route::get('/public/guest-walk-in/{token}/check', [PublicGuestWalkInController::class, 'checkDuplicates']);
@@ -95,8 +97,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/conversations/{conversation}/messages', [MessagingController::class, 'messages']);
     Route::post('/conversations/{conversation}/messages', [MessagingController::class, 'send']);
 
-    Route::get('/chatbot/config', [ChatbotController::class, 'config']);
-    Route::get('/chatbot/options', [ChatbotController::class, 'options']);
     Route::post('/chatbot/options', [ChatbotController::class, 'storeOption']);
     Route::put('/chatbot/options/{chatbotOption}', [ChatbotController::class, 'updateOption']);
     Route::delete('/chatbot/options/{chatbotOption}', [ChatbotController::class, 'destroyOption']);

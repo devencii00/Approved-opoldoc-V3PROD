@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Mail\StaffInviteMail;
 use App\Models\LogEntry;
+use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -70,6 +71,12 @@ class UserController extends Controller
                 'role' => $user->role,
             ]
         );
+
+        if ($user->role === 'doctor') {
+            Notification::notifyAdmins('[Doctor Added] A new doctor account was created.');
+        } elseif ($user->role === 'receptionist') {
+            Notification::notifyAdmins('[Receptionist Added] A new receptionist account was created.');
+        }
 
         return response()->json($user, 201);
     }
@@ -151,6 +158,8 @@ class UserController extends Controller
             );
         }
 
+        $originalAccountActivated = (bool) $user->account_activated;
+
         if (array_key_exists('password', $data)) {
             $data['password_hash'] = Hash::make($data['password']);
             unset($data['password']);
@@ -181,6 +190,10 @@ class UserController extends Controller
                 'fields' => array_keys($data),
             ]
         );
+
+        if (! $originalAccountActivated && (bool) $user->account_activated) {
+            Notification::notifyAdmins('[Account Activated] A user activated their account.');
+        }
 
         return $user->refresh();
     }
@@ -285,6 +298,12 @@ class UserController extends Controller
                     'role' => $user->role,
                 ]
             );
+
+            if ($user->role === 'doctor') {
+                Notification::notifyAdmins('[Doctor Added] A new doctor account was created.');
+            } elseif ($user->role === 'receptionist') {
+                Notification::notifyAdmins('[Receptionist Added] A new receptionist account was created.');
+            }
 
             return $user;
         });
@@ -521,6 +540,10 @@ class UserController extends Controller
         $currentUser->save();
 
         $store->forget($tokenKey);
+
+        if ($currentUser->role === 'patient') {
+            Notification::notifyUsers([(int) $currentUser->user_id], '[Password Changed] Your account password was updated.', 'system');
+        }
 
         LogEntry::write(
             (int) $currentUser->user_id,

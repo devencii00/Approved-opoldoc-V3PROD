@@ -18,18 +18,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-
 const { width, height } = Dimensions.get('window');
-const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000/api').replace(/\/+$/, '');
-
-type ChatbotOption = {
-  id: number;
-  parent_id: number | null;
-  button_text: string;
-  response_text: string;
-  is_starting_option: boolean;
-  sort_order: number;
-};
+import {
+  fetchChatbotConfig,
+  getChildChatbotOptions,
+  type ChatbotOption,
+} from '../../../lib/chatbot';
 
 type ChatMessage = {
   id: string;
@@ -61,19 +55,9 @@ export default function HomeLanding() {
   const [freeText, setFreeText] = useState('');
   const scrollRef = useRef<ScrollView | null>(null);
 
-  const startingOptions = useMemo(() => {
-    return [...options]
-      .filter((o) => o.parent_id == null && !!o.is_starting_option)
-      .sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0));
-  }, [options]);
-
   const currentOptions = useMemo(() => {
-    if (currentParentId == null) return startingOptions;
-    const children = options
-      .filter((o) => Number(o.parent_id ?? 0) === Number(currentParentId))
-      .sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0));
-    return children.length > 0 ? children : startingOptions;
-  }, [currentParentId, options, startingOptions]);
+    return getChildChatbotOptions(options, currentParentId);
+  }, [currentParentId, options]);
 
   function resetChat(nextGreeting?: string) {
     const greet = typeof nextGreeting === 'string' && nextGreeting.trim() ? nextGreeting.trim() : greeting;
@@ -83,37 +67,17 @@ export default function HomeLanding() {
 
   async function ensureChatLoaded() {
     if (options.length > 0) return;
-    const token = (globalThis as any)?.apiToken as string | undefined;
-    if (!token) {
-      setChatError('Please log in again.');
-      setOptions([]);
-      setMessages([{ id: 'bot-auth', from: 'bot', text: 'Please log in to use the chatbot.' }]);
-      setCurrentParentId(null);
-      return;
-    }
-
     setChatLoading(true);
     setChatError('');
     try {
-      const res = await fetch(`${API_BASE_URL}/chatbot/config`, {
-        headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json().catch(() => (null));
-      if (!res.ok) {
-        const msg = typeof (data as any)?.message === 'string' ? (data as any).message : 'Unable to load chatbot.';
-        setChatError(msg);
-        setMessages([{ id: 'bot-load-fail', from: 'bot', text: msg }]);
-        setCurrentParentId(null);
-        return;
-      }
-      const greet = typeof (data as any)?.greeting === 'string' ? String((data as any).greeting) : 'How can I help you today?';
-      const list: ChatbotOption[] = Array.isArray((data as any)?.options) ? ((data as any).options as ChatbotOption[]) : [];
-      setGreeting(greet);
-      setOptions(list);
-      resetChat(greet);
-    } catch {
-      setChatError('Network error. Please try again.');
-      setMessages([{ id: 'bot-net', from: 'bot', text: 'Network error. Please try again.' }]);
+      const config = await fetchChatbotConfig();
+      setGreeting(config.greeting);
+      setOptions(config.options);
+      resetChat(config.greeting);
+    } catch (err) {
+      const msg = err instanceof Error && err.message ? err.message : 'Network error. Please try again.';
+      setChatError(msg);
+      setMessages([{ id: 'bot-load-fail', from: 'bot', text: msg }]);
       setCurrentParentId(null);
     } finally {
       setChatLoading(false);

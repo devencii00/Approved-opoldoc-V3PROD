@@ -4,22 +4,11 @@ import {
 } from 'react-native';
  import { Redirect, Tabs, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-
-const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000/api').replace(/\/+$/, '');
-
-type ChatbotOption = {
-  option_id: number;
-  question_id: number;
-  option_text: string;
-  response_text: string | null;
-  next_question_id: number | null;
-};
-
-type ChatbotQuestion = {
-  question_id: number;
-  question_text: string;
-  options?: ChatbotOption[];
-};
+import {
+  fetchChatbotConfig,
+  getChildChatbotOptions,
+  type ChatbotOption,
+} from '@/lib/chatbot';
 
 type ChatMessage = {
   id: string;
@@ -82,91 +71,54 @@ export default function TabsLayout() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState('');
-  const [questions, setQuestions] = useState<ChatbotQuestion[]>([]);
-  const [currentQuestionId, setCurrentQuestionId] = useState<number | null>(null);
+  const [greeting, setGreeting] = useState('How can I help you today?');
+  const [options, setOptions] = useState<ChatbotOption[]>([]);
+  const [currentParentId, setCurrentParentId] = useState<number | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [freeText, setFreeText] = useState('');
   const scrollRef = useRef<ScrollView | null>(null);
 
-  const questionsById = useMemo(() => {
-    const map = new Map<number, ChatbotQuestion>();
-    for (const q of questions) map.set(Number(q.question_id), q);
-    return map;
-  }, [questions]);
+  const currentOptions = useMemo(
+    () => getChildChatbotOptions(options, currentParentId),
+    [options, currentParentId]
+  );
 
-  const currentQuestion = useMemo(() => {
-    if (currentQuestionId == null) return null;
-    return questionsById.get(currentQuestionId) ?? null;
-  }, [currentQuestionId, questionsById]);
-
-  function resetChat(nextQuestions?: ChatbotQuestion[]) {
-    const source = nextQuestions ?? questions;
-    const first = [...source].sort((a, b) => Number(a.question_id) - Number(b.question_id))[0] ?? null;
-    if (!first) {
-      setMessages([{ id: 'bot-empty', from: 'bot', text: 'No chatbot questions configured yet.' }]);
-      setCurrentQuestionId(null);
-      return;
-    }
-    setMessages([{ id: `bot-q-${first.question_id}`, from: 'bot', text: String(first.question_text ?? '') }]);
-    setCurrentQuestionId(Number(first.question_id));
+  function resetChat(nextGreeting?: string) {
+    const greet = typeof nextGreeting === 'string' && nextGreeting.trim() ? nextGreeting.trim() : greeting;
+    setMessages([{ id: `bot-greet-${Date.now()}`, from: 'bot', text: greet }]);
+    setCurrentParentId(null);
   }
 
   async function ensureChatLoaded() {
-    if (questions.length > 0) return;
-    const token = (globalThis as any)?.apiToken as string | undefined;
-    if (!token) {
-      setChatError('Please log in again.');
-      setMessages([{ id: 'bot-auth', from: 'bot', text: 'Please log in to use the chatbot.' }]);
-      setCurrentQuestionId(null);
-      return;
-    }
+    if (options.length > 0) return;
     setChatLoading(true);
     setChatError('');
     try {
-      const res = await fetch(`${API_BASE_URL}/chatbot/questions`, {
-        headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json().catch(() => ([]));
-      if (!res.ok) {
-        const msg = typeof (data as any)?.message === 'string' ? (data as any).message : 'Unable to load chatbot.';
-        setChatError(msg);
-        setMessages([{ id: 'bot-load-fail', from: 'bot', text: msg }]);
-        setCurrentQuestionId(null);
-        return;
-      }
-      const list: ChatbotQuestion[] = Array.isArray(data)
-        ? data
-        : Array.isArray((data as any)?.data) ? (data as any).data : [];
-      setQuestions(list);
-      resetChat(list);
-    } catch {
-      setChatError('Network error. Please try again.');
-      setMessages([{ id: 'bot-net', from: 'bot', text: 'Network error. Please try again.' }]);
-      setCurrentQuestionId(null);
+      const config = await fetchChatbotConfig();
+      setGreeting(config.greeting);
+      setOptions(config.options);
+      resetChat(config.greeting);
+    } catch (err) {
+      const msg = err instanceof Error && err.message ? err.message : 'Network error. Please try again.';
+      setChatError(msg);
+      setMessages([{ id: 'bot-load-fail', from: 'bot', text: msg }]);
+      setCurrentParentId(null);
     } finally {
       setChatLoading(false);
     }
   }
 
   function pickOption(option: ChatbotOption) {
-    const optionText = String(option.option_text ?? '').trim();
+    const optionText = String(option.button_text ?? '').trim();
     const responseText = String(option.response_text ?? '').trim();
     setMessages((prev) => [
       ...prev,
-      { id: `user-${option.option_id}-${Date.now()}`, from: 'user' as const, text: optionText || 'Selected option' },
-      ...(responseText ? [{ id: `bot-r-${option.option_id}-${Date.now()}`, from: 'bot' as const, text: responseText }] : []),
+      { id: `user-${option.id}-${Date.now()}`, from: 'user' as const, text: optionText || 'Selected option' },
+      ...(responseText ? [{ id: `bot-r-${option.id}-${Date.now()}`, from: 'bot' as const, text: responseText }] : []),
     ]);
-    const nextId = option.next_question_id != null ? Number(option.next_question_id) : null;
-    if (nextId != null && questionsById.has(nextId)) {
-      const nextQ = questionsById.get(nextId)!;
-      setMessages((prev) => [
-        ...prev,
-        { id: `bot-q-${nextId}-${Date.now()}`, from: 'bot', text: String(nextQ.question_text ?? '') },
-      ]);
-      setCurrentQuestionId(nextId);
-      return;
-    }
-    setCurrentQuestionId(null);
+
+    const hasChildren = options.some((item) => Number(item.parent_id ?? 0) === Number(option.id));
+    setCurrentParentId(hasChildren ? Number(option.id) : null);
   }
 
   function sendFreeText() {
@@ -277,6 +229,7 @@ export default function TabsLayout() {
 
         {/* Hidden screens */}
         <Tabs.Screen name="appointments" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+        <Tabs.Screen name="notifications" options={{ href: null, tabBarStyle: { display: 'none' } }} />
         <Tabs.Screen name="queue"        options={{ href: null, tabBarStyle: { display: 'none' } }} />
         <Tabs.Screen name="visits"       options={{ href: null , tabBarStyle: { display: 'none' } }} />
         <Tabs.Screen name="prescriptions" options={{ href: null , tabBarStyle: { display: 'none' } }} />
@@ -337,15 +290,15 @@ export default function TabsLayout() {
                   </ScrollView>
 
                   <View style={styles.optionsWrap}>
-                    {currentQuestion && Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0 ? (
+                    {currentOptions.length > 0 ? (
                       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionRow}>
-                        {currentQuestion.options.map((o) => (
+                        {currentOptions.map((o) => (
                           <Pressable
-                            key={o.option_id}
+                            key={o.id}
                             onPress={() => pickOption(o)}
                             style={({ pressed }) => [styles.optionChip, pressed && { opacity: 0.85 }]}
                           >
-                            <Text style={styles.optionChipText}>{String(o.option_text ?? '')}</Text>
+                            <Text style={styles.optionChipText}>{String(o.button_text ?? '')}</Text>
                           </Pressable>
                         ))}
                       </ScrollView>

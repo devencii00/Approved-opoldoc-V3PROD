@@ -8,6 +8,7 @@ use App\Models\DoctorSchedule;
 use App\Models\LogEntry;
 use App\Models\MedicalBackground;
 use App\Models\Message;
+use App\Models\Notification;
 use App\Models\Queue;
 use App\Models\Service;
 use App\Models\Transaction;
@@ -560,6 +561,20 @@ class AppointmentController extends Controller
             return $appointment;
         });
 
+        $appointment->load(['patient', 'doctor', 'services']);
+
+        if ((string) $appointment->appointment_type === 'scheduled' && $appointment->appointment_datetime) {
+            $this->notifyDoctorNewAppointment($appointment);
+        }
+
+        if ($isPatient && (string) $appointment->appointment_type === 'scheduled' && $appointment->appointment_datetime) {
+            Notification::notifyReceptionists('[Appointment Booked] A patient booked an appointment.', 'appointment');
+        }
+
+        if ($isReceptionist && (string) $appointment->appointment_type === 'walk_in') {
+            Notification::notifyReceptionists('[Walk-in Registered] A walk-in patient was registered.', 'appointment');
+        }
+
         LogEntry::write(
             optional($request->user())->user_id ? (int) $request->user()->user_id : null,
             'appointment_created',
@@ -572,7 +587,7 @@ class AppointmentController extends Controller
             ]
         );
 
-        return response()->json($appointment->load(['patient', 'doctor', 'services']), 201);
+        return response()->json($appointment, 201);
     }
 
     public function show(Appointment $appointment)
@@ -595,6 +610,7 @@ class AppointmentController extends Controller
         }
 
         $previousDoctorId = (int) $appointment->doctor_id;
+        $previousStatus = (string) ($appointment->status ?? '');
 
         $data = $request->validate([
             'patient_id' => ['sometimes', 'exists:users,user_id'],
@@ -721,6 +737,7 @@ class AppointmentController extends Controller
         });
 
         $appointment->refresh();
+        $this->notifyPatientForAppointmentStatusChange($appointment, $previousStatus, (string) ($appointment->status ?? ''));
 
         $doctorChanged = array_key_exists('doctor_id', $data) && (int) $appointment->doctor_id !== $previousDoctorId;
         if ($doctorChanged) {
@@ -759,6 +776,45 @@ class AppointmentController extends Controller
     {
         $payload = Cache::store('file')->get('doctor_availability:'.$doctorId);
         return is_array($payload) && ($payload['is_available'] ?? null) === false;
+    }
+
+    private function notifyPatientForAppointmentStatusChange(Appointment $appointment, ?string $before, ?string $after): void
+    {
+        $previous = strtolower(trim((string) $before));
+        $current = strtolower(trim((string) $after));
+        $patientId = (int) ($appointment->patient_id ?? 0);
+
+        if ($patientId < 1 || $current === '' || $current === $previous) {
+            return;
+        }
+
+        $message = match ($current) {
+            'confirmed' => '[Appointment Approved] Your appointment was approved.',
+            'cancelled' => '[Appointment Rejected] Your appointment was rejected.',
+            default => null,
+        };
+
+        if ($message !== null) {
+            Notification::notifyUsers([$patientId], $message, 'appointment');
+        }
+    }
+
+    private function notifyDoctorNewAppointment(Appointment $appointment): void
+    {
+        $doctorId = (int) ($appointment->doctor_id ?? 0);
+        if ($doctorId < 1 || ! $appointment->appointment_datetime) {
+            return;
+        }
+
+        $scheduledAt = $appointment->appointment_datetime instanceof Carbon
+            ? $appointment->appointment_datetime
+            : Carbon::parse((string) $appointment->appointment_datetime);
+
+        Notification::notifyUsers(
+            [$doctorId],
+            '[New Appointment] You have a new appointment on '.$scheduledAt->format('F j \a\t g:i A').'.',
+            'appointment'
+        );
     }
 
     public function destroy(Appointment $appointment)

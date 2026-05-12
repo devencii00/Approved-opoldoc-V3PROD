@@ -9,11 +9,17 @@ import {
   StatusBar,
   Animated,
   SafeAreaView,
+  Modal,
 } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import {
+  fetchPatientNotifications,
+  formatNotificationTimestamp,
+  type PatientNotification as DashboardNotification,
+} from '../../../lib/notifications';
 
 // ─── Design Tokens ───────────────────────────────────────────────────────────
 const T = {
@@ -91,12 +97,6 @@ type DashboardVisit = {
   date: string;
   doctor: string;
   reason: string;
-};
-
-type DashboardNotification = {
-  id: string;
-  title: string;
-  body: string;
 };
 
 type DashboardQueueStatus = {
@@ -262,13 +262,14 @@ function RowItem({ icon, title, subtitle, pill, onPress }: RowItemProps) {
 }
 
 // ─── Notification Row ─────────────────────────────────────────────────────────
-function NotifRow({ title, body }: { title: string; body: string }) {
+function NotifRow({ title, body, meta }: { title: string; body: string; meta?: string }) {
   return (
     <View style={styles.notifRow}>
       <View style={styles.notifDot} />
       <View style={styles.notifBody}>
         <Text style={styles.notifTitle}>{title}</Text>
         <Text style={styles.notifText}>{body}</Text>
+        {meta ? <Text style={styles.notifMeta}>{meta}</Text> : null}
       </View>
     </View>
   );
@@ -288,6 +289,7 @@ export default function PatientDashboardScreen() {
     sub: 'All consulted bills are already paid',
   });
   const [error, setError] = useState('');
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const loadingQueueRef = useRef(false);
 
   useEffect(() => {
@@ -330,22 +332,21 @@ export default function PatientDashboardScreen() {
 
     async function loadDashboard(token: string) {
       try {
-        const [appointmentsRes, prescriptionsRes, visitsRes, notificationsRes, transactionsRes] = await Promise.all([
+        const [appointmentsRes, prescriptionsRes, visitsRes, transactionsRes, notificationsList] = await Promise.all([
           fetch(`${API_BASE_URL}/appointments?per_page=100&order=latest`, { headers: { Accept: 'application/json', Authorization: `Bearer ${token}` } }),
           fetch(`${API_BASE_URL}/prescriptions?per_page=5`, { headers: { Accept: 'application/json', Authorization: `Bearer ${token}` } }),
           fetch(`${API_BASE_URL}/visits?per_page=5`, { headers: { Accept: 'application/json', Authorization: `Bearer ${token}` } }),
-          fetch(`${API_BASE_URL}/notifications?per_page=5`, { headers: { Accept: 'application/json', Authorization: `Bearer ${token}` } }),
           fetch(`${API_BASE_URL}/transactions?per_page=100&order=latest`, { headers: { Accept: 'application/json', Authorization: `Bearer ${token}` } }),
+          fetchPatientNotifications(token, 10),
         ]);
-        const [appointmentsData, prescriptionsData, visitsData, notificationsData, transactionsData] = await Promise.all([
+        const [appointmentsData, prescriptionsData, visitsData, transactionsData] = await Promise.all([
           appointmentsRes.json().catch(() => ({})),
           prescriptionsRes.json().catch(() => ({})),
           visitsRes.json().catch(() => ({})),
-          notificationsRes.json().catch(() => ({})),
           transactionsRes.json().catch(() => ({})),
         ]);
-        if (!appointmentsRes.ok || !prescriptionsRes.ok || !visitsRes.ok || !notificationsRes.ok || !transactionsRes.ok) {
-          const msg = appointmentsData?.message || prescriptionsData?.message || visitsData?.message || notificationsData?.message || transactionsData?.message;
+        if (!appointmentsRes.ok || !prescriptionsRes.ok || !visitsRes.ok || !transactionsRes.ok) {
+          const msg = appointmentsData?.message || prescriptionsData?.message || visitsData?.message || transactionsData?.message;
           setError(typeof msg === 'string' && msg.length > 0 ? msg : 'Unable to load dashboard.');
           return;
         }
@@ -407,12 +408,6 @@ export default function PatientDashboardScreen() {
           return { id: String(v.transaction_id), date: dt ? dt.toLocaleDateString() : '', doctor: n === 'Dr.' ? 'Doctor' : n, reason };
         });
 
-        const notifsRaw = Array.isArray(notificationsData?.data) ? notificationsData.data : [];
-        const notifsMapped: DashboardNotification[] = notifsRaw.map((n: any) => {
-          const type = typeof n?.type === 'string' ? n.type : 'system';
-          return { id: String(n.notification_id), title: `${type.charAt(0).toUpperCase()}${type.slice(1)}`, body: typeof n?.message === 'string' ? n.message : '' };
-        });
-
         const transactionsRaw = Array.isArray(transactionsData?.data) ? transactionsData.data : [];
         const transactionByAppointmentId = new Map<string, any>();
         transactionsRaw.forEach((transaction: any) => {
@@ -449,11 +444,15 @@ export default function PatientDashboardScreen() {
           setUpcomingAppointments(upcomingMapped);
           setRecentPrescriptions(presMapped);
           setRecentVisits(visitsMapped);
-          setNotifications(notifsMapped);
+          setNotifications(notificationsList);
           setPendingBilling(pendingBillingCard);
           setError('');
         }
-      } catch { if (!cancelled) setError('Network error. Please try again.'); }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error && err.message ? err.message : 'Network error. Please try again.');
+        }
+      }
     }
 
     const token = (globalThis as any)?.apiToken as string | undefined;
@@ -466,6 +465,7 @@ export default function PatientDashboardScreen() {
   }, [isFocused]);
 
   const nextAppt = upcomingAppointments[0];
+  const notificationPreview = notifications.slice(0, 10);
 
 
   const getGreeting = () => {
@@ -507,11 +507,11 @@ export default function PatientDashboardScreen() {
   </View>
 </View>
             <View style={styles.notifBtnWrap}>
-              <Pressable style={styles.notifBtn} onPress={() => router.push('/screenviews/notifications' as any)}>
+              <Pressable style={styles.notifBtn} onPress={() => setNotificationsOpen(true)}>
                 <Ionicons name="notifications-outline" size={19} color={T.white} />
                 {notifications.length > 0 && (
                   <View style={styles.notifBadge}>
-                    <Text style={styles.notifBadgeText}>{notifications.length}</Text>
+                    <Text style={styles.notifBadgeText}>{Math.min(notifications.length, 99)}</Text>
                   </View>
                 )}
               </Pressable>
@@ -603,18 +603,63 @@ export default function PatientDashboardScreen() {
               ))}
             </SectionCard>
           )}
-
-          {/* ── Notifications ── */}
-          {notifications.length > 0 && (
-            <SectionCard title="Notifications" badge="Updates" delay={300} style={{ marginBottom: 24 }}>
-              {notifications.map((item) => (
-                <NotifRow key={item.id} title={item.title} body={item.body} />
-              ))}
-            </SectionCard>
-          )}
         </View>
       </ScrollView>
+      <Modal visible={notificationsOpen} transparent animationType="fade" onRequestClose={() => setNotificationsOpen(false)}>
+        <Pressable style={styles.notifDropdownBackdrop} onPress={() => setNotificationsOpen(false)} />
+        <View style={styles.notifDropdownWrap}>
+          <View style={styles.notifDropdownCard}>
+            <View style={styles.notifDropdownHeader}>
+              <View>
+                <Text style={styles.notifDropdownTitle}>Notifications</Text>
+                <Text style={styles.notifDropdownSubtitle}>Latest 10 updates</Text>
+              </View>
+              <Pressable
+                onPress={() => setNotificationsOpen(false)}
+                style={({ pressed }) => [styles.notifDropdownClose, pressed && { opacity: 0.75 }]}
+              >
+                <Ionicons name="close" size={16} color={T.slate600} />
+              </Pressable>
+            </View>
 
+            <ScrollView
+              style={styles.notifDropdownScroll}
+              contentContainerStyle={styles.notifDropdownContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {notificationPreview.length > 0 ? (
+                notificationPreview.map((item) => (
+                  <NotifRow
+                    key={item.id}
+                    title={item.title}
+                    body={item.body}
+                    meta={formatNotificationTimestamp(item.createdAt)}
+                  />
+                ))
+              ) : (
+                <View style={styles.notifEmptyState}>
+                  <Ionicons name="notifications-off-outline" size={22} color={T.slate400} />
+                  <Text style={styles.notifEmptyTitle}>No notifications yet</Text>
+                  <Text style={styles.notifEmptyText}>Your latest appointment, queue, and account updates will appear here.</Text>
+                </View>
+              )}
+            </ScrollView>
+
+            <View style={styles.notifDropdownFooter}>
+              <Pressable
+                style={({ pressed }) => [styles.notifSeeMoreBtn, pressed && { opacity: 0.9 }]}
+                onPress={() => {
+                  setNotificationsOpen(false);
+                  router.push('/screenviews/notifications' as any);
+                }}
+              >
+                <Text style={styles.notifSeeMoreText}>See more</Text>
+                <Ionicons name="arrow-forward" size={14} color={T.cyan700} />
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1023,6 +1068,112 @@ waveIcon: {
     fontSize: 10,
     color: T.slate500,
     lineHeight: 14,
+  },
+  notifMeta: {
+    fontSize: 10,
+    color: T.slate400,
+    marginTop: 6,
+  },
+  notifDropdownBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15,23,42,0.18)',
+  },
+  notifDropdownWrap: {
+    position: 'absolute',
+    top: 86,
+    left: 14,
+    right: 14,
+    alignItems: 'flex-end',
+  },
+  notifDropdownCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: T.white,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: T.slate200,
+    shadowColor: T.slate900,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.14,
+    shadowRadius: 18,
+    elevation: 8,
+    overflow: 'hidden',
+  },
+  notifDropdownHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: T.slate100,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  notifDropdownTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: T.slate800,
+  },
+  notifDropdownSubtitle: {
+    fontSize: 11,
+    color: T.slate500,
+    marginTop: 2,
+  },
+  notifDropdownClose: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: T.slate50,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notifDropdownScroll: {
+    maxHeight: 360,
+  },
+  notifDropdownContent: {
+    paddingBottom: 6,
+  },
+  notifDropdownFooter: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderTopWidth: 1,
+    borderTopColor: T.slate100,
+  },
+  notifSeeMoreBtn: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(8,145,178,0.18)',
+    backgroundColor: 'rgba(6,182,212,0.08)',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  notifSeeMoreText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: T.cyan700,
+  },
+  notifEmptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 28,
+  },
+  notifEmptyTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: T.slate700,
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  notifEmptyText: {
+    fontSize: 11,
+    color: T.slate500,
+    lineHeight: 16,
+    textAlign: 'center',
   },
 
 });
