@@ -34,6 +34,7 @@ const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:
 export default function PendingApprovalScreen() {
   const router = useRouter();
   const [checking, setChecking] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [error, setError] = useState('');
 
   const token = (globalThis as any)?.apiToken as string | undefined;
@@ -41,6 +42,11 @@ export default function PendingApprovalScreen() {
   const canCheck = useMemo(() => Boolean(token) && !checking, [token, checking]);
 
   async function handleLogout() {
+    if (loggingOut) {
+      return;
+    }
+
+    setLoggingOut(true);
     try {
       const currentToken = (globalThis as any)?.apiToken as string | undefined;
       if (currentToken) {
@@ -138,9 +144,15 @@ export default function PendingApprovalScreen() {
 
           <Pressable
             onPress={handleLogout}
-            style={({ pressed }) => [styles.secondaryButton, pressed && { opacity: 0.85 }]}
+            disabled={loggingOut}
+            style={({ pressed }) => [
+              styles.secondaryButton,
+              loggingOut && { opacity: 0.7 },
+              pressed && !loggingOut && { opacity: 0.85 },
+            ]}
           >
-            <Text style={styles.secondaryButtonText}>Log out</Text>
+            {loggingOut ? <ActivityIndicator size="small" color={T.slate800} /> : null}
+            <Text style={styles.secondaryButtonText}>{loggingOut ? 'Logging out...' : 'Log out'}</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -211,6 +223,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 10,
     backgroundColor: 'rgba(100,116,139,0.10)',
     borderWidth: 1,
     borderColor: 'rgba(100,116,139,0.25)',

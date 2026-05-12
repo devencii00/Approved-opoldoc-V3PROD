@@ -12,6 +12,7 @@ import {
   Dimensions,
   Image,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -28,6 +29,8 @@ export default function CreateAccountScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -257,23 +260,41 @@ export default function CreateAccountScreen() {
             style={styles.input}
           />
 
-          <TextInput
-            placeholder="Password"
-            placeholderTextColor="rgba(255,255,255,0.5)"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-            style={styles.input}
-          />
+          <View style={styles.inputWrap}>
+            <TextInput
+              placeholder="Password"
+              placeholderTextColor="rgba(255,255,255,0.5)"
+              secureTextEntry={!showPassword}
+              value={password}
+              onChangeText={setPassword}
+              style={styles.inputField}
+            />
+            <Pressable
+              onPress={() => setShowPassword((value) => !value)}
+              style={styles.inputToggle}
+              hitSlop={8}
+            >
+              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="rgba(255,255,255,0.78)" />
+            </Pressable>
+          </View>
 
-          <TextInput
-            placeholder="Confirm password"
-            placeholderTextColor="rgba(255,255,255,0.5)"
-            secureTextEntry
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            style={styles.input}
-          />
+          <View style={styles.inputWrap}>
+            <TextInput
+              placeholder="Confirm password"
+              placeholderTextColor="rgba(255,255,255,0.5)"
+              secureTextEntry={!showConfirmPassword}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              style={styles.inputField}
+            />
+            <Pressable
+              onPress={() => setShowConfirmPassword((value) => !value)}
+              style={styles.inputToggle}
+              hitSlop={8}
+            >
+              <Ionicons name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="rgba(255,255,255,0.78)" />
+            </Pressable>
+          </View>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
           {success ? <Text style={styles.success}>{success}</Text> : null}
@@ -392,6 +413,23 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.12)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.25)',
+  },
+  inputWrap: {
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  inputField: {
+    flex: 1,
+    padding: 14,
+    color: '#fff',
+  },
+  inputToggle: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
 
   error: {

@@ -75,8 +75,34 @@ function normalizePersonName(value: string): string {
   return s;
 }
 
-function isValidPHContact11Digits(value: string): boolean {
-  return /^09\d{9}$/.test(String(value || ''));
+function normalizePHContact(value: string): string {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  const compact = raw.replace(/[^\d+]/g, '');
+  if (compact === '+63') return '';
+
+  const digits = compact.replace(/[^\d]/g, '');
+  if (!digits) return '';
+
+  if (digits.length === 11 && digits.startsWith('09')) {
+    return `+63${digits.slice(1)}`;
+  }
+  if (digits.length === 10 && digits.startsWith('9')) {
+    return `+63${digits}`;
+  }
+  if (digits.length === 12 && digits.startsWith('639')) {
+    return `+${digits}`;
+  }
+  if (compact.startsWith('+') && digits.length === 12 && digits.startsWith('639')) {
+    return `+${digits}`;
+  }
+
+  return '';
+}
+
+function isValidPHContact(value: string): boolean {
+  return /^\+639\d{9}$/.test(String(value || ''));
 }
 
 function formatDateInput(value: Date): string {
@@ -148,7 +174,7 @@ export default function FillupInfoScreen() {
     if (!form.birthdate || !/^\d{4}-\d{2}-\d{2}$/.test(form.birthdate)) return false;
     if (form.sex !== 'Male' && form.sex !== 'Female') return false;
     if (!normalizeText(form.address)) return false;
-    if (!normalizeText(form.contact_number) || !isValidPHContact11Digits(form.contact_number)) return false;
+    if (!normalizePHContact(form.contact_number) || !isValidPHContact(normalizePHContact(form.contact_number))) return false;
     return true;
   }, [form, saving]);
 
@@ -185,7 +211,7 @@ export default function FillupInfoScreen() {
     const lastname = normalizePersonName(form.lastname);
     const birthdate = normalizeText(form.birthdate);
     const address = normalizeText(form.address);
-    const contact = normalizeText(form.contact_number);
+    const contact = normalizePHContact(form.contact_number);
 
     if (!firstname || !lastname) {
       setError('First name and last name are required.');
@@ -211,8 +237,8 @@ export default function FillupInfoScreen() {
       setError('Address is required.');
       return;
     }
-    if (!contact || !isValidPHContact11Digits(contact)) {
-      setError('Contact number must be 11 digits and start with 09.');
+    if (!contact || !isValidPHContact(contact)) {
+      setError('Please enter a valid PH contact number (e.g. +639750443410).');
       return;
     }
 
@@ -438,15 +464,21 @@ export default function FillupInfoScreen() {
               <Text style={[styles.label, { marginTop: 12 }]}>Contact number</Text>
               <TextInput
                 value={form.contact_number}
-                onChangeText={(v) => update('contact_number', v.replace(/\D/g, '').slice(0, 11))}
+                onChangeText={(v) => update('contact_number', v)}
                 onFocus={() => setSexMenuOpen(false)}
-                placeholder="09XXXXXXXXX"
+                onBlur={() => {
+                  const normalized = normalizePHContact(form.contact_number);
+                  if (normalized) {
+                    update('contact_number', normalized);
+                  }
+                }}
+                placeholder="+639 1234 56789"
                 placeholderTextColor="#9ca3af"
                 keyboardType="phone-pad"
-                maxLength={11}
+                maxLength={16}
                 style={styles.input}
               />
-              <Text style={styles.helperText}>Use 11 digits in 09XXXXXXXXX format.</Text>
+        
               <Text style={styles.noticeText}>Make sure the details you input will match your id/document.</Text>
 
               <Pressable

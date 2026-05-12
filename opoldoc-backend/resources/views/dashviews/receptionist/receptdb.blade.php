@@ -508,7 +508,7 @@ if (!next.length) {
         @elseif ($sectionKey === 'record-payment')
             @include('dashviews.receptionist.reception_record_payment')
         @elseif ($sectionKey === 'verification-oversight')
-            @include('dashviews.admin.verification_approvals')
+            @include('dashviews.receptionist.reception_verification_approvals')
         @elseif ($sectionKey === 'settings-reception')
             @include('dashviews.receptionist.reception_settings')
         @elseif ($sectionKey === 'messages')

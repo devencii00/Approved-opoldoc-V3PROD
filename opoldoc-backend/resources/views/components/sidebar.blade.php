@@ -505,20 +505,50 @@
             var logoutModal = document.getElementById('sidebarLogoutModal')
             var logoutCancel = document.getElementById('sidebarLogoutCancel')
             var logoutConfirm = document.getElementById('sidebarLogoutConfirm')
+            var logoutButtonDefaultHtml = logoutButton ? logoutButton.innerHTML : ''
+            var logoutConfirmDefaultHtml = logoutConfirm ? logoutConfirm.innerHTML : ''
+            var logoutSubmitting = false
+
+            function setLogoutSubmittingState(submitting) {
+                logoutSubmitting = !!submitting
+                if (logoutButton) {
+                    logoutButton.disabled = logoutSubmitting
+                    logoutButton.classList.toggle('opacity-70', logoutSubmitting)
+                    logoutButton.classList.toggle('cursor-not-allowed', logoutSubmitting)
+                    logoutButton.innerHTML = logoutSubmitting
+                        ? '<span class="inline-flex items-center gap-2"><span class="w-4 h-4 border-2 border-red-300 border-t-red-600 rounded-full animate-spin"></span><span>Signing Out...</span></span>'
+                        : logoutButtonDefaultHtml
+                }
+                if (logoutCancel) {
+                    logoutCancel.disabled = logoutSubmitting
+                    logoutCancel.classList.toggle('opacity-70', logoutSubmitting)
+                    logoutCancel.classList.toggle('cursor-not-allowed', logoutSubmitting)
+                }
+                if (logoutConfirm) {
+                    logoutConfirm.disabled = logoutSubmitting
+                    logoutConfirm.classList.toggle('opacity-70', logoutSubmitting)
+                    logoutConfirm.classList.toggle('cursor-not-allowed', logoutSubmitting)
+                    logoutConfirm.innerHTML = logoutSubmitting
+                        ? '<span class="inline-flex items-center gap-2"><span class="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span><span>Signing out...</span></span>'
+                        : logoutConfirmDefaultHtml
+                }
+            }
 
             function closeLogoutModal() {
-                if (!logoutModal) return
+                if (!logoutModal || logoutSubmitting) return
                 logoutModal.classList.add('hidden')
                 logoutModal.classList.remove('flex')
             }
 
             function openLogoutModal() {
-                if (!logoutModal) return
+                if (!logoutModal || logoutSubmitting) return
                 logoutModal.classList.remove('hidden')
                 logoutModal.classList.add('flex')
             }
 
             function doLogout() {
+                if (logoutSubmitting) return
+                setLogoutSubmittingState(true)
                 try {
                     if (window.localStorage) {
                         window.localStorage.removeItem('api_token')
