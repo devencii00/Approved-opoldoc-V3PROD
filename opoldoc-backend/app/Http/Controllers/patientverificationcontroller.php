@@ -49,7 +49,7 @@ class PatientVerificationController extends Controller
             'patient_id' => [$isPatient ? 'sometimes' : 'required', 'exists:users,user_id'],
             'type' => ['required', 'in:senior,pwd,pregnant'],
             'status' => ['nullable', 'in:pending,approved,rejected'],
-            'document' => ['nullable', 'file', 'max:10240', 'mimes:jpg,jpeg,png,pdf'],
+            'document' => ['nullable', 'file', 'max:10240', 'mimes:jpg,jpeg,png,pdf,doc,docx'],
             'document_path' => ['nullable', 'string'],
             'remarks' => ['nullable', 'string'],
         ]);

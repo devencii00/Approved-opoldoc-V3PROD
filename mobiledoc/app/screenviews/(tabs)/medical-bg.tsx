@@ -10,6 +10,7 @@ import {
   TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 const T = {
   cyan500: '#06b6d4',
@@ -58,6 +59,7 @@ export default function PatientMedicalBackgroundScreen() {
   const [success, setSuccess] = useState('');
 
   const [category, setCategory] = useState<MedicalBackgroundCategory>('condition');
+  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
 
@@ -223,34 +225,58 @@ export default function PatientMedicalBackgroundScreen() {
               <View style={styles.eyebrowDot} />
               <Text style={styles.eyebrowText}>Add</Text>
             </View>
-            <Text style={styles.cardTitle}>New entry</Text>
+            <Text style={styles.cardTitle}></Text>
             <Text style={styles.cardSubtitle}>You can add multiple entries.</Text>
           </View>
 
           <View style={styles.cardBody}>
             <Text style={styles.label}>Category</Text>
-            <View style={styles.categoryRow}>
-              {(['allergy_food', 'allergy_drug', 'condition'] as MedicalBackgroundCategory[]).map((c) => (
-                <Pressable
-                  key={c}
-                  onPress={() => setCategory(c)}
-                  style={({ pressed }) => [
-                    styles.categoryChip,
-                    category === c && styles.categoryChipActive,
-                    pressed && { opacity: 0.85 },
-                  ]}
-                >
-                  <Text style={[styles.categoryChipText, category === c && styles.categoryChipTextActive]}>
-                    {categoryLabel(c)}
-                  </Text>
-                </Pressable>
-              ))}
+            <View style={styles.dropdownWrap}>
+              <Pressable
+                onPress={() => setCategoryMenuOpen((current) => !current)}
+                style={({ pressed }) => [
+                  styles.dropdownTrigger,
+                  categoryMenuOpen && styles.dropdownTriggerActive,
+                  pressed && { opacity: 0.9 },
+                ]}
+              >
+                <Text style={styles.dropdownTriggerText}>{categoryLabel(category)}</Text>
+                <Ionicons
+                  name={categoryMenuOpen ? 'chevron-up-outline' : 'chevron-down-outline'}
+                  size={18}
+                  color={T.slate600}
+                />
+              </Pressable>
+              {categoryMenuOpen ? (
+                <View style={styles.dropdownMenu}>
+                  {(['allergy_food', 'allergy_drug', 'condition'] as MedicalBackgroundCategory[]).map((c) => (
+                    <Pressable
+                      key={c}
+                      onPress={() => {
+                        setCategory(c);
+                        setCategoryMenuOpen(false);
+                      }}
+                      style={({ pressed }) => [
+                        styles.dropdownItem,
+                        category === c && styles.dropdownItemActive,
+                        pressed && { opacity: 0.9 },
+                      ]}
+                    >
+                      <Text style={[styles.dropdownItemText, category === c && styles.dropdownItemTextActive]}>
+                        {categoryLabel(c)}
+                      </Text>
+                      {category === c ? <Ionicons name="checkmark-outline" size={18} color={T.cyan700} /> : null}
+                    </Pressable>
+                  ))}
+                </View>
+              ) : null}
             </View>
 
             <Text style={[styles.label, { marginTop: 12 }]}>Name</Text>
             <TextInput
               value={name}
               onChangeText={setName}
+              onFocus={() => setCategoryMenuOpen(false)}
               placeholder="e.g. Penicillin, Asthma, Shellfish"
               placeholderTextColor="#9ca3af"
               style={styles.input}
@@ -260,6 +286,7 @@ export default function PatientMedicalBackgroundScreen() {
             <TextInput
               value={notes}
               onChangeText={setNotes}
+              onFocus={() => setCategoryMenuOpen(false)}
               placeholder="Additional details"
               placeholderTextColor="#9ca3af"
               style={[styles.input, { height: 84, textAlignVertical: 'top' }]}
@@ -318,12 +345,12 @@ export default function PatientMedicalBackgroundScreen() {
           </View>
         </View>
 
-        <Pressable
+        {/* <Pressable
           onPress={() => router.back()}
           style={({ pressed }) => [styles.secondaryButton, pressed && { opacity: 0.85 }]}
         >
           <Text style={styles.secondaryButtonText}>Done</Text>
-        </Pressable>
+        </Pressable> */}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -448,18 +475,67 @@ const styles = StyleSheet.create({
     color: T.slate800,
     backgroundColor: T.white,
   },
-  categoryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  categoryChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: T.slate50,
+  dropdownWrap: {
+    position: 'relative',
+    zIndex: 10,
+  },
+  dropdownTrigger: {
+    minHeight: 46,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: T.slate200,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: T.white,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
   },
-  categoryChipActive: { backgroundColor: '#ecfeff', borderColor: 'rgba(8,145,178,0.25)' },
-  categoryChipText: { fontSize: 12, fontWeight: '600', color: T.slate700 },
-  categoryChipTextActive: { color: T.cyan700 },
+  dropdownTriggerActive: {
+    borderColor: 'rgba(8,145,178,0.35)',
+  },
+  dropdownTriggerText: {
+    fontSize: 13,
+    color: T.slate800,
+    flex: 1,
+  },
+  dropdownMenu: {
+    marginTop: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: T.slate200,
+    backgroundColor: T.white,
+    overflow: 'hidden',
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  dropdownItem: {
+    minHeight: 44,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: T.slate100,
+  },
+  dropdownItemActive: {
+    backgroundColor: '#ecfeff',
+  },
+  dropdownItemText: {
+    fontSize: 13,
+    color: T.slate700,
+    flex: 1,
+  },
+  dropdownItemTextActive: {
+    color: T.cyan700,
+    fontWeight: '700',
+  },
   primaryButton: {
     marginTop: 6,
     borderRadius: 14,

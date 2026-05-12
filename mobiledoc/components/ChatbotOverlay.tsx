@@ -166,7 +166,12 @@ export default function ChatbotOverlay() {
       <>
       <Pressable
         onPress={() => setChatOpen(true)}
-        style={({ pressed }) => [styles.fab, { bottom: fabBottom }, pressed && { opacity: 0.85 }]}
+        style={({ pressed, hovered }) => [
+          styles.fab,
+          { bottom: fabBottom },
+          hovered && styles.fabHovered,
+          pressed && styles.fabPressed,
+        ]}
       >
         <Ionicons name="chatbubbles-outline" size={22} color="#ffffff" />
       </Pressable>
@@ -279,7 +284,15 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 6,
     zIndex: 60,
-    opacity: 0.95,
+    opacity: 0.45,
+  },
+  fabHovered: {
+    opacity: 0.82,
+    backgroundColor: 'rgba(14,116,144,0.96)',
+    transform: [{ scale: 1.04 }],
+  },
+  fabPressed: {
+    opacity: 0.92,
   },
   modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(15,23,42,0.45)' },
   sheet: {

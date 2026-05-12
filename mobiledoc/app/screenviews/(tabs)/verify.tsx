@@ -10,6 +10,7 @@ import {
   TextInput,
   ActivityIndicator,
   Animated,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -58,6 +59,7 @@ type PickedDoc = {
   uri: string;
   name: string;
   mimeType: string;
+  file?: File | null;
 };
 
 // ─── Animated Card ────────────────────────────────────────────────────────────
@@ -99,6 +101,9 @@ export default function PatientVerificationScreen() {
   const latestRejected = useMemo(() => {
     return verificationItems.find(v => v.status === 'rejected');
   }, [verificationItems]);
+  const hasPendingVerification = useMemo(() => {
+    return verificationItems.some(v => v.status === 'pending');
+  }, [verificationItems]);
 
   useEffect(() => {
     let cancelled = false;
@@ -139,7 +144,12 @@ export default function PatientVerificationScreen() {
     setSuccess('');
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: ['image/*', 'application/pdf'],
+        type: [
+          'image/*',
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ],
         copyToCacheDirectory: true,
         multiple: false,
       });
@@ -155,6 +165,7 @@ export default function PatientVerificationScreen() {
         uri: asset.uri,
         name: asset.name,
         mimeType: asset.mimeType ?? 'application/octet-stream',
+        file: (asset as any).file instanceof File ? (asset as any).file : null,
       });
     } catch {
       setError('Unable to pick a document.');
@@ -162,6 +173,10 @@ export default function PatientVerificationScreen() {
   }
 
   async function handleSubmit() {
+    if (hasPendingVerification) {
+      setError('You already have a pending verification request.');
+      return;
+    }
     if (!verificationType) {
       setError('Please select a patient type.');
       return;
@@ -184,7 +199,15 @@ export default function PatientVerificationScreen() {
 
       const formData = new FormData();
       formData.append('type', verificationType);
-      formData.append('document', { uri: verificationDoc.uri, name: verificationDoc.name, type: verificationDoc.mimeType } as any);
+      if (Platform.OS === 'web' && verificationDoc.file) {
+        formData.append('document', verificationDoc.file, verificationDoc.name);
+      } else {
+        formData.append('document', {
+          uri: verificationDoc.uri,
+          name: verificationDoc.name,
+          type: verificationDoc.mimeType,
+        } as any);
+      }
 
       const response = await fetch(`${API_BASE_URL}/patient-verifications`, {
         method: 'POST',
@@ -194,7 +217,11 @@ export default function PatientVerificationScreen() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setError(data?.message || 'Unable to submit verification request.');
+        const validationMessage =
+          data?.errors && typeof data.errors === 'object'
+            ? Object.values(data.errors).flat().filter(Boolean).join(' ')
+            : '';
+        setError(validationMessage || data?.message || 'Unable to submit verification request.');
         return;
       }
 
@@ -301,11 +328,11 @@ export default function PatientVerificationScreen() {
               <View style={styles.sectionBadge}>
                 <Text style={styles.sectionBadgeText}>Step 2</Text>
               </View>
-              <Text style={styles.sectionTitle}>Upload Proof</Text>
+              <Text style={styles.sectionTitle}></Text>
             </View>
             <View style={styles.sectionBody}>
               <Text style={styles.uploadHint}>
-                Please upload a clear photo or PDF of your ID or medical certificate.
+                Please upload a clear image or document copy of your ID or medical certificate.
               </Text>
               <Pressable
                 onPress={handlePickDoc}
@@ -323,7 +350,7 @@ export default function PatientVerificationScreen() {
                 <Text style={[styles.uploadBoxText, verificationDoc && styles.uploadBoxTextActive]}>
                   {verificationDoc ? verificationDoc.name : 'Tap to select document'}
                 </Text>
-                <Text style={styles.uploadBoxSub}>Supports JPG, PNG, PDF</Text>
+                <Text style={styles.uploadBoxSub}>Supports JPG, JPEG, PNG, PDF, DOC, DOCX</Text>
               </Pressable>
             </View>
           </AnimatedCard>
@@ -331,10 +358,10 @@ export default function PatientVerificationScreen() {
           <AnimatedCard delay={200} style={styles.actionSection}>
             <Pressable
               onPress={handleSubmit}
-              disabled={submitting || loading}
+              disabled={submitting || loading || hasPendingVerification}
               style={({ pressed }) => [
                 styles.submitBtn,
-                (submitting || loading) && { opacity: 0.6 },
+                (submitting || loading || hasPendingVerification) && styles.submitBtnDisabled,
                 pressed && { opacity: 0.85 },
               ]}
             >
@@ -342,11 +369,20 @@ export default function PatientVerificationScreen() {
                 <ActivityIndicator color={T.white} size="small" />
               ) : (
                 <>
-                  <Text style={styles.submitBtnText}>Submit Verification</Text>
-                  <Ionicons name="send" size={18} color={T.white} />
+                  <Text style={styles.submitBtnText}>
+                    {hasPendingVerification ? 'Pending verification' : 'Submit Verification'}
+                  </Text>
+                  <Ionicons
+                    name={hasPendingVerification ? 'hourglass-outline' : 'send'}
+                    size={18}
+                    color={T.white}
+                  />
                 </>
               )}
             </Pressable>
+            {hasPendingVerification ? (
+              <Text style={styles.pendingNotice}>Please wait for admin/Staff review.</Text>
+            ) : null}
           </AnimatedCard>
 
           <AnimatedCard delay={250} style={styles.sectionCard}>
@@ -590,7 +626,18 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
+  submitBtnDisabled: {
+    backgroundColor: T.slate400,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
   submitBtnText: { color: T.white, fontSize: 15, fontWeight: '700' },
+  pendingNotice: {
+    marginTop: 10,
+    textAlign: 'center',
+    fontSize: 12,
+    color: T.slate500,
+  },
   emptyText: { textAlign: 'center', color: T.slate400, fontSize: 12, paddingVertical: 20 },
   historyRow: {
     flexDirection: 'row',
