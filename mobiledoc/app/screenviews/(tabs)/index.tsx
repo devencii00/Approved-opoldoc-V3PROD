@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import {
   fetchPatientNotifications,
   formatNotificationTimestamp,
+  markPatientNotificationsAsRead,
   type PatientNotification as DashboardNotification,
 } from '../../../lib/notifications';
 
@@ -292,6 +293,36 @@ export default function PatientDashboardScreen() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const loadingQueueRef = useRef(false);
 
+  async function openNotificationsModal() {
+    setNotificationsOpen(true);
+
+    const unreadIds = notifications
+      .slice(0, 10)
+      .filter((item) => !item.isRead)
+      .map((item) => item.id);
+
+    if (!unreadIds.length) {
+      return;
+    }
+
+    setNotifications((current) => current.map((item) => (
+      unreadIds.includes(item.id) ? { ...item, isRead: true } : item
+    )));
+
+    const token = (globalThis as any)?.apiToken as string | undefined;
+    if (!token) {
+      return;
+    }
+
+    try {
+      await markPatientNotificationsAsRead(token, unreadIds);
+    } catch {
+      setNotifications((current) => current.map((item) => (
+        unreadIds.includes(item.id) ? { ...item, isRead: false } : item
+      )));
+    }
+  }
+
   useEffect(() => {
     if (!isFocused) return;
 
@@ -507,11 +538,13 @@ export default function PatientDashboardScreen() {
   </View>
 </View>
             <View style={styles.notifBtnWrap}>
-              <Pressable style={styles.notifBtn} onPress={() => setNotificationsOpen(true)}>
+              <Pressable style={styles.notifBtn} onPress={openNotificationsModal}>
                 <Ionicons name="notifications-outline" size={19} color={T.white} />
-                {notifications.length > 0 && (
+                {notifications.some((item) => !item.isRead) && (
                   <View style={styles.notifBadge}>
-                    <Text style={styles.notifBadgeText}>{Math.min(notifications.length, 99)}</Text>
+                    <Text style={styles.notifBadgeText}>
+                      {Math.min(notifications.filter((item) => !item.isRead).length, 99)}
+                    </Text>
                   </View>
                 )}
               </Pressable>

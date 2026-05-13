@@ -976,26 +976,30 @@ export default function DependentsScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor={T.cyan700} />
-      <View style={styles.header}>
-        
-  <View style={styles.circleTopRight} />
+      <ScrollView
+        style={styles.pageScroll}
+        contentContainerStyle={styles.pageScrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <View style={styles.circleTopRight} />
           <View style={styles.circleBottomLeft} />
           <View style={styles.circleMidLeft} />
-   
- <View style={styles.eyebrowRow}>
-              <View style={[styles.eyebrowDot, { backgroundColor: 'rgba(255,255,255,0.7)' }]} />
-              <Text style={[styles.eyebrowText, { color: 'rgba(255,255,255,0.8)' }]}>Patient Portal</Text>
-            </View>
 
-        <Text style={styles.headerTitle}>Dependents</Text>
-        <Text style={styles.subtitle}>View linked dependent accounts and their records.</Text>
-      </View>
+          <View style={styles.eyebrowRow}>
+            <View style={[styles.eyebrowDot, { backgroundColor: 'rgba(255,255,255,0.7)' }]} />
+            <Text style={[styles.eyebrowText, { color: 'rgba(255,255,255,0.8)' }]}>Patient Portal</Text>
+          </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {error ? <Text style={styles.inlineError}>{error}</Text> : null}
-        {overviewError ? <Text style={styles.inlineError}>{overviewError}</Text> : null}
+          <Text style={styles.headerTitle}>Dependents</Text>
+          <Text style={styles.subtitle}>View linked dependent accounts and their records.</Text>
+        </View>
 
-        <View style={styles.summaryCard}>
+        <View style={styles.contentSurface}>
+          {error ? <Text style={styles.inlineError}>{error}</Text> : null}
+          {overviewError ? <Text style={styles.inlineError}>{overviewError}</Text> : null}
+
+          <View style={styles.summaryCard}>
           <View style={styles.summaryHeaderRow}>
             <View style={styles.iconWrap}>
               <Ionicons name="people-outline" size={24} color={T.cyan700} />
@@ -1015,25 +1019,25 @@ export default function DependentsScreen() {
           ) : null}
         </View>
 
-        {loading ? (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator size="small" color={T.cyan700} />
-            <Text style={styles.loadingText}>Loading dependents...</Text>
-          </View>
-        ) : null}
-
-        {!loading && dependents.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <View style={styles.emptyIconWrap}>
-              <Ionicons name="person-add-outline" size={24} color={T.cyan700} />
+          {loading ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator size="small" color={T.cyan700} />
+              <Text style={styles.loadingText}>Loading dependents...</Text>
             </View>
-            <Text style={styles.emptyTitle}>No dependents linked</Text>
-            <Text style={styles.emptyText}>This account does not have any dependent profile linked yet.</Text>
-          </View>
-        ) : null}
+          ) : null}
 
-        {!loading
-          ? dependents.map((dependent) => {
+          {!loading && dependents.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <View style={styles.emptyIconWrap}>
+                <Ionicons name="person-add-outline" size={24} color={T.cyan700} />
+              </View>
+              <Text style={styles.emptyTitle}>No dependents linked</Text>
+              <Text style={styles.emptyText}>This account does not have any dependent profile linked yet.</Text>
+            </View>
+          ) : null}
+
+          {!loading
+            ? dependents.map((dependent) => {
               const isExpanded = expandedDependentId === dependent.user_id;
               const state = recordsByDependent[dependent.user_id] ?? createRecordsState();
               const name = formatDependentName(dependent);
@@ -1048,7 +1052,7 @@ export default function DependentsScreen() {
                       <View style={styles.nameRow}>
                         <Text style={styles.dependentName}>{name}</Text>
                         <View style={styles.relationshipPill}>
-                          <Text style={styles.relationshipText}>{formatRelationship(dependent.relationship)}</Text>
+                          <Text style={styles.relationshipText}>Linked as : {formatRelationship(dependent.relationship)}</Text>
                         </View>
                       </View>
                       <Text style={styles.dependentSubtext}>{`${formatDateOnly(dependent.birthdate)} · ${calculateAge(dependent.birthdate)}`}</Text>
@@ -1296,7 +1300,8 @@ export default function DependentsScreen() {
                 </View>
               );
             })
-          : null}
+            : null}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -1323,12 +1328,12 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 30, fontWeight: '800', color: T.white, lineHeight: 34 },
   subtitle: { marginTop: 4, fontSize: 12, color: 'rgba(255,255,255,0.78)' },
-  scroll: {
+  pageScroll: {
     flex: 1,
-    backgroundColor: T.slate100,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    
+    backgroundColor: 'rgba(255,255,255,0.07)',
+  },
+  pageScrollContent: {
+    flexGrow: 1,
   },
    headerTitle: {
     fontSize: 30,
@@ -1338,7 +1343,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
     lineHeight: 34,
   },
-  content: { padding: 16, paddingBottom: 32, gap: 14 },
+  contentSurface: {
+    flex: 1,
+    backgroundColor: T.slate100,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 16,
+    paddingBottom: 32,
+    gap: 14,
+  },
   summaryCard: {
     backgroundColor: T.white,
     borderRadius: 20,

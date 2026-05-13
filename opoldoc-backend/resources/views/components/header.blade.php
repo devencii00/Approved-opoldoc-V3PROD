@@ -29,7 +29,7 @@
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                 <path d="M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
-            <span id="headerNotificationDot" class="absolute top-1.5 right-1.5 w-1.75 h-1.75 rounded-full bg-cyan-500 border-2 border-white"></span>
+            <span id="headerNotificationDot" class="absolute top-1.5 right-1.5 w-1.75 h-1.75 rounded-full bg-red-500 border-2 border-white"></span>
         </button>
 
         <div id="headerNotificationPanel" class="hidden absolute right-0 top-10 w-80 max-h-80 bg-white border border-slate-200 rounded-2xl shadow-[0_10px_30px_rgba(15,23,42,0.18)] overflow-hidden">
@@ -140,6 +140,57 @@
             container.innerHTML = html
         }
 
+        function extractNotificationItems(payload) {
+            if (Array.isArray(payload)) {
+                return payload
+            }
+            if (payload && Array.isArray(payload.data)) {
+                return payload.data
+            }
+            if (payload && Array.isArray(payload.notifications)) {
+                return payload.notifications
+            }
+            return []
+        }
+
+        function readJsonResult(response) {
+            return response.json().then(function (data) {
+                return { ok: response.ok, data: data }
+            }).catch(function () {
+                return { ok: response.ok, data: null }
+            })
+        }
+
+        function markNotificationsRead(items, dot) {
+            var unreadIds = (Array.isArray(items) ? items : [])
+                .filter(function (item) {
+                    return item && item.is_read === false && item.notification_id != null
+                })
+                .map(function (item) {
+                    return String(item.notification_id)
+                })
+
+            if (!unreadIds.length) {
+                return Promise.resolve()
+            }
+
+            if (dot) {
+                dot.classList.add('hidden')
+            }
+
+            return Promise.all(unreadIds.map(function (id) {
+                return headerApiFetch("{{ url('/api/notifications') }}/" + encodeURIComponent(id), {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_read: true })
+                }).catch(function () {
+                    return null
+                })
+            })).then(function () {
+                return null
+            })
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
             var button = document.getElementById('headerNotificationButton')
             var panel = document.getElementById('headerNotificationPanel')
@@ -158,13 +209,7 @@
                         body.innerHTML = '<div class="px-3 py-3 text-[0.75rem] text-slate-400">Loading notifications...</div>'
                     }
                     headerApiFetch("{{ url('/api/notifications') }}", { method: 'GET' })
-                        .then(function (response) {
-                            return response.json().then(function (data) {
-                                return { ok: response.ok, data: data }
-                            }).catch(function () {
-                                return { ok: response.ok, data: null }
-                            })
-                        })
+                        .then(readJsonResult)
                         .then(function (result) {
                             if (!result.ok || !result.data) {
                                 if (body) {
@@ -173,15 +218,7 @@
                                 return
                             }
 
-                            var payload = result.data
-                            var items = []
-                            if (Array.isArray(payload)) {
-                                items = payload
-                            } else if (Array.isArray(payload.data)) {
-                                items = payload.data
-                            } else if (Array.isArray(payload.notifications)) {
-                                items = payload.notifications
-                            }
+                            var items = extractNotificationItems(result.data)
 
                             renderNotifications(body, items)
 
@@ -191,6 +228,8 @@
                             if (dot) {
                                 dot.classList.toggle('hidden', !hasUnread)
                             }
+
+                            markNotificationsRead(items, dot)
                         })
                         .catch(function () {
                             if (body) {

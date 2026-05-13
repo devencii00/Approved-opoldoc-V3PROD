@@ -79,5 +79,32 @@ export async function fetchPatientNotifications(token: string, perPage = 10): Pr
   }
 
   const records = Array.isArray(data?.data) ? data.data : [];
-  return records.map(mapPatientNotification).filter((item) => item.id);
+  return records.map(mapPatientNotification).filter((item: PatientNotification) => item.id);
+}
+
+export async function markPatientNotificationsAsRead(token: string, notificationIds: string[]): Promise<void> {
+  const uniqueIds = Array.from(new Set(notificationIds.filter((id) => typeof id === 'string' && id.trim().length > 0)));
+  if (!uniqueIds.length) return;
+
+  await Promise.all(
+    uniqueIds.map(async (notificationId) => {
+      const response = await fetch(`${API_BASE_URL}/notifications/${encodeURIComponent(notificationId)}`, {
+        method: 'PATCH',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ is_read: true }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        const message = typeof data?.message === 'string' && data.message.trim().length > 0
+          ? data.message
+          : 'Unable to update notifications.';
+        throw new Error(message);
+      }
+    }),
+  );
 }
