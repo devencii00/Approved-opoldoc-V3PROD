@@ -26,11 +26,22 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
+  const [mode, setMode] = useState<'login' | 'forgot-password'>('login');
+  const [resetStep, setResetStep] = useState<1 | 2 | 3>(1);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetPasswordConfirm, setResetPasswordConfirm] = useState('');
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [showResetPasswordConfirm, setShowResetPasswordConfirm] = useState(false);
+  const [resetSubmitting, setResetSubmitting] = useState(false);
+  const [resetError, setResetError] = useState('');
+  const [resetNotice, setResetNotice] = useState('');
 
   // Animations (same system as landing)
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -156,6 +167,83 @@ export default function LoginScreen() {
     }
   }
 
+  function openForgotPassword() {
+    setMode('forgot-password');
+    setResetStep(1);
+    setResetEmail(email);
+    setResetCode('');
+    setResetPassword('');
+    setResetPasswordConfirm('');
+    setShowResetPassword(false);
+    setShowResetPasswordConfirm(false);
+    setResetError('');
+    setResetNotice('');
+  }
+
+  function closeForgotPassword() {
+    setMode('login');
+    setResetStep(1);
+    setResetCode('');
+    setResetPassword('');
+    setResetPasswordConfirm('');
+    setShowResetPassword(false);
+    setShowResetPasswordConfirm(false);
+    setResetSubmitting(false);
+    setResetError('');
+    setResetNotice('');
+  }
+
+  function handleSendPasscode() {
+    setResetError('');
+    setResetNotice('');
+    setResetSubmitting(true);
+
+    setTimeout(() => {
+      setResetSubmitting(false);
+      setResetStep(2);
+      setResetNotice(`A 5-digit passcode was sent to ${resetEmail || 'your email'}.`);
+    }, 500);
+  }
+
+  function handleVerifyPasscode() {
+    setResetError('');
+    setResetNotice('');
+    setResetSubmitting(true);
+
+    setTimeout(() => {
+      setResetSubmitting(false);
+      setResetStep(3);
+      setResetNotice('Passcode accepted. You can now set a new password.');
+    }, 400);
+  }
+
+  function handleResetPassword() {
+    setResetError('');
+    setResetNotice('');
+
+    if (!resetPassword || !resetPasswordConfirm) {
+      setResetError('Please enter and confirm your new password.');
+      return;
+    }
+
+    setResetSubmitting(true);
+
+    setTimeout(() => {
+      setResetSubmitting(false);
+      setPassword(resetPassword);
+      setMode('login');
+      setResetStep(1);
+      setResetCode('');
+      setResetPassword('');
+      setResetPasswordConfirm('');
+      setShowResetPassword(false);
+      setShowResetPasswordConfirm(false);
+      setResetError('');
+      setResetNotice('');
+      setError('You can now log in with the new password.');
+    }, 500);
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
@@ -187,10 +275,18 @@ export default function LoginScreen() {
         >
           <Text style={styles.tagline}>PATIENT PORTAL</Text>
           <Text style={styles.title}>
-            Log in to your{'\n'}account
+            {mode === 'login' ? `Log in to your${'\n'}account` : `Reset your${'\n'}password`}
           </Text>
           <View style={styles.divider} />
-          <Text style={styles.subtitle}>Secure access to medical records</Text>
+          <Text style={styles.subtitle}>
+            {mode === 'login'
+              ? 'Secure access to medical records'
+              : resetStep === 1
+                ? 'Enter your email to receive a 5-digit passcode'
+                : resetStep === 2
+                  ? 'Enter the mock passcode to continue'
+                  : 'Create and confirm your new password'}
+          </Text>
         </Animated.View>
 
         {/* LOGO (FIXED - REAL IMAGE RESTORED) */}
@@ -213,64 +309,217 @@ export default function LoginScreen() {
 
         {/* INPUTS */}
         <Animated.View style={[styles.form, { opacity: fadeAnim }]}>
-          <TextInput
-            placeholder="Email address"
-            placeholderTextColor="rgba(255,255,255,0.5)"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            value={email}
-            onChangeText={setEmail}
-            style={styles.input}
-          />
+          {mode === 'login' ? (
+            <>
+              <TextInput
+                placeholder="Email address"
+                placeholderTextColor="rgba(255,255,255,0.5)"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={email}
+                onChangeText={setEmail}
+                style={styles.input}
+              />
 
-          <View style={styles.inputWrap}>
-            <TextInput
-              placeholder="Password"
-              placeholderTextColor="rgba(255,255,255,0.5)"
-              secureTextEntry={!showPassword}
-              value={password}
-              onChangeText={setPassword}
-              style={styles.inputField}
-            />
-            <Pressable
-              onPress={() => setShowPassword((value) => !value)}
-              style={styles.inputToggle}
-              hitSlop={8}
-            >
-              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="rgba(255,255,255,0.78)" />
-            </Pressable>
-          </View>
+              <View style={styles.inputWrap}>
+                <TextInput
+                  placeholder="Password"
+                  placeholderTextColor="rgba(255,255,255,0.5)"
+                  secureTextEntry={!showPassword}
+                  value={password}
+                  onChangeText={setPassword}
+                  style={styles.inputField}
+                />
+                <Pressable
+                  onPress={() => setShowPassword((value) => !value)}
+                  style={styles.inputToggle}
+                  hitSlop={8}
+                >
+                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="rgba(255,255,255,0.78)" />
+                </Pressable>
+              </View>
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+              <Pressable onPress={openForgotPassword}>
+                <Text style={styles.forgotText}>I forgot my password</Text>
+              </Pressable>
+            </>
+          ) : null}
+
+          {mode === 'forgot-password' && resetStep === 1 ? (
+            <>
+              <View style={styles.stepBadge}>
+                <Text style={styles.stepBadgeText}>Step 1 of 3</Text>
+              </View>
+              <TextInput
+                placeholder="Enter your email"
+                placeholderTextColor="rgba(255,255,255,0.5)"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={resetEmail}
+                onChangeText={setResetEmail}
+                style={styles.input}
+              />
+            </>
+          ) : null}
+
+          {mode === 'forgot-password' && resetStep === 2 ? (
+            <>
+              <View style={styles.stepBadge}>
+                <Text style={styles.stepBadgeText}>Step 2 of 3</Text>
+              </View>
+              <TextInput
+                placeholder="Enter 5-digit passcode"
+                placeholderTextColor="rgba(255,255,255,0.5)"
+                keyboardType="number-pad"
+                maxLength={5}
+                value={resetCode}
+                onChangeText={setResetCode}
+                style={styles.input}
+              />
+            </>
+          ) : null}
+
+          {mode === 'forgot-password' && resetStep === 3 ? (
+            <>
+              <View style={styles.stepBadge}>
+                <Text style={styles.stepBadgeText}>Step 3 of 3</Text>
+              </View>
+              <View style={styles.inputWrap}>
+                <TextInput
+                  placeholder="New password"
+                  placeholderTextColor="rgba(255,255,255,0.5)"
+                  secureTextEntry={!showResetPassword}
+                  value={resetPassword}
+                  onChangeText={setResetPassword}
+                  style={styles.inputField}
+                />
+                <Pressable
+                  onPress={() => setShowResetPassword((value) => !value)}
+                  style={styles.inputToggle}
+                  hitSlop={8}
+                >
+                  <Ionicons name={showResetPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="rgba(255,255,255,0.78)" />
+                </Pressable>
+              </View>
+
+              <View style={styles.inputWrap}>
+                <TextInput
+                  placeholder="Confirm new password"
+                  placeholderTextColor="rgba(255,255,255,0.5)"
+                  secureTextEntry={!showResetPasswordConfirm}
+                  value={resetPasswordConfirm}
+                  onChangeText={setResetPasswordConfirm}
+                  style={styles.inputField}
+                />
+                <Pressable
+                  onPress={() => setShowResetPasswordConfirm((value) => !value)}
+                  style={styles.inputToggle}
+                  hitSlop={8}
+                >
+                  <Ionicons name={showResetPasswordConfirm ? 'eye-off-outline' : 'eye-outline'} size={20} color="rgba(255,255,255,0.78)" />
+                </Pressable>
+              </View>
+            </>
+          ) : null}
+
+          {mode === 'login' && error ? <Text style={styles.error}>{error}</Text> : null}
+          {mode === 'forgot-password' && resetNotice ? <Text style={styles.notice}>{resetNotice}</Text> : null}
+          {mode === 'forgot-password' && resetError ? <Text style={styles.error}>{resetError}</Text> : null}
         </Animated.View>
 
         {/* BUTTONS */}
         <View style={styles.buttons}>
-          <Pressable
-            onPress={handleLogin}
-            disabled={submitting}
-            style={({ pressed }) => [
-              styles.loginBtn,
-              pressed && { opacity: 0.85 },
-            ]}
-          >
-            <LinearGradient
-              colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.10)']}
-              style={styles.loginGradient}
+          {mode === 'login' ? (
+            <Pressable
+              onPress={handleLogin}
+              disabled={submitting}
+              style={({ pressed }) => [
+                styles.loginBtn,
+                pressed && { opacity: 0.85 },
+              ]}
             >
-              <Text style={styles.loginText}>
-                {submitting ? 'Logging in...' : 'Log In'}
-              </Text>
-            </LinearGradient>
-          </Pressable>
+              <LinearGradient
+                colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.10)']}
+                style={styles.loginGradient}
+              >
+                <Text style={styles.loginText}>
+                  {submitting ? 'Logging in...' : 'Log In'}
+                </Text>
+              </LinearGradient>
+            </Pressable>
+          ) : null}
 
-          <Pressable onPress={() => router.push('/screenviews/aut-landing/create-account')}>
-            <Text style={styles.createText}>Create Account</Text>
-          </Pressable>
+          {mode === 'forgot-password' && resetStep === 1 ? (
+            <Pressable
+              onPress={handleSendPasscode}
+              disabled={resetSubmitting}
+              style={({ pressed }) => [
+                styles.loginBtn,
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <LinearGradient
+                colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.10)']}
+                style={styles.loginGradient}
+              >
+                <Text style={styles.loginText}>
+                  {resetSubmitting ? 'Sending passcode...' : 'Send Passcode'}
+                </Text>
+              </LinearGradient>
+            </Pressable>
+          ) : null}
 
-           {/* <Pressable onPress={() => router.push('/screenviews/aut-landing/landing-portal')}>
-            <Text style={styles.createText}>Back</Text>
-          </Pressable> */}
+          {mode === 'forgot-password' && resetStep === 2 ? (
+            <Pressable
+              onPress={handleVerifyPasscode}
+              disabled={resetSubmitting}
+              style={({ pressed }) => [
+                styles.loginBtn,
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <LinearGradient
+                colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.10)']}
+                style={styles.loginGradient}
+              >
+                <Text style={styles.loginText}>
+                  {resetSubmitting ? 'Verifying...' : 'Verify Passcode'}
+                </Text>
+              </LinearGradient>
+            </Pressable>
+          ) : null}
+
+          {mode === 'forgot-password' && resetStep === 3 ? (
+            <Pressable
+              onPress={handleResetPassword}
+              disabled={resetSubmitting}
+              style={({ pressed }) => [
+                styles.loginBtn,
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <LinearGradient
+                colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.10)']}
+                style={styles.loginGradient}
+              >
+                <Text style={styles.loginText}>
+                  {resetSubmitting ? 'Updating password...' : 'Update Password'}
+                </Text>
+              </LinearGradient>
+            </Pressable>
+          ) : null}
+
+          {mode === 'login' ? (
+            <Pressable onPress={() => router.push('/screenviews/aut-landing/create-account')}>
+              <Text style={styles.createText}>Create Account</Text>
+            </Pressable>
+          ) : null}
+
+          {mode === 'forgot-password' ? (
+            <Pressable onPress={closeForgotPassword}>
+              <Text style={styles.createText}>Back to Login</Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
     </SafeAreaView>
@@ -406,6 +655,32 @@ const styles = StyleSheet.create({
     color: '#fecaca',
     fontSize: 12,
     textAlign: 'center',
+  },
+  notice: {
+    color: 'rgba(255,255,255,0.82)',
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  forgotText: {
+    color: 'rgba(255,255,255,0.85)',
+    textAlign: 'right',
+    fontSize: 12,
+    marginTop: -2,
+  },
+  stepBadge: {
+    alignSelf: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  stepBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
   },
 
   // buttons
