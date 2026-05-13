@@ -142,6 +142,21 @@
                 </div>
                 <div id="receptionWalkInDoctorPreview" class="hidden mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.78rem] text-slate-700 break-words"></div>
             </div>
+            <div class="min-w-0">
+                <div class="block text-[0.7rem] text-slate-600 mb-1">Last Walk-in visit</div>
+                <div id="receptionWalkInPatientSummaryCard" class="rounded-xl border border-slate-200 bg-white px-3 py-3 min-h-[96px]">
+                    <div id="receptionWalkInPatientSummaryEmpty" class="text-[0.75rem] text-slate-500">No patient selected.</div>
+                    <div id="receptionWalkInPatientSummaryDetails" class="hidden space-y-1.5 text-[0.75rem] text-slate-700">
+                        <div><span class="font-semibold text-slate-800">Last visit:</span> <span id="receptionWalkInPatientSummaryVisit">—</span></div>
+                        <div><span class="font-semibold text-slate-800">Service inquired:</span> <span id="receptionWalkInPatientSummaryService">—</span></div>
+                        <div><span class="font-semibold text-slate-800">Doctor:</span> <span id="receptionWalkInPatientSummaryDoctor">—</span></div>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <label for="reception_walkin_reason" class="block text-[0.7rem] text-slate-600 mb-1">Reason (optional)</label>
+                <input id="reception_walkin_reason" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Reason for visit">
+            </div>
             <div>
                 <label for="reception_walkin_priority" class="block text-[0.7rem] text-slate-600 mb-1">Priority level (optional)</label>
                 <select id="reception_walkin_priority" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
@@ -155,10 +170,6 @@
                 <div id="receptionWalkInPriorityHelp" class="mt-1 text-[0.68rem] text-slate-500">
                     Manual priority stays available until an approved patient type is found.
                 </div>
-            </div>
-            <div class="md:col-span-3">
-                <label for="reception_walkin_reason" class="block text-[0.7rem] text-slate-600 mb-1">Reason (optional)</label>
-                <input id="reception_walkin_reason" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Reason for visit">
             </div>
 
             <input id="reception_walkin_type" type="hidden" value="walk_in">
@@ -1939,6 +1950,11 @@ function setWalkInTab(tab) {
         var doctorSelect = accountQuery('#reception_walkin_doctor_id')
         var doctorResults = accountQuery('#receptionWalkInDoctorResults')
         var doctorPreview = accountQuery('#receptionWalkInDoctorPreview')
+        var patientSummaryEmpty = accountQuery('#receptionWalkInPatientSummaryEmpty')
+        var patientSummaryDetails = accountQuery('#receptionWalkInPatientSummaryDetails')
+        var patientSummaryVisit = accountQuery('#receptionWalkInPatientSummaryVisit')
+        var patientSummaryService = accountQuery('#receptionWalkInPatientSummaryService')
+        var patientSummaryDoctor = accountQuery('#receptionWalkInPatientSummaryDoctor')
         var dateSelect = accountQuery('#reception_walkin_date_select')
         var dateInput = accountQuery('#reception_walkin_date')
         var dateLoadMore = accountQuery('#reception_walkin_date_load_more')
@@ -2066,6 +2082,54 @@ function setWalkInTab(tab) {
             return name
         }
 
+        function appointmentDoctorDisplayName(appointment) {
+            if (!appointment) return '—'
+            var doctor = appointment.doctor || null
+            if (doctor) {
+                var name = [doctor.firstname, doctor.middlename, doctor.lastname]
+                    .filter(function (v) { return String(v || '').trim() !== '' })
+                    .join(' ')
+                    .trim()
+                if (name) return name
+                if (doctor.user_id != null) return 'Doctor #' + doctor.user_id
+            }
+            if (appointment.doctor_id != null) return 'Doctor #' + appointment.doctor_id
+            return '—'
+        }
+
+        function formatAppointmentVisitLabel(value) {
+            if (!value) return 'No walk-in visit yet.'
+            var date = new Date(value)
+            if (isNaN(date.getTime())) {
+                return String(value || '').replace('T', ' ').slice(0, 16) || 'No walk-in visit yet.'
+            }
+            return date.toLocaleString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit'
+            })
+        }
+
+        function setPatientSummaryCard(summary) {
+            if (!patientSummaryEmpty || !patientSummaryDetails || !patientSummaryVisit || !patientSummaryService || !patientSummaryDoctor) return
+            if (!summary) {
+                patientSummaryEmpty.textContent = 'No patient selected.'
+                patientSummaryEmpty.classList.remove('hidden')
+                patientSummaryDetails.classList.add('hidden')
+                patientSummaryVisit.textContent = '—'
+                patientSummaryService.textContent = '—'
+                patientSummaryDoctor.textContent = '—'
+                return
+            }
+            patientSummaryEmpty.classList.add('hidden')
+            patientSummaryDetails.classList.remove('hidden')
+            patientSummaryVisit.textContent = summary.lastVisit || '—'
+            patientSummaryService.textContent = summary.serviceInquired || '—'
+            patientSummaryDoctor.textContent = summary.doctor || '—'
+        }
+
         function verificationTypeLabel(type) {
             var key = normalizeText(type || '')
             if (key === 'pwd') return 'PWD'
@@ -2147,6 +2211,7 @@ function setWalkInTab(tab) {
             approvedVerificationType = ''
             if (priorityInput) priorityInput.value = ''
             syncPriorityInputState()
+            setPatientSummaryCard(null)
 
             if (patientPreview) {
                 if (!patient) {
@@ -2171,6 +2236,11 @@ function setWalkInTab(tab) {
             }
 
             if (patient && patient.user_id) {
+                setPatientSummaryCard({
+                    lastVisit: 'Loading...',
+                    serviceInquired: 'Loading...',
+                    doctor: 'Loading...'
+                })
                 loadPreviousProvider(String(patient.user_id))
                 loadApprovedPatientVerification(String(patient.user_id))
             }
@@ -2178,10 +2248,18 @@ function setWalkInTab(tab) {
 
         function loadPreviousProvider(patientId) {
             if (!patientId || typeof apiFetch !== 'function') return
-            apiFetch("{{ url('/api/appointments') }}?patient_id=" + encodeURIComponent(patientId) + "&per_page=1&order=latest", { method: 'GET' })
+            apiFetch("{{ url('/api/appointments') }}?patient_id=" + encodeURIComponent(patientId) + "&appointment_type=walk_in&per_page=1&order=latest", { method: 'GET' })
                 .then(function (r) { return readResponse(r) })
                 .then(function (res) {
-                    if (!res.ok) return
+                    if (!selectedPatient || String(selectedPatient.user_id || '') !== String(patientId)) return
+                    if (!res.ok) {
+                        setPatientSummaryCard({
+                            lastVisit: 'No walk-in visit yet.',
+                            serviceInquired: '—',
+                            doctor: '—'
+                        })
+                        return
+                    }
                     var list = res.data && Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : [])
                     var last = list && list.length ? list[0] : null
                     var docId = last && last.doctor_id != null ? parseInt(last.doctor_id, 10) : 0
@@ -2198,6 +2276,17 @@ function setWalkInTab(tab) {
                         previousServiceIds.push(sid)
                     })
 
+                    var serviceText = lastServices
+                        .map(function (service) { return serviceDisplayName(service) })
+                        .filter(function (name) { return !!String(name || '').trim() })
+                        .join(', ')
+
+                    setPatientSummaryCard({
+                        lastVisit: formatAppointmentVisitLabel(last && last.appointment_datetime ? last.appointment_datetime : ''),
+                        serviceInquired: serviceText || '—',
+                        doctor: appointmentDoctorDisplayName(last)
+                    })
+
                     if (doctorSearch && doctorResults && !doctorResults.classList.contains('hidden')) {
                         searchDoctors(String(doctorSearch.value || '').trim())
                     }
@@ -2205,7 +2294,14 @@ function setWalkInTab(tab) {
                         searchServices(String(serviceSearch.value || '').trim())
                     }
                 })
-                .catch(function () {})
+                .catch(function () {
+                    if (!selectedPatient || String(selectedPatient.user_id || '') !== String(patientId)) return
+                    setPatientSummaryCard({
+                        lastVisit: 'No walk-in visit yet.',
+                        serviceInquired: '—',
+                        doctor: '—'
+                    })
+                })
         }
 
         function renderPatientResults(items) {

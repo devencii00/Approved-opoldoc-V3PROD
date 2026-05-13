@@ -51,7 +51,19 @@
             </div>
             <div id="receptionDoctorPreview" class="hidden mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.78rem] text-slate-700 break-words"></div>
         </div>
-        <div id="receptionAppointmentDateWrap" class="self-start relative">
+        <div class="min-w-0">
+            <div class="block text-[0.7rem] text-slate-600 mb-1">Last Scheduled visit</div>
+            <div class="mb-1 text-[0.7rem] text-slate-500">&nbsp;</div>
+            <div id="receptionAppointmentPatientSummaryCard" class="rounded-xl border border-slate-200 bg-white px-3 py-3 min-h-[96px]">
+                <div id="receptionAppointmentPatientSummaryEmpty" class="text-[0.75rem] text-slate-500">No patient selected.</div>
+                <div id="receptionAppointmentPatientSummaryDetails" class="hidden space-y-1.5 text-[0.75rem] text-slate-700">
+                    <div><span class="font-semibold text-slate-800">Last visit:</span> <span id="receptionAppointmentPatientSummaryVisit">—</span></div>
+                    <div><span class="font-semibold text-slate-800">Service inquired:</span> <span id="receptionAppointmentPatientSummaryService">—</span></div>
+                    <div><span class="font-semibold text-slate-800">Doctor:</span> <span id="receptionAppointmentPatientSummaryDoctor">—</span></div>
+                </div>
+            </div>
+        </div>
+        <div id="receptionAppointmentDateWrap" class="self-start relative min-w-0">
             <label for="reception_appointment_date" class="block text-[0.7rem] text-slate-600 mb-1">Date</label>
             <div class="mb-1 text-[0.7rem] text-slate-500">&nbsp;</div>
             <button id="receptionAppointmentDateTrigger" type="button" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 text-left focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none disabled:opacity-60" disabled>
@@ -75,8 +87,9 @@
             </select>
             <input id="reception_appointment_date" type="date" class="hidden" tabindex="-1">
         </div>
-        <div id="receptionAppointmentTimeWrap" class="self-start relative">
+        <div id="receptionAppointmentTimeWrap" class="self-start relative min-w-0">
             <label class="block text-[0.7rem] text-slate-600 mb-1">Time slot</label>
+             <div class="mb-1 text-[0.7rem] text-slate-500">&nbsp;</div>
             <input id="reception_appointment_time" type="hidden" required>
             <div id="reception_available_days" class="mb-1 text-[0.7rem] text-slate-500"></div>
             <button id="receptionTimeSlotTrigger" type="button" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 text-left focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none disabled:opacity-60" disabled>
@@ -100,7 +113,7 @@
     </form>
 
     <p class="text-[0.7rem] text-slate-400">
-        Appointments booked by reception are confirmed by default.
+        Appointments booked by receptionists are confirmed by default.
     </p>
     </div>
 
@@ -337,6 +350,11 @@ function setAppointmentTab(tab) {
         var patientSelect = document.getElementById('reception_appointment_patient_id')
         var patientResults = document.getElementById('receptionPatientResults')
         var patientPreview = document.getElementById('receptionPatientPreview')
+        var patientSummaryEmpty = document.getElementById('receptionAppointmentPatientSummaryEmpty')
+        var patientSummaryDetails = document.getElementById('receptionAppointmentPatientSummaryDetails')
+        var patientSummaryVisit = document.getElementById('receptionAppointmentPatientSummaryVisit')
+        var patientSummaryService = document.getElementById('receptionAppointmentPatientSummaryService')
+        var patientSummaryDoctor = document.getElementById('receptionAppointmentPatientSummaryDoctor')
         var serviceSearch = document.getElementById('reception_service_search')
         var serviceSelect = document.getElementById('reception_appointment_service_id')
         var serviceResults = document.getElementById('receptionServiceResults')
@@ -453,12 +471,66 @@ function setAppointmentTab(tab) {
             return name
         }
 
+        function serviceDisplayName(service) {
+            if (!service) return ''
+            return String(service.service_name || service.name || '').trim()
+        }
+
+        function appointmentDoctorDisplayName(appointment) {
+            if (!appointment) return '—'
+            var doctor = appointment.doctor || null
+            if (doctor) {
+                var name = [doctor.firstname, doctor.middlename, doctor.lastname]
+                    .filter(function (v) { return String(v || '').trim() !== '' })
+                    .join(' ')
+                    .trim()
+                if (name) return name
+                if (doctor.user_id != null) return 'Doctor #' + doctor.user_id
+            }
+            if (appointment.doctor_id != null) return 'Doctor #' + appointment.doctor_id
+            return '—'
+        }
+
+        function formatAppointmentVisitLabel(value) {
+            if (!value) return 'No scheduled visit yet.'
+            var date = new Date(value)
+            if (isNaN(date.getTime())) {
+                return String(value || '').replace('T', ' ').slice(0, 16) || 'No scheduled visit yet.'
+            }
+            return date.toLocaleString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit'
+            })
+        }
+
+        function setPatientSummaryCard(summary) {
+            if (!patientSummaryEmpty || !patientSummaryDetails || !patientSummaryVisit || !patientSummaryService || !patientSummaryDoctor) return
+            if (!summary) {
+                patientSummaryEmpty.textContent = 'No patient selected.'
+                patientSummaryEmpty.classList.remove('hidden')
+                patientSummaryDetails.classList.add('hidden')
+                patientSummaryVisit.textContent = '—'
+                patientSummaryService.textContent = '—'
+                patientSummaryDoctor.textContent = '—'
+                return
+            }
+            patientSummaryEmpty.classList.add('hidden')
+            patientSummaryDetails.classList.remove('hidden')
+            patientSummaryVisit.textContent = summary.lastVisit || '—'
+            patientSummaryService.textContent = summary.serviceInquired || '—'
+            patientSummaryDoctor.textContent = summary.doctor || '—'
+        }
+
         function setPatientSelection(patient) {
             selectedPatient = patient || null
             if (patientSelect) patientSelect.value = patient && patient.user_id ? String(patient.user_id) : ''
             previousDoctorId = 0
             previousServiceIds = []
             previousServiceIdSet = {}
+            setPatientSummaryCard(null)
 
             if (patientPreview) {
                 if (!patient) {
@@ -483,16 +555,29 @@ function setAppointmentTab(tab) {
             }
 
             if (patient && patient.user_id) {
+                setPatientSummaryCard({
+                    lastVisit: 'Loading...',
+                    serviceInquired: 'Loading...',
+                    doctor: 'Loading...'
+                })
                 loadPreviousProvider(String(patient.user_id))
             }
         }
 
         function loadPreviousProvider(patientId) {
             if (!patientId || typeof apiFetch !== 'function') return
-            apiFetch("{{ url('/api/appointments') }}?patient_id=" + encodeURIComponent(patientId) + "&per_page=1&order=latest", { method: 'GET' })
+            apiFetch("{{ url('/api/appointments') }}?patient_id=" + encodeURIComponent(patientId) + "&appointment_type=scheduled&per_page=1&order=latest", { method: 'GET' })
                 .then(function (r) { return readResponse(r) })
                 .then(function (res) {
-                    if (!res.ok) return
+                    if (!selectedPatient || String(selectedPatient.user_id || '') !== String(patientId)) return
+                    if (!res.ok) {
+                        setPatientSummaryCard({
+                            lastVisit: 'No scheduled visit yet.',
+                            serviceInquired: '—',
+                            doctor: '—'
+                        })
+                        return
+                    }
                     var list = res.data && Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : [])
                     var last = list && list.length ? list[0] : null
                     var docId = last && last.doctor_id != null ? parseInt(last.doctor_id, 10) : 0
@@ -509,12 +594,30 @@ function setAppointmentTab(tab) {
                         previousServiceIds.push(sid)
                     })
 
+                    var serviceText = lastServices
+                        .map(function (service) { return serviceDisplayName(service) })
+                        .filter(function (name) { return !!String(name || '').trim() })
+                        .join(', ')
+
+                    setPatientSummaryCard({
+                        lastVisit: formatAppointmentVisitLabel(last && last.appointment_datetime ? last.appointment_datetime : ''),
+                        serviceInquired: serviceText || '—',
+                        doctor: appointmentDoctorDisplayName(last)
+                    })
+
                     renderDoctorResults()
                     if (serviceSearch && (document.activeElement === serviceSearch || (serviceResults && !serviceResults.classList.contains('hidden')))) {
                         renderServiceResults()
                     }
                 })
-                .catch(function () {})
+                .catch(function () {
+                    if (!selectedPatient || String(selectedPatient.user_id || '') !== String(patientId)) return
+                    setPatientSummaryCard({
+                        lastVisit: 'No scheduled visit yet.',
+                        serviceInquired: '—',
+                        doctor: '—'
+                    })
+                })
         }
 
         function renderPatientResults(items) {
