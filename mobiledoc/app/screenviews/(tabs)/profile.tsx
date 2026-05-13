@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Image,
   Modal,
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -56,6 +57,7 @@ type PickedImage = {
   uri: string;
   name: string;
   mimeType: string;
+  file?: File | null;
 };
 
 type EditableProfileForm = {
@@ -159,6 +161,22 @@ function mapApiUserToProfileUser(data: any): ProfileUser {
   };
 }
 
+function cacheBustedUri(value: string | null | undefined): string {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return '';
+  if (/^(blob:|data:)/i.test(raw)) return raw;
+  return `${raw}${raw.includes('?') ? '&' : '?'}v=${Date.now()}`;
+}
+
+async function ensureWebFile(uri: string, name: string, mimeType: string, existingFile?: File | null): Promise<File> {
+  if (existingFile instanceof File) return existingFile;
+  const response = await fetch(uri);
+  const blob = await response.blob();
+  return new File([blob], name || 'upload-image', {
+    type: mimeType || blob.type || 'application/octet-stream',
+  });
+}
+
 function buildEditableForm(user: ProfileUser | null): EditableProfileForm {
   return {
     contact_number: normalizeText(user?.contact_number),
@@ -178,6 +196,9 @@ export default function ProfileScreen() {
   const [success, setSuccess] = useState('');
   const [form, setForm] = useState<EditableProfileForm>(buildEditableForm((globalThis as any)?.currentUser ?? null));
   const [verificationTypeLabel, setVerificationTypeLabel] = useState('Not specified');
+  const [profileImageUri, setProfileImageUri] = useState<string>(() =>
+    cacheBustedUri(((globalThis as any)?.currentUser?.prof_path_url as string | null | undefined) ?? '')
+  );
 
   const profileName = useMemo(() => formatFullName(user), [user]);
   const profileDobLabel = useMemo(() => {
@@ -215,6 +236,7 @@ export default function ProfileScreen() {
         if (!cancelled) {
           setUser(nextUser);
           setForm(buildEditableForm(nextUser));
+          setProfileImageUri(cacheBustedUri(nextUser.prof_path_url));
           await persistCurrentUser({ ...(globalThis as any)?.currentUser, ...data });
         }
       } catch {
@@ -297,8 +319,10 @@ export default function ProfileScreen() {
         uri: asset.uri,
         name: asset.name,
         mimeType: asset.mimeType ?? 'image/jpeg',
+        file: (asset as any).file instanceof File ? (asset as any).file : null,
       };
 
+      setProfileImageUri(asset.uri);
       await uploadProfileImage(pickedImage);
     } catch {
       setError('Unable to pick an image on this device.');
@@ -318,11 +342,16 @@ export default function ProfileScreen() {
       }
 
       const formData = new FormData();
-      formData.append('prof_path', {
-        uri: image.uri,
-        name: image.name,
-        type: image.mimeType,
-      } as any);
+      if (Platform.OS === 'web') {
+        const webFile = await ensureWebFile(image.uri, image.name, image.mimeType, image.file);
+        formData.append('prof_path', webFile, webFile.name);
+      } else {
+        formData.append('prof_path', {
+          uri: image.uri,
+          name: image.name,
+          type: image.mimeType,
+        } as any);
+      }
 
       const response = await fetch(`${API_BASE_URL}/users/me/profile-picture`, {
         method: 'POST',
@@ -332,9 +361,15 @@ export default function ProfileScreen() {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
+        const validationMessage =
+          data?.errors && typeof data.errors === 'object'
+            ? Object.values(data.errors).flat().filter(Boolean).join(' ')
+            : '';
         const message =
-          typeof data?.message === 'string' && data.message.length > 0 ? data.message : 'Unable to update profile image.';
+          validationMessage ||
+          (typeof data?.message === 'string' && data.message.length > 0 ? data.message : 'Unable to update profile image.');
         setError(message);
+        setProfileImageUri(cacheBustedUri(user?.prof_path_url));
         return;
       }
 
@@ -342,10 +377,12 @@ export default function ProfileScreen() {
 
       setUser(nextUser);
       setForm(buildEditableForm(nextUser));
+      setProfileImageUri(cacheBustedUri(nextUser.prof_path_url) || image.uri);
       await persistCurrentUser({ ...(globalThis as any)?.currentUser, ...data });
       setSuccess('Profile image updated.');
     } catch {
       setError('Network error. Please try again.');
+      setProfileImageUri(cacheBustedUri(user?.prof_path_url));
     } finally {
       setUploadingImage(false);
     }
@@ -478,8 +515,8 @@ export default function ProfileScreen() {
 
         <View style={styles.heroCard}>
           <View style={styles.avatarWrap}>
-            {user?.prof_path_url ? (
-              <Image source={{ uri: user.prof_path_url }} style={styles.avatarImage} resizeMode="cover" />
+            {profileImageUri ? (
+              <Image source={{ uri: profileImageUri }} style={styles.avatarImage} resizeMode="cover" />
             ) : (
               <Text style={styles.avatarInitials}>{getInitials(user)}</Text>
             )}

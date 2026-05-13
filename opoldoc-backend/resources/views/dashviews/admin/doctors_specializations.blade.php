@@ -47,6 +47,8 @@
             </tbody>
         </table>
     </div>
+
+    
     <!-- Schedule Modal -->
     <div id="adminDoctorScheduleModal" class="hidden fixed inset-0 z-50 bg-slate-900/40 items-center justify-center p-4">
         <div class="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.24)]">
@@ -259,6 +261,7 @@
                             <option value="General Medicine"></option>
                             <option value="General Surgeon"></option>
                             <option value="obstetrician - gynecologist"></option>
+                            <option value="Internal Medicine"></option>
                         
                         </datalist>
                     </div>

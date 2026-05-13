@@ -100,7 +100,7 @@ class UserController extends Controller
 
         $emailRules = ['sometimes', 'email', "unique:users,email,{$user->user_id},user_id"];
         if ($user->role === 'admin' && $user->is_first_login) {
-            $emailRules[] = 'regex:/@example\\.com$/i';
+            $emailRules[] = 'regex:/@(example\.com|gmail\.com|test\.com)$/i';
         }
 
         $mustChangeForUser = $user->role === 'patient'
@@ -332,16 +332,11 @@ class UserController extends Controller
         }
 
         $data = $request->validate([
-            'signature' => ['required', 'file', 'image', 'max:2048'],
+            'signature' => ['required', 'image', 'max:2048'],
         ]);
 
         $file = $data['signature'];
-        $ext = strtolower($file->getClientOriginalExtension() ?: 'png');
-        if (! in_array($ext, ['png', 'jpg', 'jpeg', 'webp'], true)) {
-            return response()->json([
-                'message' => 'Unsupported signature image type.',
-            ], 422);
-        }
+        $ext = strtolower($file->guessExtension() ?: $file->extension() ?: $file->getClientOriginalExtension() ?: 'png');
 
         $oldPath = $currentUser->signature_path;
 
@@ -367,16 +362,11 @@ class UserController extends Controller
         }
 
         $data = $request->validate([
-            'prof_path' => ['required', 'file', 'image', 'max:5120'],
+            'prof_path' => ['required', 'image', 'max:5120'],
         ]);
 
         $file = $data['prof_path'];
-        $ext = strtolower($file->getClientOriginalExtension() ?: 'png');
-        if (! in_array($ext, ['png', 'jpg', 'jpeg', 'webp'], true)) {
-            return response()->json([
-                'message' => 'Unsupported profile image type.',
-            ], 422);
-        }
+        $ext = strtolower($file->guessExtension() ?: $file->extension() ?: $file->getClientOriginalExtension() ?: 'png');
 
         $oldPath = $currentUser->prof_path ?? null;
 

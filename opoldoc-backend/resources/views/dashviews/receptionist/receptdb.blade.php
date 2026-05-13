@@ -144,7 +144,7 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <select id="receptionNextQueueDoctorSelect" class="w-[250px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-[0.75rem] text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                    <select id="receptionNextQueueDoctorSelect" class="w-[110px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-[0.75rem] text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
                         <option value="">Auto (any active doctor)</option>
                         @foreach ($activeCallNextDoctors as $doctorState)
                             @php
@@ -161,7 +161,7 @@
                             </option>
                         @endforeach
                     </select>
-                    <button type="button" id="receptionNextQueueNextBtn" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 text-white text-[0.72rem] font-semibold hover:bg-slate-700 transition-all duration-150 shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 disabled:opacity-60 disabled:pointer-events-none">
+                    <button type="button" id="receptionNextQueueNextBtn" class="inline-flex   items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 text-white text-[0.72rem] font-semibold hover:bg-slate-700 transition-all duration-150 shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 disabled:opacity-60 disabled:pointer-events-none">
                         <span id="receptionNextQueueNextSpinner" class="hidden w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
                         <x-lucide-megaphone class="w-3.5 h-3.5" />
                         <span id="receptionNextQueueNextLabel">Call next</span>

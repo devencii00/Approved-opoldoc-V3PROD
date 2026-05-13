@@ -470,6 +470,7 @@
         function cacheBustedUrl(url) {
             var raw = String(url || '').trim()
             if (!raw) return ''
+            if (/^(blob:|data:)/i.test(raw)) return raw
             return raw + (raw.indexOf('?') === -1 ? '?v=' : '&v=') + String(Date.now())
         }
 
@@ -478,6 +479,7 @@
             var normalized = String(imageUrl || '').trim()
             if (!normalized) {
                 container.textContent = emptyText || 'No image uploaded yet.'
+                container.classList.remove('text-slate-700')
                 container.classList.add('text-slate-400')
                 return
             }
@@ -485,6 +487,14 @@
             container.innerHTML = '<img alt="' + String(altText || 'Image') + '" src="' + src + '" class="max-h-20 max-w-full object-contain' + (rounded ? ' rounded-lg' : '') + '">'
             container.classList.remove('text-slate-400')
             container.classList.add('text-slate-700')
+            var img = container.querySelector('img')
+            if (img) {
+                img.addEventListener('error', function () {
+                    container.textContent = emptyText || 'No image uploaded yet.'
+                    container.classList.remove('text-slate-700')
+                    container.classList.add('text-slate-400')
+                }, { once: true })
+            }
         }
 
         function setUploadButtonState(button, spinner, icon, labelNode, busy, busyLabel, idleLabel) {
@@ -775,7 +785,13 @@
                     })
                     .then(function (result) {
                         if (!result.ok) {
-                            var msg = (result.data && result.data.message) ? String(result.data.message) : 'Unable to upload profile picture.'
+                            var validationMessage = result.data && result.data.errors && typeof result.data.errors === 'object'
+                                ? Object.keys(result.data.errors).map(function (key) {
+                                    var list = Array.isArray(result.data.errors[key]) ? result.data.errors[key] : [result.data.errors[key]]
+                                    return list.filter(Boolean).join(' ')
+                                }).filter(Boolean).join(' ')
+                                : ''
+                            var msg = validationMessage || ((result.data && result.data.message) ? String(result.data.message) : 'Unable to upload profile picture.')
                             window.alert(msg)
                             loadDoctorSettings()
                             return

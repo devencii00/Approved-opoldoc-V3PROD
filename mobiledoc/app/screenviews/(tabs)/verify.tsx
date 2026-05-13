@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Animated,
+  Image,
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -50,6 +51,7 @@ type VerificationRequest = {
   type: 'none' | 'senior' | 'pwd' | 'pregnant';
   status: 'pending' | 'approved' | 'rejected';
   document_path: string | null;
+  document_url?: string | null;
   remarks: string | null;
   verified_at: string | null;
 };
@@ -87,6 +89,29 @@ function AnimatedCard({ children, delay = 0, style }: { children: React.ReactNod
   );
 }
 
+function fileNameFromPath(value: string | null | undefined): string {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return 'Uploaded document';
+  const normalized = raw.split('?')[0];
+  const parts = normalized.split('/');
+  return parts[parts.length - 1] || 'Uploaded document';
+}
+
+function isImageLike(value: string | null | undefined): boolean {
+  const raw = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  if (!raw) return false;
+  return raw.startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp|svg|avif)$/i.test(raw);
+}
+
+async function ensureWebFile(uri: string, name: string, mimeType: string, existingFile?: File | null): Promise<File> {
+  if (existingFile instanceof File) return existingFile;
+  const response = await fetch(uri);
+  const blob = await response.blob();
+  return new File([blob], name || 'verification-document', {
+    type: mimeType || blob.type || 'application/octet-stream',
+  });
+}
+
 export default function PatientVerificationScreen() {
   const router = useRouter();
   const isOnboarding = Boolean((globalThis as any)?.currentUser?.is_first_login);
@@ -98,12 +123,16 @@ export default function PatientVerificationScreen() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [typeMenuOpen, setTypeMenuOpen] = useState(false);
+  const [submittedDocPreview, setSubmittedDocPreview] = useState<PickedDoc | null>(null);
 
   const latestRejected = useMemo(() => {
     return verificationItems.find(v => v.status === 'rejected');
   }, [verificationItems]);
   const hasPendingVerification = useMemo(() => {
     return verificationItems.some(v => v.status === 'pending');
+  }, [verificationItems]);
+  const latestDocumentItem = useMemo(() => {
+    return verificationItems.find(v => !!v.document_path);
   }, [verificationItems]);
 
   useEffect(() => {
@@ -168,6 +197,7 @@ export default function PatientVerificationScreen() {
         mimeType: asset.mimeType ?? 'application/octet-stream',
         file: (asset as any).file instanceof File ? (asset as any).file : null,
       });
+      setSubmittedDocPreview(null);
     } catch {
       setError('Unable to pick a document.');
     }
@@ -202,8 +232,9 @@ export default function PatientVerificationScreen() {
 
       const formData = new FormData();
       formData.append('type', verificationType);
-      if (Platform.OS === 'web' && pickedDoc.file) {
-        formData.append('document', pickedDoc.file, pickedDoc.name);
+      if (Platform.OS === 'web') {
+        const webFile = await ensureWebFile(pickedDoc.uri, pickedDoc.name, pickedDoc.mimeType, pickedDoc.file);
+        formData.append('document', webFile, webFile.name);
       } else {
         formData.append('document', {
           uri: pickedDoc.uri,
@@ -229,6 +260,7 @@ export default function PatientVerificationScreen() {
       }
 
       setSuccess('Verification request submitted.');
+      setSubmittedDocPreview(pickedDoc);
       setVerificationDoc(null);
       setVerificationType('none');
       setTypeMenuOpen(false);
@@ -388,6 +420,44 @@ export default function PatientVerificationScreen() {
                 </Text>
                 <Text style={styles.uploadBoxSub}>Supports JPG, JPEG, PNG, PDF, DOC, DOCX</Text>
               </Pressable>
+              {verificationDoc ? (
+                <View style={styles.documentPreviewCard}>
+                  <Text style={styles.documentPreviewTitle}>Selected document</Text>
+                  {isImageLike(verificationDoc.mimeType) ? (
+                    <Image source={{ uri: verificationDoc.uri }} style={styles.documentPreviewImage} resizeMode="cover" />
+                  ) : (
+                    <View style={styles.documentPreviewFile}>
+                      <Ionicons name="document-text-outline" size={22} color={T.cyan700} />
+                      <Text style={styles.documentPreviewName}>{verificationDoc.name}</Text>
+                    </View>
+                  )}
+                  <Text style={styles.documentPreviewMeta}>Ready to upload</Text>
+                </View>
+              ) : submittedDocPreview ? (
+                <View style={styles.documentPreviewCard}>
+                  <Text style={styles.documentPreviewTitle}>Latest uploaded document</Text>
+                  {isImageLike(submittedDocPreview.mimeType) ? (
+                    <Image source={{ uri: submittedDocPreview.uri }} style={styles.documentPreviewImage} resizeMode="cover" />
+                  ) : (
+                    <View style={styles.documentPreviewFile}>
+                      <Ionicons name="document-outline" size={22} color={T.cyan700} />
+                      <Text style={styles.documentPreviewName}>{submittedDocPreview.name}</Text>
+                    </View>
+                  )}
+                  <Text style={styles.documentPreviewMeta}>Uploaded in this session</Text>
+                </View>
+              ) : latestDocumentItem?.document_path ? (
+                <View style={styles.documentPreviewCard}>
+                  <Text style={styles.documentPreviewTitle}>Current uploaded document</Text>
+                  <View style={styles.documentPreviewFile}>
+                    <Ionicons name="document-attach-outline" size={22} color={T.cyan700} />
+                    <Text style={styles.documentPreviewName}>{fileNameFromPath(latestDocumentItem.document_path)}</Text>
+                  </View>
+                  <Text style={styles.documentPreviewMeta}>
+                    {latestDocumentItem.status === 'pending' ? 'Pending review' : `Status: ${latestDocumentItem.status}`}
+                  </Text>
+                </View>
+              ) : null}
             </View>
           </AnimatedCard>
 
@@ -448,6 +518,9 @@ export default function PatientVerificationScreen() {
                         {v.type === 'none' ? 'None' : v.type === 'pwd' ? 'PWD' : v.type === 'senior' ? 'Senior Citizen' : 'Pregnant'}
                       </Text>
                       <Text style={styles.historyStatus}>{v.status.toUpperCase()}</Text>
+                      {v.document_path ? (
+                        <Text style={styles.historyDocName}>{fileNameFromPath(v.document_path)}</Text>
+                      ) : null}
                     </View>
                     <Text style={styles.historyDate}>
                       {v.verified_at ? new Date(v.verified_at).toLocaleDateString() : 'Pending'}
@@ -672,6 +745,36 @@ const styles = StyleSheet.create({
   uploadBoxText: { fontSize: 13, fontWeight: '600', color: T.slate600, textAlign: 'center', paddingHorizontal: 20 },
   uploadBoxTextActive: { color: T.cyan700 },
   uploadBoxSub: { fontSize: 10, color: T.slate400 },
+  documentPreviewCard: {
+    marginTop: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: T.slate200,
+    backgroundColor: T.slate50,
+    padding: 12,
+    gap: 10,
+  },
+  documentPreviewTitle: { fontSize: 12, fontWeight: '700', color: T.slate700 },
+  documentPreviewImage: {
+    width: '100%',
+    height: 180,
+    borderRadius: 12,
+    backgroundColor: T.white,
+  },
+  documentPreviewFile: {
+    minHeight: 56,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: T.slate200,
+    backgroundColor: T.white,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  documentPreviewName: { flex: 1, fontSize: 12, fontWeight: '600', color: T.slate700 },
+  documentPreviewMeta: { fontSize: 11, color: T.slate500 },
   actionSection: { marginTop: 4 },
   submitBtn: {
     backgroundColor: T.cyan700,
@@ -719,5 +822,6 @@ const styles = StyleSheet.create({
   historyMain: { flex: 1 },
   historyTitle: { fontSize: 13, fontWeight: '700', color: T.slate800 },
   historyStatus: { fontSize: 10, fontWeight: '600', color: T.slate500, marginTop: 1 },
+  historyDocName: { fontSize: 10, color: T.slate500, marginTop: 4 },
   historyDate: { fontSize: 11, color: T.slate400 },
 });
