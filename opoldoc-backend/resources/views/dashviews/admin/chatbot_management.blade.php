@@ -164,6 +164,7 @@
         var confirmCleanup = null
         var editingId = null
         var creatingParentId = null
+        var collapsedNodeMap = {}
 
         function showChatbotError(message) {
             if (!errorBox) return
@@ -331,6 +332,28 @@
             })
         }
 
+        function syncCollapsedStateFromTree(nodes) {
+            function visit(list) {
+                (Array.isArray(list) ? list : []).forEach(function (node) {
+                    var id = String(node.id)
+                    var hasChildren = Array.isArray(node.children) && node.children.length > 0
+                    if (hasChildren) {
+                        if (typeof collapsedNodeMap[id] === 'undefined') {
+                            collapsedNodeMap[id] = false
+                        }
+                    } else if (Object.prototype.hasOwnProperty.call(collapsedNodeMap, id)) {
+                        delete collapsedNodeMap[id]
+                    }
+
+                    if (hasChildren) {
+                        visit(node.children)
+                    }
+                })
+            }
+
+            visit(nodes)
+        }
+
         function hydrateParentSelect(excludeId) {
             if (!editParent) return
             var current = String(editParent.value || '')
@@ -477,6 +500,15 @@
             function renderNode(node, depth) {
                 if (!matches(node)) return ''
                 var startingBadge = node.is_starting_option ? '<span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[0.62rem] text-emerald-700 font-semibold">Starting</span>' : ''
+                var children = sortChildren(Array.isArray(node.children) ? node.children : [])
+                var hasChildren = children.length > 0
+                var isCollapsed = !!collapsedNodeMap[String(node.id)]
+                var childCountBadge = hasChildren
+                    ? '<span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[0.62rem] text-slate-500 font-semibold">' + String(children.length) + ' child' + (children.length === 1 ? '' : 'ren') + '</span>'
+                    : ''
+                var toggleButton = hasChildren
+                    ? '<button type="button" class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[0.68rem] font-semibold text-slate-600 hover:bg-slate-100 admin-chatbot-toggle-children" data-option-id="' + String(node.id) + '" aria-expanded="' + String(!isCollapsed) + '">' + (isCollapsed ? 'Show children' : 'Hide children') + '</button>'
+                    : ''
                 var html = ''
                 html += '<div class="rounded-2xl border border-slate-200 bg-white px-3 py-2.5" data-option-id="' + String(node.id) + '" style="margin-left:' + String(Math.max(0, depth) * 10) + 'px">'
                 html += '<div class="flex items-start justify-between gap-2">'
@@ -485,9 +517,11 @@
                 html += '<div class="flex items-center gap-2">'
                 html += '<p class="text-[0.68rem] text-slate-400">#' + String(node.id) + ' • Order ' + String(node.sort_order != null ? node.sort_order : 0) + '</p>'
                 html += startingBadge
+                html += childCountBadge
                 html += '</div>'
                 html += '</div>'
                 html += '<div class="flex items-center gap-2">'
+                html += toggleButton
                 html += '<button type="button" class="inline-flex items-center gap-1 text-[0.7rem] text-cyan-700 hover:text-cyan-800 font-semibold admin-chatbot-add-child" data-option-id="' + String(node.id) + '"><span class="hidden w-3 h-3 border-2 border-cyan-700/30 border-t-cyan-700 rounded-full animate-spin admin-chatbot-btn-spinner"></span><span class="admin-chatbot-btn-label">Add child</span></button>'
                 html += '<button type="button" class="inline-flex items-center gap-1 text-[0.7rem] text-amber-700 hover:text-amber-800 font-semibold admin-chatbot-edit" data-option-id="' + String(node.id) + '"><span class="hidden w-3 h-3 border-2 border-current/30 border-t-current rounded-full animate-spin admin-chatbot-btn-spinner"></span><span class="admin-chatbot-btn-label">Edit</span></button>'
                 html += '<button type="button" class="inline-flex items-center gap-1 text-[0.7rem] text-rose-700 hover:text-rose-800 font-semibold admin-chatbot-delete" data-option-id="' + String(node.id) + '"><span class="hidden w-3 h-3 border-2 border-current/30 border-t-current rounded-full animate-spin admin-chatbot-btn-spinner"></span><span class="admin-chatbot-btn-label">Delete</span></button>'
@@ -495,10 +529,11 @@
                 html += '</div>'
                 html += '</div>'
 
-                var children = sortChildren(Array.isArray(node.children) ? node.children : [])
-                children.forEach(function (c) {
-                    html += renderNode(c, depth + 1)
-                })
+                if (!isCollapsed) {
+                    children.forEach(function (c) {
+                        html += renderNode(c, depth + 1)
+                    })
+                }
                 return html
             }
 
@@ -523,6 +558,16 @@
                     e.stopPropagation()
                     var id = btn.getAttribute('data-option-id')
                     openCreateModal(id)
+                })
+            })
+
+            optionsContainer.querySelectorAll('.admin-chatbot-toggle-children').forEach(function (btn) {
+                btn.addEventListener('click', function (e) {
+                    e.stopPropagation()
+                    var id = btn.getAttribute('data-option-id')
+                    if (!id) return
+                    collapsedNodeMap[String(id)] = !collapsedNodeMap[String(id)]
+                    renderTree()
                 })
             })
 
@@ -590,6 +635,7 @@
                     }
                     optionsFlat = Array.isArray(result.data && result.data.flat) ? result.data.flat : []
                     optionsTree = Array.isArray(result.data && result.data.tree) ? result.data.tree : []
+                    syncCollapsedStateFromTree(optionsTree)
                     hydrateParentSelect(editingId)
                     renderTree()
                     if (selectedOptionId) renderPreview(selectedOptionId)

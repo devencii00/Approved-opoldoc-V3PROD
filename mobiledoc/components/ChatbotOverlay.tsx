@@ -16,6 +16,8 @@ type ChatMessage = {
 };
 
 export default function ChatbotOverlay() {
+  const BOT_RESPONSE_DELAY_MS = 1000;
+  const OPTIONS_REVEAL_DELAY_MS = 300;
   const insets = useSafeAreaInsets();
   const segments = useSegments();
   const isTabsRoute = (segments as string[]).includes('(tabs)');
@@ -31,17 +33,45 @@ export default function ChatbotOverlay() {
   const [currentParentId, setCurrentParentId] = useState<number | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [freeText, setFreeText] = useState('');
+  const [showCurrentOptions, setShowCurrentOptions] = useState(true);
+  const [botIsThinking, setBotIsThinking] = useState(false);
   const scrollRef = useRef<ScrollView | null>(null);
+  const responseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const optionsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentOptions = useMemo(
     () => getChildChatbotOptions(options, currentParentId),
     [options, currentParentId]
   );
 
+  function clearPendingTimers() {
+    if (responseTimerRef.current) {
+      clearTimeout(responseTimerRef.current);
+      responseTimerRef.current = null;
+    }
+    if (optionsTimerRef.current) {
+      clearTimeout(optionsTimerRef.current);
+      optionsTimerRef.current = null;
+    }
+  }
+
+  function revealOptionsWithDelay() {
+    if (optionsTimerRef.current) {
+      clearTimeout(optionsTimerRef.current);
+    }
+    optionsTimerRef.current = setTimeout(() => {
+      setShowCurrentOptions(true);
+      optionsTimerRef.current = null;
+    }, OPTIONS_REVEAL_DELAY_MS);
+  }
+
   function resetChat(nextGreeting?: string) {
+    clearPendingTimers();
     const greet = typeof nextGreeting === 'string' && nextGreeting.trim() ? nextGreeting.trim() : greeting;
     setMessages([{ id: `bot-greet-${Date.now()}`, from: 'bot', text: greet }]);
     setCurrentParentId(null);
+    setBotIsThinking(false);
+    setShowCurrentOptions(true);
   }
 
   async function ensureChatLoaded() {
@@ -68,29 +98,56 @@ export default function ChatbotOverlay() {
     const optionText = String(option.button_text ?? '').trim();
     const responseText = String(option.response_text ?? '').trim();
     const ts = Date.now();
+    const hasChildren = options.some((item) => Number(item.parent_id ?? 0) === Number(option.id));
+    const nextParentId = hasChildren ? Number(option.id) : null;
+
+    clearPendingTimers();
     setMessages((prev) => [
       ...prev,
       { id: `user-${option.id}-${ts}`, from: 'user' as const, text: optionText || 'Selected option' },
-      ...(responseText ? [{ id: `bot-r-${option.id}-${ts}`, from: 'bot' as const, text: responseText }] : []),
     ]);
+    setShowCurrentOptions(false);
+    setBotIsThinking(true);
+    setCurrentParentId(null);
 
-    const hasChildren = options.some((item) => Number(item.parent_id ?? 0) === Number(option.id));
-    setCurrentParentId(hasChildren ? Number(option.id) : null);
+    responseTimerRef.current = setTimeout(() => {
+      if (responseText) {
+        setMessages((prev) => [
+          ...prev,
+          { id: `bot-r-${option.id}-${ts}`, from: 'bot' as const, text: responseText },
+        ]);
+      }
+      setBotIsThinking(false);
+      setCurrentParentId(nextParentId);
+      revealOptionsWithDelay();
+      responseTimerRef.current = null;
+    }, BOT_RESPONSE_DELAY_MS);
   }
 
   function sendFreeText() {
     const trimmed = freeText.trim();
     if (!trimmed) return;
     setFreeText('');
+    clearPendingTimers();
     setMessages((prev) => [
       ...prev,
       { id: `user-free-${Date.now()}`, from: 'user', text: trimmed },
-      {
-        id: `bot-free-${Date.now()}`,
-        from: 'bot',
-        text: 'Please select one of the suggested options so I can respond accurately.',
-      },
     ]);
+    setShowCurrentOptions(false);
+    setBotIsThinking(true);
+    responseTimerRef.current = setTimeout(() => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `bot-free-${Date.now()}`,
+          from: 'bot',
+          text: 'Please select one of the suggested options so I can respond accurately.',
+        },
+      ]);
+      setBotIsThinking(false);
+      revealOptionsWithDelay();
+      responseTimerRef.current = null;
+    }, BOT_RESPONSE_DELAY_MS);
   }
 
   useEffect(() => {
@@ -103,7 +160,13 @@ export default function ChatbotOverlay() {
     requestAnimationFrame(() => {
       scrollRef.current?.scrollToEnd({ animated: true });
     });
-  }, [messages, chatOpen]);
+  }, [messages, chatOpen, botIsThinking]);
+
+  useEffect(() => {
+    return () => {
+      clearPendingTimers();
+    };
+  }, []);
 
   const fabBottom = insets.bottom + (isTabsRoute ? 92 : 24);
   const hideOverlay = isFirstLoginRoute;
@@ -166,11 +229,22 @@ export default function ChatbotOverlay() {
                     </View>
                   </View>
                 ))}
+                {botIsThinking ? (
+                  <View style={[styles.bubbleRow, styles.bubbleRowBot]}>
+                    <View style={[styles.bubble, styles.bubbleBot]}>
+                      <Text style={[styles.bubbleText, styles.bubbleTextBot]}>Thinking....</Text>
+                    </View>
+                  </View>
+                ) : null}
                 {chatError ? <Text style={styles.errorText}>{chatError}</Text> : null}
               </ScrollView>
 
               <View style={styles.optionsWrap}>
-                {currentOptions.length > 0 ? (
+                {!showCurrentOptions ? (
+                  <View style={styles.optionRow}>
+                    <Text style={styles.mutedText}>Preparing options...</Text>
+                  </View>
+                ) : currentOptions.length > 0 ? (
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionRow}>
                     {currentOptions.map((o) => (
                       <Pressable
